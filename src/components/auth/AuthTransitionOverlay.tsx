@@ -24,10 +24,10 @@ export default function AuthTransitionOverlay({
     <View style={styles.overlay} pointerEvents="auto">
       {failed ? (
         <>
-          <Text style={styles.title}>Couldn’t finish a secure cleanup</Text>
+          <Text style={styles.title}>Couldn’t clear saved images</Text>
           <Text style={styles.body}>
-            Your previous session’s images could not be cleared. Try again before
-            continuing.
+            Images from the previous session are still on this device. Try again
+            before continuing.
           </Text>
           <Button
             title="Try again"
@@ -37,10 +37,12 @@ export default function AuthTransitionOverlay({
           />
         </>
       ) : (
-        <>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.body}>Finishing a secure cleanup…</Text>
-        </>
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading"
+        />
       )}
     </View>
   );
