@@ -117,9 +117,23 @@ const epochAt = refreshBody.indexOf('const epoch = authEpoch.current');
 const getMeAt = refreshBody.indexOf('authApi.getMe(accessToken)');
 const applyAt = refreshBody.indexOf('applyApiUser(user)');
 assert.equal(epochAt > 0 && getMeAt > epochAt && applyAt > getMeAt, true);
-const throwAt = signOutBody.indexOf('throw new Error');
-const clearAt = signOutBody.indexOf('clearAuthenticatedState()');
-assert.equal(throwAt > 0 && clearAt > throwAt, true, 'failed local sign-out does not clear auth');
+const mutation = read('src/lib/authSessionMutation.ts');
+const errorBranch = mutation.slice(
+  mutation.indexOf('const signOutError = await input.signOutLocal()'),
+  mutation.indexOf('flags.localSignOutDone = true;\n    input.applyOutcome(txnId);'),
+);
+const failureThrow = errorBranch.lastIndexOf('throw new Error(LOGOUT_FAILURE_MESSAGE)');
+const applyBeforeThrow = errorBranch.lastIndexOf('input.applyOutcome', failureThrow);
+assert.equal(
+  failureThrow > applyBeforeThrow && applyBeforeThrow > 0,
+  true,
+  'failed local sign-out throws before a later apply',
+);
+assert.equal(
+  errorBranch.slice(failureThrow).includes('input.applyOutcome'),
+  false,
+  'failed local sign-out does not clear auth',
+);
 assert.equal(/supabase\.auth\.signOut\(\s*\)/.test(auth), false);
 assert.doesNotMatch(auth, /console\.(log|debug|info)/);
 

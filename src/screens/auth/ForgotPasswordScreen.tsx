@@ -16,6 +16,8 @@ import OtpCodeInput, { OTP_LENGTH } from '../../components/auth/OtpCodeInput';
 import { colors, spacing, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
+import { enqueueAuthMutation } from '../../lib/authMutationQueue';
+import { ownedSession } from '../../lib/authSessionMutation';
 import { supabase } from '../../lib/supabase';
 import { isAuthNetworkError, isAuthRateLimitError } from '../../lib/authErrors';
 import {
@@ -86,15 +88,43 @@ export default function ForgotPasswordScreen({
     const state = loadRecoveryState();
     if (!state || state.phase !== 'verifying') return;
     try {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession();
+      if (error) return;
+      const userId = data.session?.user?.id;
+      const stamp =
+        userId && data.session?.access_token
+          ? ownedSession({
+              userId,
+              accessToken: data.session.access_token,
+              refreshToken: data.session.refresh_token,
+            })
+          : null;
       if (!data.session) {
-        clearRecoveryLock();
+        const current = loadRecoveryState();
+        if (
+          current?.phase === 'verifying' &&
+          current.email === state.email &&
+          current.userId === state.userId
+        ) {
+          clearRecoveryLock();
+        }
         return;
       }
-      await signOut('sessionClearForRecovery');
-      clearRecoveryLock();
+      if (!stamp) return;
+      await signOut('sessionClearForRecovery', {
+        expectedUserId: stamp.userId,
+        expectedSessionId: stamp.sessionId,
+      });
+      const current = loadRecoveryState();
+      if (
+        current?.phase === 'verifying' &&
+        current.email === state.email &&
+        current.userId === state.userId
+      ) {
+        clearRecoveryLock();
+      }
     } catch {
-      // Keep the lock if we cannot prove the recovery session is gone.
+      // Keep the lock if we cannot prove this recovery session is gone.
     }
   };
 
@@ -108,10 +138,43 @@ export default function ForgotPasswordScreen({
     sendRef.current = true;
     setSending(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      if (data.session || loadRecoveryState()) {
-        await signOut('sessionClearForRecovery');
-        clearRecoveryLock();
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        Alert.alert('Could not start password reset', 'Check your connection and try again.');
+        return;
+      }
+      const captured = loadRecoveryState();
+      const userId = data.session?.user?.id;
+      const stamp =
+        userId && data.session?.access_token
+          ? ownedSession({
+              userId,
+              accessToken: data.session.access_token,
+              refreshToken: data.session.refresh_token,
+            })
+          : null;
+      if ((data.session && !stamp) || captured || stamp) {
+        if (data.session && !stamp) {
+          Alert.alert(
+            'Could not start password reset',
+            'This session could not be confirmed. Try again.',
+          );
+          return;
+        }
+        await signOut('sessionClearForRecovery', {
+          expectedUserId: stamp?.userId ?? captured?.userId,
+          expectedSessionId: stamp?.sessionId ?? '',
+        });
+        const current = loadRecoveryState();
+        if (
+          !current ||
+          (captured &&
+            current.email === captured.email &&
+            current.phase === captured.phase &&
+            current.userId === captured.userId)
+        ) {
+          clearRecoveryLock();
+        }
         enterSignedOutAt({
           name: 'ForgotPassword',
           params: { email: normalized, autoSend: true },
@@ -149,12 +212,14 @@ export default function ForgotPasswordScreen({
       setCooldown(RESEND_COOLDOWN_SEC);
       Alert.alert('Check your email', RECOVERY_REQUEST_COPY);
     } catch (err) {
+      const superseded =
+        err instanceof Error && err.message === 'SESSION_SUPERSEDED';
       Alert.alert(
         'Could not start password reset',
         isAuthNetworkError(err)
           ? 'Check your connection and try again.'
-          : err instanceof Error
-            ? err.message
+          : superseded
+            ? 'The session changed before sign-out finished. Try again.'
             : 'Please try again.',
       );
     } finally {
@@ -185,11 +250,16 @@ export default function ForgotPasswordScreen({
       return;
     }
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: normalized,
-        token,
-        type: 'recovery',
-      });
+      // Arming stays outside this slot so a credential call already in
+      // flight can see the lock. This verifyOtp is the recovery session,
+      // so it must not be discarded as a stale credential write.
+      const { data, error } = await enqueueAuthMutation(() =>
+        supabase.auth.verifyOtp({
+          email: normalized,
+          token,
+          type: 'recovery',
+        }),
+      );
       if (error || !data.session?.user) {
         await releaseVerifyingLock();
         Alert.alert(

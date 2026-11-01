@@ -1,7 +1,7 @@
 /**
  * Typed in-flight sign-out transaction. Raw Supabase SIGNED_OUT is interpreted
- * through this latch. One active transaction. Duplicates of the same kind are
- * idempotent. A different kind while one is in-flight is a conflict.
+ * through this latch. One active transaction. A duplicate is the same kind
+ * and the same expected user. A different user or kind is a conflict.
  *
  * No local imports so Node selftests can execute this module.
  */
@@ -66,7 +66,8 @@ export function beginSignOutTransaction(input: {
   now?: number;
 }): BeginSignOutResult {
   if (active?.status === 'started') {
-    if (active.kind === input.kind) {
+    const sameOwner = (active.expectedUserId ?? '') === (input.expectedUserId ?? '');
+    if (active.kind === input.kind && sameOwner) {
       return { status: 'duplicate', txn: active };
     }
     return { status: 'conflict', txn: active };

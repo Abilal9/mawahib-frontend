@@ -47,10 +47,18 @@ export type ReturnIntentAction =
   | 'request'
   | 'create'
   | 'review'
-  | 'private';
+  | 'private'
+  | 'messages'
+  | 'jobs';
+
+export type GuestTabIntentScreen =
+  | 'HomeTab'
+  | 'SearchTab'
+  | 'MessagesTab'
+  | 'JobsTab';
 
 export type GuestTabsReturnParams = {
-  screen?: 'HomeTab' | 'SearchTab';
+  screen?: GuestTabIntentScreen;
 };
 
 export type ReturnIntentParams =
@@ -67,6 +75,7 @@ export type ReturnIntent = {
   params: ReturnIntentParams;
   action?: ReturnIntentAction;
   epoch: number;
+  processId: string;
   createdAt: number;
   consumed: boolean;
 };
@@ -109,7 +118,16 @@ const REJECTED_ROUTES = new Set([
 ]);
 
 let generation = 0;
+let processId = createProcessId();
 let memoryIntent: ReturnIntent | null = null;
+
+function createProcessId(): string {
+  return `p${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function getReturnIntentProcessId(): string {
+  return processId;
+}
 
 function storageAvailable(): boolean {
   try {
@@ -137,7 +155,9 @@ function isAction(value: unknown): value is ReturnIntentAction {
     value === 'request' ||
     value === 'create' ||
     value === 'review' ||
-    value === 'private'
+    value === 'private' ||
+    value === 'messages' ||
+    value === 'jobs'
   );
 }
 
@@ -175,7 +195,13 @@ export function sanitizeReturnIntentInput(input: {
   if (input.route === 'GuestTabs') {
     if (!onlyKeys(raw, ['screen'])) return null;
     const screen = raw.screen;
-    if (screen !== undefined && screen !== 'HomeTab' && screen !== 'SearchTab') {
+    if (
+      screen !== undefined &&
+      screen !== 'HomeTab' &&
+      screen !== 'SearchTab' &&
+      screen !== 'MessagesTab' &&
+      screen !== 'JobsTab'
+    ) {
       return null;
     }
     return {
@@ -323,6 +349,9 @@ export function parseStoredIntent(value: unknown): ReturnIntent | null {
   const record = value as Record<string, unknown>;
   if (record.consumed === true) return null;
   if (typeof record.epoch !== 'number' || !Number.isFinite(record.epoch)) return null;
+  if (typeof record.processId !== 'string' || record.processId.length < 4) {
+    return null;
+  }
   if (typeof record.createdAt !== 'number' || !Number.isFinite(record.createdAt)) {
     return null;
   }
@@ -337,17 +366,20 @@ export function parseStoredIntent(value: unknown): ReturnIntent | null {
     params: sanitized.params,
     action: sanitized.action,
     epoch: record.epoch,
+    processId: record.processId,
     createdAt: record.createdAt,
     consumed: false,
   };
 }
 
 export function isReturnIntentFresh(
-  intent: Pick<ReturnIntent, 'createdAt' | 'epoch' | 'consumed'>,
+  intent: Pick<ReturnIntent, 'createdAt' | 'epoch' | 'processId' | 'consumed'>,
   now: number,
   liveEpoch: number,
+  liveProcessId: string = processId,
 ): boolean {
   if (intent.consumed) return false;
+  if (intent.processId !== liveProcessId) return false;
   if (intent.epoch !== liveEpoch) return false;
   if (!Number.isFinite(intent.createdAt) || intent.createdAt > now) return false;
   if (now - intent.createdAt >= RETURN_INTENT_TTL_MS) return false;
@@ -368,6 +400,7 @@ export function stageReturnIntent(input: {
     params: sanitized.params,
     action: sanitized.action,
     epoch: generation,
+    processId,
     createdAt: input.now ?? Date.now(),
     consumed: false,
   };
@@ -405,6 +438,12 @@ export function mapReturnIntentToAuthenticated(
     if (screen === 'SearchTab') {
       return { name: 'MainTabs', params: { screen: 'SearchTab' } };
     }
+    if (screen === 'MessagesTab') {
+      return { name: 'MainTabs', params: { screen: 'MessagesTab' } };
+    }
+    if (screen === 'JobsTab') {
+      return { name: 'MainTabs', params: { screen: 'JobsTab' } };
+    }
     return { name: 'MainTabs' };
   }
   if (intent.route === 'Reviews') {
@@ -441,13 +480,34 @@ export function mapReturnIntentToAuthenticated(
  * Clears memory + storage synchronously before mapping so duplicate
  * post-auth effects cannot navigate twice.
  */
+function markPersistedIntentConsumed(intent: ReturnIntent): boolean {
+  if (!storageAvailable()) return true;
+  try {
+    localStorage.setItem(
+      RETURN_INTENT_STORAGE_KEY,
+      JSON.stringify({ ...intent, consumed: true }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function takeReturnIntent(now: number = Date.now()): AuthenticatedRestoreRoute | null {
   const current = readPersistedReturnIntent();
   memoryIntent = null;
+  if (!current) {
+    clearPersistedReturnIntent();
+    return null;
+  }
+  if (hasRecoveryLock() || !isReturnIntentFresh(current, now, generation)) {
+    markPersistedIntentConsumed(current);
+    clearPersistedReturnIntent();
+    return null;
+  }
+  const marked = markPersistedIntentConsumed(current);
   clearPersistedReturnIntent();
-  if (!current) return null;
-  if (hasRecoveryLock()) return null;
-  if (!isReturnIntentFresh(current, now, generation)) return null;
+  if (!marked) return null;
   return mapReturnIntentToAuthenticated(current);
 }
 
@@ -465,6 +525,7 @@ export function consumeReturnIntentRoutes(
 /** Test helper. Not used by product code. */
 export function resetReturnIntentForTests(): void {
   generation = 0;
+  processId = createProcessId();
   memoryIntent = null;
   clearPersistedReturnIntent();
 }

@@ -42,6 +42,13 @@ assert.equal(first.status, 'started');
 const dup = beginSignOutTransaction({ kind: 'logout' });
 assert.equal(dup.status, 'duplicate');
 assert.equal(dup.txn.id, first.txn.id);
+reset();
+beginSignOutTransaction({ kind: 'logout', expectedUserId: 'user-a' });
+const otherOwner = beginSignOutTransaction({
+  kind: 'logout',
+  expectedUserId: 'user-b',
+});
+assert.equal(otherOwner.status, 'conflict');
 const conflict = beginSignOutTransaction({
   kind: 'hydrate401',
   });
@@ -137,37 +144,48 @@ assert.equal(
 );
 
 const auth = read('src/context/AuthContext.tsx');
-assert.match(auth, /beginSignOutTransaction/);
+const mutation = read('src/lib/authSessionMutation.ts');
+assert.match(auth, /runSignOutAttempt/);
 assert.match(auth, /markMediaCacheClearPending/);
 assert.match(auth, /clearMediaImageCache/);
-assert.match(auth, /failSignOutTransaction/);
-assert.match(auth, /signOut\('hydrate401'\)/);
-assert.match(auth, /signOut\('recoveryAbort'\)/);
-assert.match(auth, /signOut\('identityMismatch'\)/);
-assert.match(auth, /kind: 'recoveryComplete'/);
-assert.match(auth, /Could not log out\. You are still signed in on this device\./);
-assert.match(auth, /signOutError/);
-assert.match(auth, /kind === 'identityMismatch'/);
-assert.match(auth, /liveUserId !== expectedUserId/);
+assert.match(mutation, /boundary\.fail\(txnId\)/);
+assert.match(auth, /signOut\('hydrate401'/);
+assert.match(auth, /signOut\('recoveryAbort'/);
+const signOutFn = auth.slice(auth.indexOf('const signOut = useCallback'));
+const snapWrite = signOutFn.indexOf('recoveryCleanupSnapRef.current = cleanupSnap');
+const queueWrite = signOutFn.indexOf('enqueueAuthMutation');
+assert.ok(snapWrite > queueWrite);
+assert.equal(
+  read('src/components/auth/AuthDeepLinkListener.tsx').includes('identityMismatch'),
+  false,
+);
+assert.match(mutation, /kind: 'recoveryComplete'/);
+assert.match(mutation, /Could not log out\. You are still signed in on this device\./);
+assert.match(auth, /setLogoutFailureNotice/);
+assert.match(mutation, /signOutError/);
+assert.match(mutation, /kind === 'identityMismatch'/);
 assert.match(auth, /enqueueAuthMutation/);
+assert.match(mutation, /beginQueued:/);
+assert.match(auth, /joinOrStartSignOut/);
 assert.ok(
-  auth.indexOf("kind === 'identityMismatch'") <
-    auth.indexOf('beginSignOutTransaction({'),
+  mutation.indexOf("input.kind === 'identityMismatch'") !== -1,
 );
 
-const signOutBody = auth.slice(auth.indexOf('const signOut = useCallback'));
-assert.ok(
-  signOutBody.indexOf('markMediaCacheClearPending()') <
-    signOutBody.indexOf("supabase.auth.signOut({ scope: 'local' })"),
+const signOutBody = mutation.slice(
+  mutation.indexOf('export async function runSignOutAttempt'),
 );
 assert.ok(
-  signOutBody.indexOf("if (error)") >
-    signOutBody.indexOf("supabase.auth.signOut({ scope: 'local' })"),
+  signOutBody.indexOf('onPause(txnId)') < signOutBody.indexOf('signOutLocal()'),
 );
-const markedFailAt = signOutBody.indexOf('!marked.ok');
+const afterLocalAttempt = signOutBody.slice(signOutBody.indexOf('const signOutError'));
+assert.ok(
+  afterLocalAttempt.indexOf('if (signOutError)') <
+    afterLocalAttempt.indexOf('flags.localSignOutDone = true'),
+);
+const markedFailAt = signOutBody.indexOf('if (!marked.ok)');
 assert.ok(markedFailAt !== -1);
 assert.ok(
-  signOutBody.indexOf('failSignOutTransaction', markedFailAt) <
+  signOutBody.indexOf('boundary.fail(txnId)', markedFailAt) <
     signOutBody.indexOf('throw new Error', markedFailAt),
 );
 
@@ -188,7 +206,7 @@ assert.match(suspended, /signOut\('suspensionLogout'\)/);
 assert.equal(suspended.includes('leaveAuthenticatedProduct'), false);
 
 const forgot = read('src/screens/auth/ForgotPasswordScreen.tsx');
-assert.match(forgot, /signOut\('sessionClearForRecovery'\)/);
+assert.match(forgot, /signOut\('sessionClearForRecovery'/);
 assert.equal(forgot.includes("await signOut()"), false);
 
 assert.equal(

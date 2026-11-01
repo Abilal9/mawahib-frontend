@@ -9,14 +9,10 @@ import GuestAppHeader from '../../components/layout/GuestAppHeader';
 import Button from '../../components/ui/Button';
 import { listPaddingAboveTabBar } from '../../components/layout/CustomTabBar';
 import { colors, spacing, typography } from '../../theme';
-import type {
-  GuestTabScreenProps,
-  SignedOutStackParamList,
-} from '../../navigation/types';
+import type { SignedOutStackParamList } from '../../navigation/types';
 
-export default function GuestAccountScreen(
-  _props: GuestTabScreenProps<'AccountTab'>,
-) {
+/** Kept for copy reference; Account is a header entry, not a tab. */
+export default function GuestAccountScreen() {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<SignedOutStackParamList>>();

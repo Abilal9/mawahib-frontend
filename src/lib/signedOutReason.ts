@@ -6,15 +6,41 @@
 export type SignedOutReason = 'none' | 'logout' | 'expired' | 'guestChosen';
 
 let reason: SignedOutReason = 'none';
+let signedOutUserId: string | null = null;
 let hadAuthenticatedProduct = false;
 let guestChosenInFlight = false;
+const listeners = new Set<() => void>();
+
+function emit(): void {
+  listeners.forEach((listener) => listener());
+}
+
+export function subscribeSignedOutReason(onChange: () => void): () => void {
+  listeners.add(onChange);
+  return () => {
+    listeners.delete(onChange);
+  };
+}
 
 export function getSignedOutReason(): SignedOutReason {
   return reason;
 }
 
-export function setSignedOutReason(next: SignedOutReason): void {
+export function getSignedOutUserId(): string | null {
+  return signedOutUserId;
+}
+
+export function setSignedOutReason(
+  next: SignedOutReason,
+  userId?: string | null,
+): void {
   reason = next;
+  if (next === 'logout' || next === 'guestChosen') {
+    if (userId !== undefined) signedOutUserId = userId;
+  } else {
+    signedOutUserId = null;
+  }
+  emit();
 }
 
 export function markAuthenticatedProcess(): void {
@@ -43,8 +69,10 @@ export function isGuestChosenInFlight(): boolean {
 
 export function resetSignedOutReasonForTests(): void {
   reason = 'none';
+  signedOutUserId = null;
   hadAuthenticatedProduct = false;
   guestChosenInFlight = false;
+  listeners.clear();
 }
 
 export function signedOutDestinationName(input: {

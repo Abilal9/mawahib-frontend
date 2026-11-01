@@ -34,6 +34,7 @@ const {
   mapReturnIntentToAuthenticated,
   resetReturnIntentForTests,
   getReturnIntentGeneration,
+  getReturnIntentProcessId,
 } = await import('../src/lib/returnIntent.ts');
 const { saveRecoveryState, clearRecoveryState } = await import(
   '../src/lib/recoveryState.ts'
@@ -123,6 +124,45 @@ assert.ok(
     params: { screen: 'SearchTab' },
   }),
 );
+assert.deepEqual(
+  sanitizeReturnIntentInput({
+    route: 'GuestTabs',
+    params: { screen: 'MessagesTab' },
+    action: 'messages',
+  }),
+  {
+    route: 'GuestTabs',
+    params: { screen: 'MessagesTab' },
+    action: 'messages',
+  },
+);
+assert.deepEqual(
+  sanitizeReturnIntentInput({
+    route: 'GuestTabs',
+    params: { screen: 'JobsTab' },
+    action: 'jobs',
+  }),
+  {
+    route: 'GuestTabs',
+    params: { screen: 'JobsTab' },
+    action: 'jobs',
+  },
+);
+assert.equal(
+  sanitizeReturnIntentInput({
+    route: 'GuestTabs',
+    params: { screen: 'MessagesTab', conversationId: USER },
+  }),
+  null,
+);
+assert.equal(
+  sanitizeReturnIntentInput({
+    route: 'MessagesTab',
+    params: {},
+    action: 'messages',
+  }),
+  null,
+);
 
 for (const route of [
   'Chat',
@@ -207,9 +247,11 @@ assert.equal(
 );
 
 const now = 1_700_000_000_000;
+reset();
+const liveProcessId = getReturnIntentProcessId();
 assert.equal(
   isReturnIntentFresh(
-    { createdAt: now, epoch: 0, consumed: false },
+    { createdAt: now, epoch: 0, processId: liveProcessId, consumed: false },
     now,
     0,
   ),
@@ -217,7 +259,12 @@ assert.equal(
 );
 assert.equal(
   isReturnIntentFresh(
-    { createdAt: now - (RETURN_INTENT_TTL_MS - 1), epoch: 0, consumed: false },
+    {
+      createdAt: now - (RETURN_INTENT_TTL_MS - 1),
+      epoch: 0,
+      processId: liveProcessId,
+      consumed: false,
+    },
     now,
     0,
   ),
@@ -225,7 +272,12 @@ assert.equal(
 );
 assert.equal(
   isReturnIntentFresh(
-    { createdAt: now - RETURN_INTENT_TTL_MS, epoch: 0, consumed: false },
+    {
+      createdAt: now - RETURN_INTENT_TTL_MS,
+      epoch: 0,
+      processId: liveProcessId,
+      consumed: false,
+    },
     now,
     0,
   ),
@@ -233,7 +285,7 @@ assert.equal(
 );
 assert.equal(
   isReturnIntentFresh(
-    { createdAt: now, epoch: 0, consumed: true },
+    { createdAt: now, epoch: 0, processId: liveProcessId, consumed: true },
     now,
     0,
   ),
@@ -241,7 +293,7 @@ assert.equal(
 );
 assert.equal(
   isReturnIntentFresh(
-    { createdAt: now, epoch: 0, consumed: false },
+    { createdAt: now, epoch: 0, processId: liveProcessId, consumed: false },
     now,
     1,
   ),
@@ -249,7 +301,15 @@ assert.equal(
 );
 assert.equal(
   isReturnIntentFresh(
-    { createdAt: now + 1, epoch: 0, consumed: false },
+    { createdAt: now + 1, epoch: 0, processId: liveProcessId, consumed: false },
+    now,
+    0,
+  ),
+  false,
+);
+assert.equal(
+  isReturnIntentFresh(
+    { createdAt: now, epoch: 0, processId: 'other-process', consumed: false },
     now,
     0,
   ),
@@ -312,6 +372,30 @@ assert.deepEqual(mapReturnIntentToAuthenticated(peekReturnIntent()), {
   name: 'MainTabs',
   params: { screen: 'SearchTab' },
 });
+
+reset();
+stageReturnIntent({
+  route: 'GuestTabs',
+  params: { screen: 'MessagesTab' },
+  action: 'messages',
+  now: Date.now(),
+});
+persistStagedReturnIntent();
+assert.deepEqual(consumeReturnIntentRoutes(Date.now()), [
+  { name: 'MainTabs', params: { screen: 'MessagesTab' } },
+]);
+
+reset();
+stageReturnIntent({
+  route: 'GuestTabs',
+  params: { screen: 'JobsTab' },
+  action: 'jobs',
+  now: Date.now(),
+});
+persistStagedReturnIntent();
+assert.deepEqual(consumeReturnIntentRoutes(Date.now()), [
+  { name: 'MainTabs', params: { screen: 'JobsTab' } },
+]);
 
 reset();
 stageReturnIntent({
@@ -412,6 +496,48 @@ assert.equal(
   null,
 );
 
+reset();
+stageReturnIntent({
+  route: 'UserProfile',
+  params: { userId: USER },
+  now: Date.now(),
+});
+assert.equal(persistStagedReturnIntent(), true);
+const leftover = mem.get(RETURN_INTENT_STORAGE_KEY);
+resetReturnIntentForTests();
+mem.set(RETURN_INTENT_STORAGE_KEY, leftover);
+assert.equal(
+  takeReturnIntent(Date.now()),
+  null,
+  'prior-process leftovers must not restore after restart',
+);
+
+reset();
+stageReturnIntent({
+  route: 'UserProfile',
+  params: { userId: USER },
+  now: Date.now(),
+});
+assert.equal(persistStagedReturnIntent(), true);
+const originalRemove = globalThis.localStorage.removeItem;
+const originalSet = globalThis.localStorage.setItem;
+globalThis.localStorage.removeItem = () => {
+  throw new Error('quota');
+};
+globalThis.localStorage.setItem = () => {
+  throw new Error('quota');
+};
+assert.equal(takeReturnIntent(Date.now()), null);
+globalThis.localStorage.removeItem = originalRemove;
+globalThis.localStorage.setItem = originalSet;
+resetReturnIntentForTests();
+assert.equal(
+  takeReturnIntent(Date.now()),
+  null,
+  'failed consumption plus restart must not restore',
+);
+reset();
+
 const returnIntent = read('src/lib/returnIntent.ts');
 assert.equal(returnIntent.includes('applyToListing'), false);
 assert.equal(returnIntent.includes('toggleLike'), false);
@@ -464,5 +590,9 @@ assert.ok(
 
 const forgot = read('src/screens/auth/ForgotPasswordScreen.tsx');
 assert.match(forgot, /invalidateReturnIntents\(\)/);
+
+const header = read('src/components/layout/GuestAccountEntry.tsx');
+assert.match(header, /invalidateReturnIntents\(\)/);
+assert.equal(header.includes('clearStagedReturnIntent'), false);
 
 console.log('return-intent-selftest ok');

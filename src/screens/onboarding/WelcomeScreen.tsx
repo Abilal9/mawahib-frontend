@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,20 @@ import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
+import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import WelcomeStepIndicator from '../../components/onboarding/WelcomeStepIndicator';
 import { WELCOME_STEPS } from '../../constants/welcome';
 import { colors, spacing, radius, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
+import {
+  canDismissOptionalAuth,
+  shouldPreventOptionalAuthRemove,
+} from '../../lib/signedOutBranchEntry';
+import { getSignedOutReason } from '../../lib/signedOutReason';
+import { invalidateReturnIntents } from '../../lib/returnIntent';
+import { shouldInvalidateIntentOnAuthRemove } from '../../lib/authIntentCancellation';
+import { loadRecoveryState } from '../../lib/recoveryState';
+import { useAuth } from '../../context/AuthContext';
 
 const HORIZONTAL_PADDING = spacing.xxl;
 const ILLUSTRATION_WIDTH = 345;
@@ -28,6 +38,7 @@ type WelcomeStep = 1 | 2 | 3;
 const STEPS: WelcomeStep[] = [1, 2, 3];
 
 export default function WelcomeScreen({ route, navigation }: ScreenProps<'Welcome'>) {
+  const { session, apiUser } = useAuth();
   const initialStep = (route.params?.step ?? 1) as WelcomeStep;
   const [step, setStep] = useState<WelcomeStep>(initialStep);
   const listRef = useRef<FlatList<WelcomeStep>>(null);
@@ -49,6 +60,57 @@ export default function WelcomeScreen({ route, navigation }: ScreenProps<'Welcom
   const handleSkip = () => {
     navigation.navigate('AccountType');
   };
+
+  const navState = navigation.getState();
+  const canDismiss = canDismissOptionalAuth({
+    recoveryLocked: Boolean(loadRecoveryState()),
+    reason: getSignedOutReason(),
+    routes: navState?.routes ?? [],
+    index: navState?.index ?? 0,
+    hasLiveUnappliedSession: Boolean(session) && !apiUser,
+  });
+
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: canDismiss });
+  }, [navigation, canDismiss]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      const action = event.data.action as {
+        type: string;
+        payload?: { count?: number };
+      };
+      if (
+        action.type !== 'GO_BACK' &&
+        action.type !== 'POP' &&
+        action.type !== 'POP_TO_TOP'
+      ) {
+        return;
+      }
+      if (
+        shouldPreventOptionalAuthRemove({
+          recoveryLocked: Boolean(loadRecoveryState()),
+          reason: getSignedOutReason(),
+          hasLiveUnappliedSession: Boolean(session) && !apiUser,
+        })
+      ) {
+        event.preventDefault();
+        return;
+      }
+      const state = navigation.getState();
+      if (
+        shouldInvalidateIntentOnAuthRemove({
+          actionType: action.type,
+          routes: state?.routes ?? [],
+          index: state?.index ?? 0,
+          count: action.payload?.count,
+        })
+      ) {
+        invalidateReturnIntents();
+      }
+    });
+    return unsubscribe;
+  }, [navigation, session, apiUser]);
 
   const onMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -78,10 +140,8 @@ export default function WelcomeScreen({ route, navigation }: ScreenProps<'Welcom
       <StatusBar style="dark" />
       <View style={styles.page}>
         <View style={styles.header}>
-          <Image
-            source={require('../../../assets/images/arabic-emblem.png')}
-            style={styles.logo}
-            contentFit="contain"
+          <AuthBrandHeader
+            onBack={canDismiss ? () => navigation.goBack() : undefined}
           />
         </View>
 
@@ -133,17 +193,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   header: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.xxl,
     paddingHorizontal: HORIZONTAL_PADDING,
-  },
-  logo: {
-    position: 'absolute',
-    width: 112,
-    height: 112,
   },
   pager: {
     flexGrow: 0,

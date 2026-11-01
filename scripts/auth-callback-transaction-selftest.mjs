@@ -210,10 +210,19 @@ assert.match(auth, /invalidateAuthCallbacks\(\)/);
 assert.match(auth, /shouldIgnoreAuthEventForCallbackCommit/);
 const listener = read('src/components/auth/AuthDeepLinkListener.tsx');
 assert.match(listener, /stale-callback-session/);
-assert.match(listener, /identityMismatch/);
-assert.match(listener, /getInflightCallbackEmail/);
-assert.match(listener, /liveEmail !== expected/);
-assert.match(listener, /expectedUserId: live.user.id/);
+assert.match(listener, /endCallbackSessionCommit/);
+assert.equal(listener.includes('identityMismatch'), false);
+assert.equal(listener.includes('signOut'), false);
+assert.match(deepLink, /releaseStaleCallbackSession/);
+const firstRelease = deepLink.indexOf('await releaseStaleCallbackSession');
+const firstCommit = deepLink.indexOf('commitCredentialSession({');
+assert.ok(firstRelease !== -1 && firstRelease < firstCommit);
+const secondRelease = deepLink.indexOf(
+  'await releaseStaleCallbackSession',
+  firstRelease + 1,
+);
+const secondCommit = deepLink.indexOf('commitCredentialSession({', firstCommit + 1);
+assert.ok(secondRelease !== -1 && secondRelease < secondCommit);
 
 const confirm = read('src/screens/auth/ConfirmCodeScreen.tsx');
 assert.match(confirm, /armAuthCallback\(\{ flow: 'signup'/);

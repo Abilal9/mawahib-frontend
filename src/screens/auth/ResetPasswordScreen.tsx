@@ -107,6 +107,25 @@ export default function ResetPasswordScreen({
     const emailForSignIn = loadRecoveryState()?.email ?? recovery?.email;
     try {
       const result = await completePasswordReset(password);
+      if (result.status === 'local-signed-out') {
+        Alert.alert(
+          'Password was changed',
+          'This device is signed out. Other sessions could not be confirmed signed out. They can keep working until their current access expires.',
+        );
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'SignIn',
+              params: {
+                email: emailForSignIn,
+                notice: 'password-updated',
+              },
+            },
+          ],
+        });
+        return;
+      }
       if (result.status === 'sign-out-failed') {
         setNeedsSignOut(true);
         Alert.alert(

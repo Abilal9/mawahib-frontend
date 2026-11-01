@@ -55,10 +55,15 @@ assert.deepEqual(guestTabScreens, [
   'HomeTab',
   'SearchTab',
   'CreateTab',
-  'AccountTab',
+  'MessagesTab',
+  'JobsTab',
 ]);
-assert.equal(guestTabScreens.includes('MessagesTab'), false);
-assert.equal(guestTabScreens.includes('JobsTab'), false);
+assert.equal(guestTabScreens.includes('AccountTab'), false);
+assert.match(guestTabs, /onGatedTabPress/);
+assert.match(guestTabs, /action: name === 'MessagesTab' \? 'messages' : 'jobs'/);
+assert.match(guestTabs, /CreateTabPlaceholder/);
+assert.equal(guestTabs.includes('MessagesInboxScreen'), false);
+assert.equal(guestTabs.includes('UserJobs'), false);
 
 assert.deepEqual(mainTabScreens, [
   'HomeTab',
@@ -148,6 +153,7 @@ assert.equal(guestAccount.includes("navigate('Settings')"), false);
 assert.equal(guestHeader.includes('useMyProfile'), false);
 assert.equal(guestHeader.includes('notifications-outline'), false);
 assert.equal(guestHeader.includes('UserAvatar'), false);
+assert.match(guestHeader, /GuestAccountEntry/);
 
 assert.match(signedOut, /GuestUserProfileScreen/);
 assert.equal(signedOut.includes('component={UserProfileScreen}'), false);

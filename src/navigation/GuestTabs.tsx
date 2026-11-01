@@ -5,21 +5,41 @@ import CustomTabBar from '../components/layout/CustomTabBar';
 import CreateTabPlaceholder from '../screens/create/CreateTabPlaceholder';
 import GuestHomeScreen from '../screens/guest/GuestHomeScreen';
 import GuestExploreScreen from '../screens/guest/GuestExploreScreen';
-import GuestAccountScreen from '../screens/guest/GuestAccountScreen';
 import GuestCreateMenu from '../components/layout/GuestCreateMenu';
 import { CreateMenuProvider } from '../context/CreateMenuContext';
+import { useAuthGate } from '../context/AuthGateContext';
 import { GuestTabParamList } from './types';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator<GuestTabParamList>();
 
+function preventTabPress() {
+  return {
+    tabPress: (e: { preventDefault: () => void }) => {
+      e.preventDefault();
+    },
+  };
+}
+
 export default function GuestTabs() {
+  const { requireAuth } = useAuthGate();
+
   return (
     <CreateMenuProvider>
       <View style={styles.root}>
         <Tab.Navigator
           tabBar={(props) => (
-            <CustomTabBar {...props} showUnreadIndicators={false} />
+            <CustomTabBar
+              {...props}
+              showUnreadIndicators={false}
+              onGatedTabPress={(name) =>
+                requireAuth({
+                  action: name === 'MessagesTab' ? 'messages' : 'jobs',
+                  route: 'GuestTabs',
+                  params: { screen: name },
+                })
+              }
+            />
           )}
           screenOptions={{
             headerShown: false,
@@ -46,16 +66,25 @@ export default function GuestTabs() {
             name="CreateTab"
             component={CreateTabPlaceholder}
             options={{ title: 'Create' }}
-            listeners={{
-              tabPress: (e) => {
-                e.preventDefault();
-              },
-            }}
+            listeners={preventTabPress}
           />
           <Tab.Screen
-            name="AccountTab"
-            component={GuestAccountScreen}
-            options={{ title: 'Account' }}
+            name="MessagesTab"
+            component={CreateTabPlaceholder}
+            options={{
+              title: 'Messages',
+              tabBarAccessibilityLabel: 'Messages, sign in required',
+            }}
+            listeners={preventTabPress}
+          />
+          <Tab.Screen
+            name="JobsTab"
+            component={CreateTabPlaceholder}
+            options={{
+              title: 'Jobs',
+              tabBarAccessibilityLabel: 'Jobs, sign in required',
+            }}
+            listeners={preventTabPress}
           />
         </Tab.Navigator>
         <GuestCreateMenu />

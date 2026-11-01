@@ -10,8 +10,19 @@ import {
   peekCallbackFingerprint,
 } from './authCallbackTransaction';
 import { getActiveSignOutTransaction } from './signOutTransaction';
-import { isGuestChosenInFlight } from './signedOutReason';
+import {
+  getSignedOutReason,
+  isGuestChosenInFlight,
+  setSignedOutReason,
+} from './signedOutReason';
 import { enqueueAuthMutation } from './authMutationQueue';
+import {
+  ownedSession,
+  releaseOwnedCredentialSession,
+  sameOwnedSession,
+} from './authSessionMutation';
+import { commitCredentialSession } from './authSignOutSlot';
+import { loadRecoveryState } from './recoveryState';
 
 export type AuthDeepLinkResult =
   | { type: 'session'; accessToken: string }
@@ -100,6 +111,55 @@ function accessTokenClaims(accessToken: string): {
 
 const SIGNUP_LINK_TYPES = new Set(['signup', 'email', 'invite', 'magiclink']);
 
+async function releaseStaleCallbackSession(
+  session:
+    | {
+        access_token?: string;
+        refresh_token?: string;
+        user?: { id?: string };
+      }
+    | null
+    | undefined,
+): Promise<void> {
+  const userId = session?.user?.id;
+  const accessToken = session?.access_token;
+  if (!userId || !accessToken) return;
+  const written = ownedSession({
+    userId,
+    accessToken,
+    refreshToken: session?.refresh_token,
+  });
+  if (!written) return;
+  await releaseOwnedCredentialSession({
+    written,
+    readLive: async () => {
+      const { data } = await supabase.auth.getSession();
+      const live = data.session;
+      if (!live?.user?.id || !live.access_token) return null;
+      return ownedSession({
+        userId: live.user.id,
+        accessToken: live.access_token,
+        refreshToken: live.refresh_token,
+      });
+    },
+    signOutLocal: async () => {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (!error) return;
+      const { data } = await supabase.auth.getSession();
+      const live = data.session;
+      const still =
+        live?.user?.id && live.access_token
+          ? ownedSession({
+              userId: live.user.id,
+              accessToken: live.access_token,
+              refreshToken: live.refresh_token,
+            })
+          : null;
+      if (sameOwnedSession(still, written)) throw error;
+    },
+  });
+}
+
 function authLifecycleBlocksCallback(): boolean {
   return (
     getActiveSignOutTransaction()?.status === 'started' ||
@@ -186,11 +246,30 @@ export async function handleAuthDeepLink(url: string): Promise<AuthDeepLinkResul
         endCallbackSessionCommit();
         return { type: 'link-rejected' };
       }
-      let data: { session?: { access_token?: string } | null } | null = null;
+      let data: { session?: { access_token?: string; user?: { id?: string } } | null } | null = null;
+      let stale = false;
       try {
-        const exchanged = await enqueueAuthMutation(() =>
-          supabase.auth.exchangeCodeForSession(params.code),
-        );
+        const exchanged = await enqueueAuthMutation(async () => {
+          const result = await supabase.auth.exchangeCodeForSession(
+            params.code,
+          );
+          if (result.error) return { ...result, stale: false };
+          const blocked =
+            getAuthCallbackEpoch() !== epochAtAccept ||
+            authLifecycleBlocksCallback() ||
+            Boolean(loadRecoveryState());
+          if (blocked) {
+            await releaseStaleCallbackSession(result.data.session);
+            return { ...result, stale: true };
+          }
+          if (result.data.session?.user?.id) {
+            commitCredentialSession({
+              reason: getSignedOutReason(),
+              setReasonNone: () => setSignedOutReason('none'),
+            });
+          }
+          return { ...result, stale: false };
+        });
         if (exchanged.error) {
           endCallbackSessionCommit();
           return {
@@ -201,16 +280,14 @@ export async function handleAuthDeepLink(url: string): Promise<AuthDeepLinkResul
           };
         }
         data = exchanged.data;
+        stale = exchanged.stale;
       } catch (err) {
         endCallbackSessionCommit();
         const message =
           err instanceof Error ? err.message : 'Could not use this link.';
         return { type: 'error', message };
       }
-      if (
-        getAuthCallbackEpoch() !== epochAtAccept ||
-        authLifecycleBlocksCallback()
-      ) {
+      if (stale) {
         return { type: 'stale-callback-session' };
       }
       endCallbackSessionCommit();
@@ -267,14 +344,31 @@ export async function handleAuthDeepLink(url: string): Promise<AuthDeepLinkResul
     endCallbackSessionCommit();
     return { type: 'link-rejected' };
   }
-  let data: { session?: { access_token?: string } | null } | null = null;
+  let data: { session?: { access_token?: string; user?: { id?: string } } | null } | null = null;
+  let stale = false;
   try {
-    const established = await enqueueAuthMutation(() =>
-      supabase.auth.setSession({
+    const established = await enqueueAuthMutation(async () => {
+      const result = await supabase.auth.setSession({
         access_token,
         refresh_token,
-      }),
-    );
+      });
+      if (result.error) return { ...result, stale: false };
+      const blocked =
+        getAuthCallbackEpoch() !== epochAtAccept ||
+        authLifecycleBlocksCallback() ||
+        Boolean(loadRecoveryState());
+      if (blocked) {
+        await releaseStaleCallbackSession(result.data.session);
+        return { ...result, stale: true };
+      }
+      if (result.data.session?.user?.id) {
+        commitCredentialSession({
+          reason: getSignedOutReason(),
+          setReasonNone: () => setSignedOutReason('none'),
+        });
+      }
+      return { ...result, stale: false };
+    });
     if (established.error) {
       endCallbackSessionCommit();
       return {
@@ -285,16 +379,14 @@ export async function handleAuthDeepLink(url: string): Promise<AuthDeepLinkResul
       };
     }
     data = established.data;
+    stale = established.stale;
   } catch (err) {
     endCallbackSessionCommit();
     const message =
       err instanceof Error ? err.message : 'Could not use this link.';
     return { type: 'error', message };
   }
-  if (
-    getAuthCallbackEpoch() !== epochAtAccept ||
-    authLifecycleBlocksCallback()
-  ) {
+  if (stale) {
     return { type: 'stale-callback-session' };
   }
   endCallbackSessionCommit();

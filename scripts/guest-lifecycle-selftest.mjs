@@ -33,7 +33,7 @@ assert.match(auth, /invalidateAuthCallbacks\(\)/);
 assert.match(auth, /leaveAuthenticatedProduct/);
 assert.match(auth, /enterSignedOutAt\(\{ name: 'GuestTabs' \}\)/);
 assert.match(auth, /enterAuthenticatedProduct\(\)/);
-assert.match(auth, /signOutError/);
+assert.match(read('src/lib/authSessionMutation.ts'), /signOutError/);
 assert.match(auth, /resetToSignedOut\('GuestTabs'\)/);
 assert.match(auth, /isMawahibProfileMissingError/);
 assert.ok(
@@ -46,7 +46,7 @@ assert.ok(
     auth.indexOf("err.status === 401"),
 );
 
-assert.match(rootNavigator, /resolveSignedOutDestination/);
+assert.match(rootNavigator, /resolveSignedOutBranchEntry/);
 assert.match(rootNavigator, /AuthenticatedProviders key=\{apiUser\.id\}/);
 assert.match(rootNavigator, /leaveAuthenticatedProduct\(\)/);
 assert.match(rootNavigator, /processStarted && !mediaCacheReady/);
@@ -81,13 +81,13 @@ assert.ok(
 );
 
 const callSites = [
-  ["src/context/AuthContext.tsx", "signOut('hydrate401')"],
-  ["src/context/AuthContext.tsx", "signOut('recoveryAbort')"],
-  ["src/context/AuthContext.tsx", "signOut('identityMismatch')"],
-  ["src/context/AuthContext.tsx", "kind: 'recoveryComplete'"],
+  ["src/context/AuthContext.tsx", "signOut('hydrate401'"],
+  ["src/context/AuthContext.tsx", "signOut('recoveryAbort'"],
+  ["src/lib/authDeepLink.ts", "releaseStaleCallbackSession"],
+  ["src/lib/authSessionMutation.ts", "kind: 'recoveryComplete'"],
   ["src/components/auth/LocalSignOutConfirm.tsx", "signOut('logout')"],
   ["src/screens/auth/AccountSuspendedScreen.tsx", "signOut('suspensionLogout')"],
-  ["src/screens/auth/ForgotPasswordScreen.tsx", "signOut('sessionClearForRecovery')"],
+  ["src/screens/auth/ForgotPasswordScreen.tsx", "signOut('sessionClearForRecovery'"],
 ];
 for (const [file, marker] of callSites) {
   assert.match(read(file), new RegExp(marker.replace(/[()']/g, '\\$&')));

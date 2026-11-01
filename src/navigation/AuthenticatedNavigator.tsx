@@ -50,7 +50,12 @@ import {
 import { AuthenticatedStackParamList } from './types';
 import { useAuth } from '../context/AuthContext';
 import { loadRecoveryState } from '../lib/recoveryState';
-import { leaveAuthenticatedProduct, takeAuthenticatedEntry } from '../lib/productTree';
+import {
+  isAuthenticatedProductActive,
+  leaveAuthenticatedProduct,
+  takeAuthenticatedEntry,
+} from '../lib/productTree';
+import { mainTabsGateLeaveAction } from '../lib/signedOutBranchEntry';
 
 const Stack = createNativeStackNavigator<AuthenticatedStackParamList>();
 
@@ -69,16 +74,14 @@ function MainTabsGate() {
   const emailOk = Boolean(apiUser?.emailVerified);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (recovery || loadRecoveryState()) {
-      leaveAuthenticatedProduct({ name: 'SignIn' });
-      return;
-    }
-    if (!isSignedIn) {
-      leaveAuthenticatedProduct({ name: 'SignIn' });
-      return;
-    }
-    if (!apiUser || !emailOk) {
+    const action = mainTabsGateLeaveAction({
+      authLoading,
+      productActive: isAuthenticatedProductActive(),
+      recoveryLocked: Boolean(recovery || loadRecoveryState()),
+      isSignedIn,
+      hasVerifiedProfile: Boolean(apiUser && emailOk),
+    });
+    if (action === 'SignIn') {
       leaveAuthenticatedProduct({ name: 'SignIn' });
     }
   }, [authLoading, isSignedIn, apiUser, emailOk, recovery]);

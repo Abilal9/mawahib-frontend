@@ -6,6 +6,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   ReactNode,
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
@@ -53,6 +54,26 @@ import {
   shouldIgnoreAuthEventForCallbackCommit,
 } from '../lib/authCallbackTransaction';
 import { enqueueAuthMutation } from '../lib/authMutationQueue';
+import {
+  finishCredentialEstablish,
+  ownedSession,
+  runPasswordChange,
+  sameOwnedSession,
+  runRecoveryCompletion,
+  runSignOutAttempt,
+  shouldApplyHydrate401Expiry,
+  type OwnedSession,
+} from '../lib/authSessionMutation';
+import {
+  applyApiUserAllowed,
+  beginQueuedSignOutIfCurrent,
+  bumpSessionGeneration,
+  commitCredentialSession,
+  getSessionGeneration,
+  hasSignOutInflight,
+  joinOrStartSignOut,
+  signOutInflightKey,
+} from '../lib/authSignOutSlot';
 import { hasConsumedProcessStart } from '../lib/processStart';
 import {
   enterAuthenticatedProduct,
@@ -78,12 +99,19 @@ import {
   clearAuthenticatedProcess,
   endGuestChosen,
   getSignedOutReason,
+  getSignedOutUserId,
   isGuestChosenInFlight,
   markAuthenticatedProcess,
   setSignedOutReason,
+  subscribeSignedOutReason,
   type SignedOutReason,
   wasAuthenticatedProcess,
 } from '../lib/signedOutReason';
+import {
+  localSignOutDecision,
+  shouldApplySignOutOutcome,
+  shouldClearLogoutReasonForIncomingSession,
+} from '../lib/signedOutBranchEntry';
 import { shouldIgnoreStaleAuthResult } from './authSessionGuard';
 import { supabase } from '../lib/supabase';
 import { appEnv } from '../config/env';
@@ -130,6 +158,9 @@ interface AuthContextValue {
   authLoading: boolean;
   authError: string | null;
   clearAuthError: () => void;
+  /** Survives media-hold remount after a failed current-device logout. */
+  logoutFailureNotice: string | null;
+  clearLogoutFailureNotice: () => void;
   /** Durable image-cache owner is established. No authenticated media before this. */
   mediaCacheReady: boolean;
   mediaCacheBlocked: boolean;
@@ -177,7 +208,7 @@ interface AuthContextValue {
   signIn: () => void;
   signOut: (
     kind?: SignOutKind,
-    options?: { expectedUserId?: string },
+    options?: { expectedUserId?: string; expectedSessionId?: string },
   ) => Promise<void>;
   signedOutReason: SignedOutReason;
   continueAsGuest: () => Promise<boolean>;
@@ -192,6 +223,7 @@ interface AuthContextValue {
   discardInterruptedRecovery: () => Promise<boolean>;
   completePasswordReset: (password: string) => Promise<
     | { status: 'signed-out' }
+    | { status: 'local-signed-out' }
     | { status: 'sign-out-failed' }
     | { status: 'rejected' }
   >;
@@ -208,6 +240,84 @@ function uncertainPasswordChange(): PasswordFlowError {
     'We could not confirm whether the password changed. Try the new password before trying again.',
     'network',
   );
+}
+
+const signOutBoundary = {
+  beginQueued: beginQueuedSignOutIfCurrent,
+  begin: beginSignOutTransaction,
+  fail: (id: number) => {
+    failSignOutTransaction(id);
+  },
+  clear: clearSignOutTransaction,
+  getActive: getActiveSignOutTransaction,
+  hasInflight: hasSignOutInflight,
+  inflightKey: signOutInflightKey,
+  localDecision: localSignOutDecision,
+};
+
+function raisePasswordFlow(
+  message: string,
+  code: 'unavailable' | 'identity',
+): never {
+  throw new PasswordFlowError(message, code);
+}
+
+async function settleEstablishedCredential(
+  session: {
+    user?: { id?: string };
+    access_token?: string;
+    refresh_token?: string;
+  } | null,
+  commit: () => void,
+): Promise<void> {
+  const userId = session?.user?.id;
+  const written =
+    userId && session?.access_token
+      ? ownedSession({
+          userId,
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+        })
+      : null;
+  await finishCredentialEstablish({
+    recoveryLocked: Boolean(loadRecoveryState()),
+    hasSessionUser: Boolean(userId),
+    written,
+    readLive: async () => readOwnedSession(),
+    signOutLocal: async () => {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (!error) return;
+      const still = await readOwnedSession();
+      if (written && sameOwnedSession(still, written)) throw error;
+    },
+    commit,
+  });
+  if (loadRecoveryState()) {
+    throw new PasswordFlowError(
+      'Password reset is in progress.',
+      'unavailable',
+    );
+  }
+}
+
+async function readOwnedSession(): Promise<
+  (OwnedSession & { email: string }) | null
+> {
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  const userId = session?.user?.id;
+  const accessToken = session?.access_token;
+  if (!userId || !accessToken) return null;
+  const owned = ownedSession({
+    userId,
+    accessToken,
+    refreshToken: session.refresh_token,
+  });
+  if (!owned) return null;
+  return {
+    ...owned,
+    email: normalizeRecoveryEmail(session.user.email ?? ''),
+  };
 }
 
 async function updatePassword(password: string): Promise<void> {
@@ -310,11 +420,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [logoutFailureNotice, setLogoutFailureNotice] = useState<string | null>(
+    null,
+  );
   const [accountSuspended, setAccountSuspended] = useState(false);
   const [recovery, setRecovery] = useState<RecoveryState | null>(null);
   const [recoveryRestart, setRecoveryRestart] = useState(false);
-  const [signedOutReason, setSignedOutReasonState] =
-    useState<SignedOutReason>('none');
+  const signedOutReason = useSyncExternalStore(
+    subscribeSignedOutReason,
+    getSignedOutReason,
+    getSignedOutReason,
+  );
   const appliedSignOutTxnId = useRef<number | null>(null);
   const [mediaCache, setMediaCache] = useState<{
     principal: MediaCacheOwner | null;
@@ -324,6 +440,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [mediaRetryTick, setMediaRetryTick] = useState(0);
   const mediaReconcileGen = useRef(0);
   const mediaPauseRef = useRef(false);
+  const mediaPauseOwnerRef = useRef<number | null>(null);
+  const recoveryCleanupSnapRef = useRef<RecoveryState | null>(null);
 
   // Owner follows the resolved Nest principal after hydrate, not TOKEN_REFRESHED
   // and not a stale in-flight hydrate. While authLoading, skip reconcile so we
@@ -422,6 +540,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   apiUserRef.current = apiUser;
 
   const clearAuthError = useCallback(() => setAuthError(null), []);
+  const clearLogoutFailureNotice = useCallback(
+    () => setLogoutFailureNotice(null),
+    [],
+  );
 
   const clearRecoveryLock = useCallback(() => {
     clearRecoveryState();
@@ -460,10 +582,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
-  const commitSignedOutReason = useCallback((next: SignedOutReason) => {
-    setSignedOutReason(next);
-    setSignedOutReasonState(next);
-  }, []);
+  const commitSignedOutReason = useCallback(
+    (next: SignedOutReason, userId?: string | null) => {
+      setSignedOutReason(next, userId);
+    },
+    [],
+  );
 
   const clearAuthenticatedState = useCallback(() => {
     invalidateReturnIntents();
@@ -483,6 +607,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applySignedOutOutcome = useCallback(
     (interpretation: ReturnType<typeof interpretSignedOut>) => {
       const txn = getActiveSignOutTransaction();
+      const liveUserId =
+        apiUserRef.current?.id ?? hydrateSessionRef.current?.user?.id ?? null;
+      if (
+        !shouldApplySignOutOutcome({
+          expectedUserId: txn?.expectedUserId,
+          liveUserId,
+        })
+      ) {
+        if (txn && mediaPauseOwnerRef.current === txn.id) {
+          mediaPauseOwnerRef.current = null;
+          mediaPauseRef.current = false;
+          setMediaCache((current) => ({
+            ...current,
+            ready: false,
+            blocked: false,
+          }));
+          setMediaRetryTick((tick) => tick + 1);
+        }
+        clearSignOutTransaction();
+        return;
+      }
       if (txn && appliedSignOutTxnId.current === txn.id && txn.status === 'completed') {
         return;
       }
@@ -490,17 +635,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeSignOutTransaction(txn.id);
         appliedSignOutTxnId.current = txn.id;
       }
-      commitSignedOutReason(interpretation.reason);
+      commitSignedOutReason(
+        interpretation.reason,
+        interpretation.reason === 'logout' || interpretation.reason === 'guestChosen'
+          ? (txn?.expectedUserId ?? liveUserId)
+          : null,
+      );
       clearAuthenticatedProcess();
       if (
         txn?.kind === 'recoveryAbort' ||
+        txn?.kind === 'sessionClearForRecovery'
+      ) {
+        const snap = recoveryCleanupSnapRef.current;
+        const current = loadRecoveryState();
+        const sameLock =
+          !!snap &&
+          !!current &&
+          current.email === snap.email &&
+          current.phase === snap.phase &&
+          current.userId === snap.userId;
+        if (sameLock) {
+          clearRecoveryState();
+          setRecovery(null);
+        }
+        recoveryCleanupSnapRef.current = null;
+      } else if (
         txn?.kind === 'recoveryComplete' ||
-        txn?.kind === 'sessionClearForRecovery' ||
         txn?.kind === 'identityMismatch'
       ) {
         clearRecoveryState();
         setRecovery(null);
       }
+      mediaPauseOwnerRef.current = null;
       mediaPauseRef.current = false;
       setMediaCache((current) => ({
         ...current,
@@ -509,6 +675,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }));
       setMediaRetryTick((tick) => tick + 1);
       clearAuthenticatedState();
+      bumpSessionGeneration();
       if (interpretation.apply) {
         leaveAuthenticatedProduct(routeFromSignedOutInterpretation(interpretation));
       }
@@ -520,11 +687,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(
     async (
       kind: SignOutKind = 'logout',
-      options?: { expectedUserId?: string },
+      options?: {
+        expectedUserId?: string;
+        generationAtCall?: number;
+        expectedSessionId?: string;
+      },
     ) => {
       const expectedUserId =
-        options?.expectedUserId ?? apiUserRef.current?.id;
-      const restoreMedia = () => {
+        options?.expectedUserId ??
+        (options?.expectedSessionId === undefined
+          ? (apiUserRef.current?.id ?? hydrateSessionRef.current?.user?.id)
+          : undefined);
+      const cleanupSnap =
+        kind === 'recoveryAbort' || kind === 'sessionClearForRecovery'
+          ? loadRecoveryState()
+          : null;
+      const generationAtCall =
+        options?.generationAtCall ?? getSessionGeneration();
+      const pauseMedia = (txnId: number) => {
+        mediaPauseOwnerRef.current = txnId;
+        mediaPauseRef.current = true;
+        setMediaCache((current) => ({
+          ...current,
+          ready: false,
+          blocked: false,
+        }));
+      };
+      const restoreMedia = (txnId: number) => {
+        if (mediaPauseOwnerRef.current !== txnId) return;
+        mediaPauseOwnerRef.current = null;
         mediaPauseRef.current = false;
         setMediaCache((current) => ({
           ...current,
@@ -533,82 +724,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }));
         setMediaRetryTick((tick) => tick + 1);
       };
-      const runCacheThenLocalSignOut = async (txnId: number) => {
-        invalidateAuthCallbacks();
-        setAuthError(null);
-        mediaPauseRef.current = true;
-        setMediaCache((current) => ({
-          ...current,
-          ready: false,
-          blocked: false,
-        }));
-        const marked = markMediaCacheClearPending();
-        if (!marked.ok) {
+      await joinOrStartSignOut(signOutInflightKey(kind, expectedUserId), () =>
+        enqueueAuthMutation(async () => {
+          recoveryCleanupSnapRef.current = cleanupSnap;
           try {
-            await clearMediaImageCache();
-          } catch {
-            failSignOutTransaction(txnId);
-            restoreMedia();
-            throw new Error(
-              'Could not log out. You are still signed in on this device.',
-            );
-          }
-        }
-        let signOutError = false;
-        try {
-          const { error } = await supabase.auth.signOut({ scope: 'local' });
-          if (error) signOutError = true;
-        } catch {
-          signOutError = true;
-        }
-        if (signOutError) {
-          failSignOutTransaction(txnId);
-          restoreMedia();
-          throw new Error(
-            'Could not log out. You are still signed in on this device.',
-          );
-        }
-        const active = getActiveSignOutTransaction();
-        if (!active || active.status === 'completed') return;
-        applySignedOutOutcome(
-          interpretSignedOut({
-            hadAuthenticatedProduct: wasAuthenticatedProcess(),
-            recoveryLocked: Boolean(loadRecoveryState()),
-            processStarted: hasConsumedProcessStart(),
-          }),
-        );
-      };
-
-      if (kind === 'identityMismatch') {
-        await enqueueAuthMutation(async () => {
-          const { data: live } = await supabase.auth.getSession();
-          const liveUserId = live.session?.user?.id;
-          if (!expectedUserId || !liveUserId || liveUserId !== expectedUserId) {
-            return;
-          }
-          const begun = beginSignOutTransaction({
+          await runSignOutAttempt({
             kind,
             expectedUserId,
+            expectedSessionId: options?.expectedSessionId,
+            generationAtCall,
+            readLiveUserId: async () => {
+              const { data: live, error } = await supabase.auth.getSession();
+              // An expired token can make getSession return no session plus an
+              // error while storage still holds the refresh token. That is not
+              // "already signed out".
+              if (error) throw error;
+              return live.session?.user?.id ?? null;
+            },
+            readLiveSessionId: async () => {
+              const live = await readOwnedSession();
+              return live?.sessionId ?? null;
+            },
+            signOutLocal: async () => {
+              try {
+                const { error } = await supabase.auth.signOut({ scope: 'local' });
+                return Boolean(error);
+              } catch {
+                return true;
+              }
+            },
+            markCachePending: markMediaCacheClearPending,
+            clearCache: clearMediaImageCache,
+            onInvalidate: () => {
+              invalidateAuthCallbacks();
+              setAuthError(null);
+            },
+            onPause: pauseMedia,
+            onRestore: restoreMedia,
+            onFailureNotice: (message) => {
+              setLogoutFailureNotice(message);
+            },
+            boundary: signOutBoundary,
+            applyOutcome: (txnId) => {
+              const active = getActiveSignOutTransaction();
+              if (!active || active.id !== txnId || active.status === 'completed') {
+                return;
+              }
+              applySignedOutOutcome(
+                interpretSignedOut({
+                  hadAuthenticatedProduct: wasAuthenticatedProcess(),
+                  recoveryLocked: Boolean(loadRecoveryState()),
+                  processStarted: hasConsumedProcessStart(),
+                }),
+              );
+            },
           });
-          if (begun.status !== 'started') return;
-          await runCacheThenLocalSignOut(begun.txn.id);
-        });
-        return;
-      }
-
-      const begun = beginSignOutTransaction({
-        kind,
-        expectedUserId,
-      });
-      if (begun.status === 'conflict') {
-        throw new Error(
-          'Could not log out. You are still signed in on this device.',
-        );
-      }
-      if (begun.status === 'duplicate') {
-        return;
-      }
-      await runCacheThenLocalSignOut(begun.txn.id);
+          } finally {
+            recoveryCleanupSnapRef.current = null;
+          }
+        }),
+      );
     },
     [applySignedOutOutcome],
   );
@@ -620,19 +795,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     }
     setRecovery(existing);
+    const live = await readOwnedSession();
     try {
-      await signOut('recoveryAbort');
+      await signOut('recoveryAbort', {
+        expectedUserId: existing.userId ?? live?.userId,
+        expectedSessionId: live?.sessionId ?? '',
+      });
+      const current = loadRecoveryState();
+      if (
+        current &&
+        current.email === existing.email &&
+        current.phase === existing.phase &&
+        current.userId === existing.userId
+      ) {
+        clearRecoveryState();
+        setRecovery(null);
+      }
       return true;
     } catch {
       return false;
     }
   }, [signOut]);
 
-  const applyApiUser = useCallback((user: ApiUser) => {
-    if (getActiveSignOutTransaction()?.status === 'started') return;
-    if (isGuestChosenInFlight()) return;
-    if (shouldIgnoreAuthEventForCallbackCommit(user.email)) {
-      return;
+  const applyApiUser = useCallback((user: ApiUser): boolean => {
+    const txn = getActiveSignOutTransaction();
+    if (
+      !applyApiUserAllowed({
+        txnStatus: txn?.status ?? null,
+        expectedUserId: txn?.expectedUserId,
+        incomingUserId: user.id,
+        guestChosenInFlight: isGuestChosenInFlight(),
+        ignoreCallbackCommit: shouldIgnoreAuthEventForCallbackCommit(
+          user.email,
+        ),
+      })
+    ) {
+      return false;
     }
     accountSuspendedRef.current = false;
     setAccountSuspended(false);
@@ -645,6 +843,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user.emailVerified && !isAuthenticatedProductActive()) {
       enterAuthenticatedProduct();
     }
+    return true;
   }, [commitSignedOutReason]);
 
   const markAccountSuspended = useCallback(() => {
@@ -796,6 +995,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hydrateOverridesRef.current,
         overrides,
       );
+      if (
+        shouldClearLogoutReasonForIncomingSession({
+          reason: getSignedOutReason(),
+          signedOutUserId: getSignedOutUserId(),
+          incomingUserId: active.user.id,
+          establishment: 'restore',
+        })
+      ) {
+        commitSignedOutReason('none');
+      }
       setSession(active);
 
       const runOnce = async (
@@ -805,6 +1014,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (loadRecoveryState()) return null;
         const accessToken = sessionSnap.access_token;
         const epochAtStart = authEpoch.current;
+        const generationAtStart = getSessionGeneration();
         const suspensionAtStart = suspensionEpoch.current;
         const isStale = (liveToken: string | null) =>
           shouldIgnoreStaleAuthResult({
@@ -852,7 +1062,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (shouldIgnoreAuthEventForCallbackCommit(user.email ?? sessionSnap.user?.email)) {
             return null;
           }
-          applyApiUser(user);
+          if (!applyApiUser(user)) {
+            return null;
+          }
           if (isEmailConfirmed(sessionSnap) && user.emailVerified) {
             clearPendingSignup();
           }
@@ -888,8 +1100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return null;
             }
             try {
-              await signOut('hydrate401');
+              await signOut('hydrate401', {
+                generationAtCall: generationAtStart,
+              });
             } catch {
+              if (
+                !shouldApplyHydrate401Expiry(
+                  generationAtStart,
+                  getSessionGeneration(),
+                )
+              ) {
+                return null;
+              }
               commitSignedOutReason('expired');
               clearAuthenticatedState();
               leaveAuthenticatedProduct({
@@ -1025,13 +1247,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (event === 'SIGNED_IN' && next) {
-        if (getActiveSignOutTransaction()?.status === 'started') {
-          return;
-        }
-        if (isGuestChosenInFlight()) {
-          return;
-        }
-        if (shouldIgnoreAuthEventForCallbackCommit(next.user?.email)) {
+        const txn = getActiveSignOutTransaction();
+        if (
+          !applyApiUserAllowed({
+            txnStatus: txn?.status ?? null,
+            expectedUserId: txn?.expectedUserId,
+            incomingUserId: next.user.id,
+            guestChosenInFlight: isGuestChosenInFlight(),
+            ignoreCallbackCommit: shouldIgnoreAuthEventForCallbackCommit(
+              next.user?.email,
+            ),
+          })
+        ) {
           return;
         }
         // Change-password reauth emits SIGNED_IN for the current account.
@@ -1046,6 +1273,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           return;
         }
+        commitCredentialSession({
+          reason: getSignedOutReason(),
+          setReasonNone: () => commitSignedOutReason('none'),
+        });
         void hydrateBackendUser(next);
       }
     });
@@ -1110,6 +1341,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accountType: AccountType;
     }): Promise<RegisterEmailResult> => {
       setAuthError(null);
+      if (loadRecoveryState()) {
+        throw new PasswordFlowError(
+          'Password reset is in progress.',
+          'unavailable',
+        );
+      }
       if (!isPasswordValid(input.password)) {
         const message =
           'Password must be at least 8 characters and include upper, lower, number, and special character.';
@@ -1129,21 +1366,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       // OTP-first: do not set emailRedirectTo — confirmation links are fallback only.
-      const { data, error } = await supabase.auth.signUp({
-        email: basics.email,
-        password: input.password,
-        options: {
-          data: {
-            display_name: basics.name,
-            first_name: basics.firstName || undefined,
-            last_name: basics.lastName || undefined,
-            city: basics.city,
-            country_code: input.countryCode,
-            location_code: input.locationCode,
-            account_type: input.accountType,
-            phone_e164: input.phoneE164,
+      const { data, error } = await enqueueAuthMutation(async () => {
+        if (loadRecoveryState()) {
+          throw new PasswordFlowError(
+            'Password reset is in progress.',
+            'unavailable',
+          );
+        }
+        const result = await supabase.auth.signUp({
+          email: basics.email,
+          password: input.password,
+          options: {
+            data: {
+              display_name: basics.name,
+              first_name: basics.firstName || undefined,
+              last_name: basics.lastName || undefined,
+              city: basics.city,
+              country_code: input.countryCode,
+              location_code: input.locationCode,
+              account_type: input.accountType,
+              phone_e164: input.phoneE164,
+            },
           },
-        },
+        });
+        await settleEstablishedCredential(result.data.session, () => {
+          commitCredentialSession({
+            reason: getSignedOutReason(),
+            setReasonNone: () => commitSignedOutReason('none'),
+          });
+        });
+        return result;
       });
 
       if (error) {
@@ -1208,6 +1460,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               'This account is suspended.',
             );
           }
+          if (getActiveSignOutTransaction()?.status === 'started') {
+            const message = 'Sign-in was interrupted. Try again.';
+            setAuthError(message);
+            throw new AuthFailure('superseded', message);
+          }
           const detail =
             lastHydrateErrorRef.current || 'Nest /users/me or bootstrap failed';
           const message = `Signed up but failed to load profile: ${detail}`;
@@ -1246,12 +1503,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifySignupOtp = useCallback(
     async (email: string, token: string) => {
       setAuthError(null);
+      if (loadRecoveryState()) {
+        throw new PasswordFlowError(
+          'Password reset is in progress.',
+          'unavailable',
+        );
+      }
       // Installed @supabase/supabase-js: EmailOtpType includes 'email' and deprecated 'signup'.
       // Prefer 'email' for signup OTP verification (current SDK guidance).
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: token.trim(),
-        type: 'email',
+      const { data, error } = await enqueueAuthMutation(async () => {
+        if (loadRecoveryState()) {
+          throw new PasswordFlowError(
+            'Password reset is in progress.',
+            'unavailable',
+          );
+        }
+        const result = await supabase.auth.verifyOtp({
+          email: email.trim(),
+          token: token.trim(),
+          type: 'email',
+        });
+        await settleEstablishedCredential(result.data.session, () => {
+          commitCredentialSession({
+            reason: getSignedOutReason(),
+            setReasonNone: () => commitSignedOutReason('none'),
+          });
+        });
+        return result;
       });
       if (error) {
         const message = mapAuthError(error);
@@ -1271,6 +1549,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             'account_suspended',
             'This account is suspended.',
           );
+        }
+        if (getActiveSignOutTransaction()?.status === 'started') {
+          const message = 'Sign-in was interrupted. Try again.';
+          setAuthError(message);
+          throw new AuthFailure('superseded', message);
         }
         const detail =
           lastHydrateErrorRef.current || 'Nest /users/me or bootstrap failed';
@@ -1418,7 +1701,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return user;
       }
     }
-    applyApiUser(user);
+    if (!applyApiUser(user)) {
+      if (getActiveSignOutTransaction()?.status === 'started') {
+        throw new AuthFailure(
+          'superseded',
+          'Sign-in was interrupted. Try again.',
+        );
+      }
+      return user;
+    }
     return user;
   }, [applyApiUser]);
 
@@ -1433,12 +1724,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'unavailable',
         );
       }
-      const { data, error } = await enqueueAuthMutation(() =>
-        supabase.auth.signInWithPassword({
+      const { data, error } = await enqueueAuthMutation(async () => {
+        if (loadRecoveryState()) {
+          throw new PasswordFlowError(
+            'Password reset is in progress.',
+            'unavailable',
+          );
+        }
+        const result = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
-        }),
-      );
+        });
+        await settleEstablishedCredential(result.data.session, () => {
+          commitCredentialSession({
+            reason: getSignedOutReason(),
+            setReasonNone: () => commitSignedOutReason('none'),
+          });
+        });
+        return result;
+      });
       if (error) {
         const lower = error.message.toLowerCase();
         if (
@@ -1474,6 +1778,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             'account_suspended',
             'This account is suspended.',
           );
+        }
+        if (getActiveSignOutTransaction()?.status === 'started') {
+          const message = 'Sign-in was interrupted. Try again.';
+          setAuthError(message);
+          throw new AuthFailure('superseded', message);
         }
         const detail =
           lastHydrateErrorRef.current ||
@@ -1514,7 +1823,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isCallbackSessionCommitInFlight()) return false;
       const second = await supabase.auth.getSession();
       if (second.data.session) return false;
-      commitSignedOutReason('guestChosen');
+      commitSignedOutReason('guestChosen', null);
       clearAuthenticatedProcess();
       invalidateReturnIntents();
       invalidateAuthCallbacks();
@@ -1545,192 +1854,162 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'unavailable',
         );
       }
-      const { data } = await supabase.auth.getSession();
-      const sessionUser = data.session?.user;
-      const email = normalizeRecoveryEmail(sessionUser?.email ?? '');
-      if (!sessionUser) {
-        try {
-          await signOut('recoveryAbort');
-        } catch {
-          return { status: 'rejected' as const };
-        }
-        return { status: 'rejected' as const };
-      }
-      if (
-        sessionUser.id !== recoveryLock.userId ||
-        email !== recoveryLock.email
-      ) {
-        try {
-          await signOut('identityMismatch', {
-            expectedUserId: sessionUser.id,
-          });
-        } catch {
-          return { status: 'rejected' as const };
-        }
-        return { status: 'rejected' as const };
-      }
-      const { error: updateError } = await (async () => {
-        try {
-          await updatePassword(password);
-          return { error: null };
-        } catch (err) {
-          return { error: err };
-        }
-      })();
-      if (updateError) throw updateError;
-      const begun = beginSignOutTransaction({
-        kind: 'recoveryComplete',
-        expectedUserId: recoveryLock.userId,
-      });
-      if (begun.status === 'conflict') {
-        return { status: 'sign-out-failed' as const };
-      }
-      if (begun.status === 'duplicate') {
-        return { status: 'signed-out' as const };
-      }
-      invalidateAuthCallbacks();
-      const marked = markMediaCacheClearPending();
-      if (!marked.ok) {
-        try {
-          await clearMediaImageCache();
-        } catch {
-          failSignOutTransaction(begun.txn.id);
-          return { status: 'sign-out-failed' as const };
-        }
-      }
-      try {
-        const globalOut = await supabase.auth.signOut({ scope: 'global' });
-        if (globalOut.error) {
-          const localOut = await supabase.auth.signOut({ scope: 'local' });
-          if (localOut.error) {
-            failSignOutTransaction(begun.txn.id);
-            return { status: 'sign-out-failed' as const };
-          }
-        }
-      } catch {
-        try {
-          const localOut = await supabase.auth.signOut({ scope: 'local' });
-          if (localOut.error) {
-            failSignOutTransaction(begun.txn.id);
-            return { status: 'sign-out-failed' as const };
-          }
-        } catch {
-          failSignOutTransaction(begun.txn.id);
-          return { status: 'sign-out-failed' as const };
-        }
-      }
-      clearRecoveryState();
-      setRecovery(null);
-      if (getActiveSignOutTransaction()?.status === 'started') {
-        applySignedOutOutcome(
-          interpretSignedOut({
-            hadAuthenticatedProduct: wasAuthenticatedProcess(),
-            recoveryLocked: Boolean(loadRecoveryState()),
-            processStarted: hasConsumedProcessStart(),
-          }),
-        );
-      }
-      return { status: 'signed-out' as const };
+      const status = await joinOrStartSignOut(
+        signOutInflightKey('recoveryComplete', recoveryLock.userId),
+        () =>
+          enqueueAuthMutation(() =>
+            runRecoveryCompletion({
+              readLock: () => {
+                const lock = loadRecoveryState();
+                if (
+                  !lock ||
+                  lock.phase !== 'recovery-session' ||
+                  !lock.userId
+                ) {
+                  return null;
+                }
+                return {
+                  email: lock.email,
+                  userId: lock.userId,
+                  phase: 'recovery-session',
+                };
+              },
+              readLive: readOwnedSession,
+              updatePassword: () => updatePassword(password),
+              signOutGlobal: async () => {
+                try {
+                  const result = await supabase.auth.signOut({ scope: 'global' });
+                  return Boolean(result.error);
+                } catch {
+                  return true;
+                }
+              },
+              signOutLocal: async () => {
+                try {
+                  const result = await supabase.auth.signOut({ scope: 'local' });
+                  return Boolean(result.error);
+                } catch {
+                  return true;
+                }
+              },
+              prepareCache: async () => {
+                invalidateAuthCallbacks();
+                const marked = markMediaCacheClearPending();
+                if (marked.ok) return true;
+                try {
+                  await clearMediaImageCache();
+                  return true;
+                } catch {
+                  return false;
+                }
+              },
+              clearLockIfSame: (lock) => {
+                const current = loadRecoveryState();
+                if (
+                  current?.phase === 'recovery-session' &&
+                  current.userId === lock.userId &&
+                  current.email === lock.email
+                ) {
+                  clearRecoveryState();
+                  setRecovery(null);
+                }
+              },
+              begin: beginSignOutTransaction,
+              fail: (id) => {
+                failSignOutTransaction(id);
+              },
+              clear: clearSignOutTransaction,
+              getActive: getActiveSignOutTransaction,
+              hasInflight: hasSignOutInflight,
+              inflightKey: signOutInflightKey,
+              onSignedOut: () => {
+                if (getActiveSignOutTransaction()?.status !== 'started') return;
+                applySignedOutOutcome(
+                  interpretSignedOut({
+                    hadAuthenticatedProduct: wasAuthenticatedProcess(),
+                    recoveryLocked: Boolean(loadRecoveryState()),
+                    processStarted: hasConsumedProcessStart(),
+                  }),
+                );
+              },
+            }),
+          ),
+      );
+      return { status };
     },
-    [applySignedOutOutcome, signOut],
+    [applySignedOutOutcome],
   );
 
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string) => {
-      if (loadRecoveryState()) {
-        throw new PasswordFlowError(
-          'Finish or cancel password reset before changing your password.',
-          'unavailable',
-        );
-      }
       if (!isPasswordValid(newPassword)) {
         throw new PasswordFlowError(
           'Password must be at least 8 characters and include upper, lower, number, and special character.',
           'validation',
         );
       }
-      const { data: before } = await supabase.auth.getSession();
-      const original = before.session?.user;
-      const email = normalizeRecoveryEmail(original?.email ?? '');
-      if (!original || !email) {
-        throw new PasswordFlowError(
-          'Sign in again before changing your password.',
-          'unavailable',
-        );
-      }
-      suppressSameUserHydrateRef.current = true;
-      let data: Awaited<
-        ReturnType<typeof supabase.auth.signInWithPassword>
-      >['data'];
-      let error: Awaited<
-        ReturnType<typeof supabase.auth.signInWithPassword>
-      >['error'];
-      try {
-        const signedIn = await supabase.auth.signInWithPassword({
-          email,
-          password: currentPassword,
-        });
-        data = signedIn.data;
-        error = signedIn.error;
-      } finally {
-        suppressSameUserHydrateRef.current = false;
-      }
-      if (error) {
-        const lower = error.message.toLowerCase();
-        if (
-          lower.includes('invalid login') ||
-          lower.includes('invalid credentials')
-        ) {
-          throw new PasswordFlowError(
-            'Current password is incorrect.',
-            'current-password',
-          );
-        }
-        if (
-          lower.includes('network') ||
-          lower.includes('failed to fetch') ||
-          lower.includes('network request failed')
-        ) {
-          throw new PasswordFlowError(
-            'Network error. Check your connection and try again.',
-            'network',
-          );
-        }
-        throw new PasswordFlowError(mapAuthError(error), 'current-password');
-      }
-      const signedInId = data.user?.id;
-      const signedInEmail = normalizeRecoveryEmail(data.user?.email ?? '');
-      const { data: afterSignIn } = await supabase.auth.getSession();
-      const currentId = afterSignIn.session?.user.id;
-      const currentEmail = normalizeRecoveryEmail(
-        afterSignIn.session?.user.email ?? '',
-      );
-      if (
-        !signedInId ||
-        signedInId !== original.id ||
-        signedInEmail !== email ||
-        currentId !== original.id ||
-        currentEmail !== email
-      ) {
-        try {
-          await signOut('identityMismatch');
-        } catch {
-          // Stay on the mismatch path; Sign In is still the destination.
-        }
-        throw new PasswordFlowError(
-          'Could not confirm this account. Sign in again.',
-          'identity',
-        );
-      }
-      await updatePassword(newPassword);
-      try {
-        const others = await supabase.auth.signOut({ scope: 'others' });
-        return { otherSessionsRevoked: !others.error };
-      } catch {
-        return { otherSessionsRevoked: false };
-      }
+      return runPasswordChange({
+        recoveryLocked: () => Boolean(loadRecoveryState()),
+        readLive: readOwnedSession,
+        signIn: async (email) => {
+          const signedIn = await supabase.auth.signInWithPassword({
+            email,
+            password: currentPassword,
+          });
+          if (signedIn.error) {
+            const lower = signedIn.error.message.toLowerCase();
+            if (
+              lower.includes('invalid login') ||
+              lower.includes('invalid credentials')
+            ) {
+              throw new PasswordFlowError(
+                'Current password is incorrect.',
+                'current-password',
+              );
+            }
+            if (
+              lower.includes('network') ||
+              lower.includes('failed to fetch') ||
+              lower.includes('network request failed')
+            ) {
+              throw new PasswordFlowError(
+                'Network error. Check your connection and try again.',
+                'network',
+              );
+            }
+            throw new PasswordFlowError(
+              mapAuthError(signedIn.error),
+              'current-password',
+            );
+          }
+          const session = signedIn.data.session;
+          if (!session?.user?.id || !session.access_token) return null;
+          return ownedSession({
+            userId: session.user.id,
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
+          });
+        },
+        updatePassword: () => updatePassword(newPassword),
+        signOutOthers: async () => {
+          try {
+            const others = await supabase.auth.signOut({ scope: 'others' });
+            return !others.error;
+          } catch {
+            return false;
+          }
+        },
+        signOutLocal: async () => {
+          await supabase.auth.signOut({ scope: 'local' });
+        },
+        suppressHydrate: (on) => {
+          suppressSameUserHydrateRef.current = on;
+        },
+        enqueue: enqueueAuthMutation,
+        raise: raisePasswordFlow,
+      });
     },
-    [signOut],
+    [],
   );
 
   const value = useMemo<AuthContextValue>(
@@ -1747,6 +2026,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authLoading,
       authError,
       clearAuthError,
+      logoutFailureNotice,
+      clearLogoutFailureNotice,
       mediaCacheReady,
       mediaCacheBlocked,
       retryMediaCache,
@@ -1785,11 +2066,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpBasics,
       authLoading,
       authError,
+      logoutFailureNotice,
       mediaCacheReady,
       mediaCacheBlocked,
       retryMediaCache,
       accountSuspended,
       clearAuthError,
+      clearLogoutFailureNotice,
       recheckAccountStatus,
       registerWithEmail,
       verifySignupOtp,

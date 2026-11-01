@@ -6,7 +6,8 @@ export type AuthFailureKind =
   | 'email_otp'
   | 'phone_otp'
   | 'backend_hydration'
-  | 'account_suspended';
+  | 'account_suspended'
+  | 'superseded';
 
 export class AuthFailure extends Error {
   readonly kind: AuthFailureKind;
@@ -35,6 +36,9 @@ export function authFailureTitle(error: unknown): string {
     }
     if (error.kind === 'backend_hydration') {
       return 'Signed in, but profile failed';
+    }
+    if (error.kind === 'superseded') {
+      return 'Sign-in interrupted';
     }
     if (error.kind === 'phone_otp') {
       return 'Phone verification failed';

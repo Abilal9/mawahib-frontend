@@ -11,6 +11,7 @@ import {
   clearAuthenticatedProcess,
   endGuestChosen,
   getSignedOutReason,
+  getSignedOutUserId,
   isGuestChosenInFlight,
   markAuthenticatedProcess,
   resetSignedOutReasonForTests,
@@ -27,8 +28,9 @@ assert.equal(getSignedOutReason(), 'none');
 assert.equal(wasAuthenticatedProcess(), false);
 assert.equal(signedOutDestinationName({}), 'GuestTabs');
 
-setSignedOutReason('logout');
+setSignedOutReason('logout', '11111111-1111-4111-8111-111111111111');
 assert.equal(signedOutDestinationName({}), 'GuestTabs');
+assert.equal(getSignedOutUserId(), '11111111-1111-4111-8111-111111111111');
 
 setSignedOutReason('guestChosen');
 assert.equal(signedOutDestinationName({}), 'GuestTabs');
@@ -60,7 +62,7 @@ assert.match(reason, /'none' \| 'logout' \| 'expired' \| 'guestChosen'/);
 
 const auth = read('src/context/AuthContext.tsx');
 assert.match(auth, /commitSignedOutReason\('expired'\)|reason === 'expired'|hydrate401/);
-assert.match(auth, /commitSignedOutReason\('guestChosen'\)/);
+assert.match(auth, /commitSignedOutReason\('guestChosen',\s*null\)/);
 assert.equal(auth.includes("if (!user) guest"), false);
 assert.equal(auth.includes('if (!apiUser) guest'), false);
 

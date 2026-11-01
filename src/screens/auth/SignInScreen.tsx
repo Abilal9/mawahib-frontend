@@ -25,6 +25,12 @@ import { applyPostAuthDestination } from '../../lib/postAuthNavigation';
 import { isAccountSuspendedFailure, isAuthFailure } from '../../lib/authFailure';
 import { getSignedOutReason } from '../../lib/signedOutReason';
 import { invalidateReturnIntents } from '../../lib/returnIntent';
+import { shouldInvalidateIntentOnAuthRemove } from '../../lib/authIntentCancellation';
+import {
+  canDismissOptionalAuth,
+  shouldPreventOptionalAuthRemove,
+} from '../../lib/signedOutBranchEntry';
+import { loadRecoveryState } from '../../lib/recoveryState';
 
 function isRateLimitError(error: unknown): boolean {
   const message =
@@ -80,6 +86,16 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
 
   const sessionExpired =
     signedOutReason === 'expired' || route.params?.notice === 'session-expired';
+  const navState = navigation.getState();
+  const canDismiss =
+    !loading &&
+    canDismissOptionalAuth({
+      recoveryLocked: Boolean(recovery || loadRecoveryState()),
+      reason: signedOutReason,
+      routes: navState?.routes ?? [],
+      index: navState?.index ?? 0,
+      hasLiveUnappliedSession: Boolean(session) && !apiUser,
+    });
 
   useEffect(() => {
     if (route.params?.notice !== 'password-updated') return;
@@ -88,15 +104,47 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
   }, [navigation, route.params?.notice]);
 
   useEffect(() => {
+    navigation.setOptions({ gestureEnabled: canDismiss });
+  }, [navigation, canDismiss]);
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
-      if (event.data.action.type !== 'GO_BACK' && event.data.action.type !== 'POP') {
+      const action = event.data.action as {
+        type: string;
+        payload?: { count?: number };
+      };
+      if (
+        action.type !== 'GO_BACK' &&
+        action.type !== 'POP' &&
+        action.type !== 'POP_TO_TOP'
+      ) {
         return;
       }
-      if (getSignedOutReason() === 'expired') return;
-      invalidateReturnIntents();
+      if (
+        shouldPreventOptionalAuthRemove({
+          loading,
+          recoveryLocked: Boolean(recovery || loadRecoveryState()),
+          reason: getSignedOutReason(),
+          hasLiveUnappliedSession: Boolean(session) && !apiUser,
+        })
+      ) {
+        event.preventDefault();
+        return;
+      }
+      const state = navigation.getState();
+      if (
+        shouldInvalidateIntentOnAuthRemove({
+          actionType: action.type,
+          routes: state?.routes ?? [],
+          index: state?.index ?? 0,
+          count: action.payload?.count,
+        })
+      ) {
+        invalidateReturnIntents();
+      }
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, loading, recovery, session, apiUser]);
 
   const handleDiscardRecovery = async () => {
     setDiscarding(true);
@@ -225,7 +273,9 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.fixedHeader}>
-          <AuthBrandHeader />
+          <AuthBrandHeader
+            onBack={canDismiss ? () => navigation.goBack() : undefined}
+          />
         </View>
         <View style={styles.content}>
           <Text style={styles.title}>Log In</Text>

@@ -44,13 +44,18 @@ const TAB_ICONS: Record<
   AccountTab: { active: 'person', inactive: 'person-outline' },
 };
 
+type GatedTabName = 'MessagesTab' | 'JobsTab';
+
 type CustomTabBarProps = BottomTabBarProps & {
   /** Guest tabs pass false so unread providers are not required. */
   showUnreadIndicators?: boolean;
+  /** Guest Messages/Jobs: open the auth gate without changing the selected tab. */
+  onGatedTabPress?: (name: GatedTabName) => void;
 };
 
 export default function CustomTabBar({
   showUnreadIndicators = true,
+  onGatedTabPress,
   ...props
 }: CustomTabBarProps) {
   if (!showUnreadIndicators) {
@@ -59,6 +64,7 @@ export default function CustomTabBar({
         {...props}
         showMessagesDot={false}
         showJobsDot={false}
+        onGatedTabPress={onGatedTabPress}
       />
     );
   }
@@ -83,9 +89,11 @@ function TabBarBody({
   navigation,
   showMessagesDot,
   showJobsDot,
+  onGatedTabPress,
 }: BottomTabBarProps & {
   showMessagesDot: boolean;
   showJobsDot: boolean;
+  onGatedTabPress?: (name: GatedTabName) => void;
 }) {
   const insets = useSafeAreaInsets();
   const { isOpen: isCreateMenuOpen, toggle: toggleCreateMenu, close: closeCreateMenu } =
@@ -115,6 +123,14 @@ function TabBarBody({
             const onPress = () => {
               if (isCreate) {
                 toggleCreateMenu();
+                return;
+              }
+
+              if (
+                onGatedTabPress &&
+                (route.name === 'MessagesTab' || route.name === 'JobsTab')
+              ) {
+                onGatedTabPress(route.name);
                 return;
               }
 

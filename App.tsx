@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { Alert, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -26,6 +26,17 @@ SplashScreen.preventAutoHideAsync();
  * - Overlay sits beside NavigationContainer and never unmounts it.
  * - Private providers mount only in the authenticated product tree.
  */
+
+function LogoutFailureNotice() {
+  const { logoutFailureNotice, clearLogoutFailureNotice } = useAuth();
+  useEffect(() => {
+    if (!logoutFailureNotice) return;
+    Alert.alert('Still signed in', logoutFailureNotice, [
+      { text: 'OK', onPress: clearLogoutFailureNotice },
+    ]);
+  }, [logoutFailureNotice, clearLogoutFailureNotice]);
+  return null;
+}
 
 function AppProviders() {
   const [fontsLoaded, fontError] = useFonts({
@@ -55,6 +66,7 @@ function AppProviders() {
 
   return (
     <View style={{ flex: 1 }}>
+      <LogoutFailureNotice />
       <NavigationContainer ref={navigationRef}>
         <StatusBar style="dark" />
         <AuthDeepLinkListener />

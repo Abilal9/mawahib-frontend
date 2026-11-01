@@ -66,26 +66,46 @@ assert.match(
   /if \(loadRecoveryState\(\)\) \{\s*const discarded = await discardInterruptedRecovery\(\);/,
 );
 
+const mutation = read('src/lib/authSessionMutation.ts');
+const recoveryRun = between(
+  mutation,
+  'export async function runRecoveryCompletion',
+  'export async function runPasswordChange',
+);
+assert.ok(
+  recoveryRun.indexOf('live.userId !== lock.userId') <
+    recoveryRun.indexOf('updatePassword()'),
+);
+assert.ok(
+  recoveryRun.indexOf('signOutGlobal()') <
+    recoveryRun.indexOf('clearLockIfSame(lock)'),
+);
+assert.match(recoveryRun, /'sign-out-failed'/);
 const resetFn = between(auth, 'const completePasswordReset', 'const changePassword');
+assert.match(resetFn, /runRecoveryCompletion/);
+assert.match(resetFn, /enqueueAuthMutation/);
 assert.ok(
-  resetFn.indexOf('sessionUser.id !== recoveryLock.userId') <
-    resetFn.indexOf('updatePassword('),
-);
-assert.ok(
-  resetFn.indexOf("scope: 'global'") < resetFn.lastIndexOf('clearRecoveryState()'),
-);
-assert.ok(
-  resetFn.indexOf("status: 'sign-out-failed'") <
-    resetFn.lastIndexOf('clearRecoveryState()'),
+  resetFn.indexOf("scope: 'global'") < resetFn.indexOf('clearRecoveryState()'),
 );
 
+const passwordRun = between(
+  mutation,
+  'export async function runPasswordChange',
+  'function refuseUserFacing',
+);
+assert.ok(
+  passwordRun.indexOf('input.enqueue') <
+    passwordRun.indexOf('input.signIn(original.email)'),
+);
+assert.ok(
+  passwordRun.indexOf('sameOwnedSession(written, live)') <
+    passwordRun.indexOf('updatePassword()'),
+);
+assert.ok(passwordRun.indexOf('updatePassword()') < passwordRun.indexOf('signOutOthers()'));
 const changeFn = between(auth, 'const changePassword', 'const value = useMemo');
 assert.ok(changeFn.indexOf('signInWithPassword') < changeFn.indexOf('updatePassword('));
-assert.ok(
-  changeFn.indexOf('currentId !== original.id') <
-    changeFn.indexOf('updatePassword('),
-);
 assert.ok(changeFn.indexOf('updatePassword(') < changeFn.indexOf("scope: 'others'"));
+assert.match(changeFn, /runPasswordChange/);
 assert.match(changeFn, /updatePassword\(newPassword\)/);
 
 const verifySignup = between(auth, 'const verifySignupOtp', 'const sendPhoneOtp');

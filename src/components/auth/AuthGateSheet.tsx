@@ -16,6 +16,8 @@ const ACTION_COPY: Record<ReturnIntentAction, string> = {
   create: 'Create a post, story, or job after you sign in.',
   review: 'Write a review after you sign in.',
   private: 'Continue after you sign in.',
+  messages: 'Sign in to open your messages. Browsing public profiles stays available.',
+  jobs: 'Sign in to manage your work and applications. Public job listings stay on Home and Explore.',
 };
 
 export default function AuthGateSheet() {

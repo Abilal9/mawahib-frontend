@@ -81,7 +81,8 @@ export default function ChangePasswordScreen({
             ? 'Password status unknown'
             : 'Could not change password';
       Alert.alert(title, message);
-      // Identity mismatch already requested the identityMismatch transaction.
+      // A mismatched reauthentication is removed only when it is still the
+      // session this attempt stored. A newer session is left in place.
     } finally {
       saveRef.current = false;
       setSaving(false);

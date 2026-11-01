@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '../../theme';
+import GuestAccountEntry from './GuestAccountEntry';
 
 const LOGO_LAYOUT = 56;
 const LOGO_DRAW = 112;
@@ -26,7 +27,9 @@ export default function GuestAppHeader() {
             contentFit="contain"
           />
         </View>
-        <View style={styles.sideSlot} />
+        <View style={[styles.sideSlot, styles.rightSlot]}>
+          <GuestAccountEntry />
+        </View>
       </View>
     </View>
   );
@@ -45,6 +48,10 @@ const styles = StyleSheet.create({
   sideSlot: {
     flex: 1,
     height: SIDE_ICON_SIZE,
+  },
+  rightSlot: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   centerSlot: {
     width: LOGO_LAYOUT,

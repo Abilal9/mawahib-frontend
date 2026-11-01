@@ -34,7 +34,7 @@ export type MainTabParamList = {
   JobsTab: JobsTabLanding | undefined;
 };
 
-/** Guest bottom tabs: Home / Explore / Create / Account. No Messages. No Jobs. */
+/** Guest bottom tabs match auth chrome. Messages/Jobs are gate placeholders. */
 export type GuestTabParamList = {
   HomeTab: undefined;
   SearchTab:
@@ -43,7 +43,8 @@ export type GuestTabParamList = {
       }
     | undefined;
   CreateTab: undefined;
-  AccountTab: undefined;
+  MessagesTab: undefined;
+  JobsTab: undefined;
 };
 
 export type SplashStackParamList = {

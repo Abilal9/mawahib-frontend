@@ -22,7 +22,17 @@ import {
   subscribeProductTree,
   takeSignedOutEntry,
 } from '../lib/productTree';
-import { resolveSignedOutDestination } from '../lib/signedOutDestination';
+import {
+  resolveSignedOutBranchEntry,
+  shouldForceCredentialReadiness,
+} from '../lib/signedOutBranchEntry';
+import { navigateSignedOut, navigationRef } from './navigationRef';
+import {
+  getSignedOutReason,
+  getSignedOutUserId,
+  wasAuthenticatedProcess,
+} from '../lib/signedOutReason';
+import { getActiveSignOutTransaction } from '../lib/signOutTransaction';
 import { View } from 'react-native';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -34,38 +44,39 @@ function MediaHoldScreen() {
   return <View style={{ flex: 1, backgroundColor: '#F7F9FB' }} />;
 }
 
-function defaultSignedOutRoute(input: {
-  recoveryLocked: boolean;
-  hasSession: boolean;
-}): keyof SignedOutStackParamList {
-  if (input.recoveryLocked || input.hasSession) return 'SignIn';
-  return resolveSignedOutDestination({
-    recoveryLocked: input.recoveryLocked,
-  }).name;
-}
-
 function SignedOutBranch({
   recoveryLocked,
   hasSession,
+  renderedUserId,
 }: {
   recoveryLocked: boolean;
   hasSession: boolean;
+  renderedUserId: string | null;
 }) {
   const [entry] = useState(() => {
     const handoff = takeSignedOutEntry();
-    // Involuntary or racy sign-out can unmount the auth tree before the
-    // SignIn handoff is written. Do not fall through to Guest Home while a
-    // live session or authenticated process still exists.
-    if (isAuthenticatedProductActive() || hasSession) {
-      if (handoff && handoff.name !== 'GuestTabs') {
-        return { name: handoff.name, params: handoff.params };
-      }
-      return { name: 'SignIn' as const };
-    }
-    if (handoff) {
-      return { name: handoff.name, params: handoff.params };
-    }
-    return { name: defaultSignedOutRoute({ recoveryLocked, hasSession }) };
+    const txn = getActiveSignOutTransaction();
+    const resolved = resolveSignedOutBranchEntry({
+      handoff,
+      recoveryLocked,
+      hasSession,
+      renderedUserId,
+      productActive: isAuthenticatedProductActive(),
+      reason: getSignedOutReason(),
+      signedOutUserId: getSignedOutUserId(),
+      wasAuthenticated: wasAuthenticatedProcess(),
+      txn: txn
+        ? {
+            kind: txn.kind,
+            status: txn.status,
+            destination: txn.destination,
+          }
+        : null,
+    });
+    return {
+      name: resolved.name as keyof SignedOutStackParamList,
+      params: resolved.params,
+    };
   });
 
   return (
@@ -84,6 +95,7 @@ export default function RootNavigator() {
     isSignedIn,
     apiUser,
     session,
+    signedOutReason,
   } = useAuth();
   useSyncExternalStore(subscribeProductTree, getProductTreeEpoch);
 
@@ -93,6 +105,28 @@ export default function RootNavigator() {
       leaveAuthenticatedProduct();
     }
   }, [accountSuspended, isSignedIn, recovery]);
+
+  useEffect(() => {
+    if (
+      !shouldForceCredentialReadiness({
+        currentRoute: navigationRef.getCurrentRoute()?.name,
+        hasSession: Boolean(session || apiUser),
+        isSignedIn,
+        recoveryLocked: Boolean(recovery || loadRecoveryState()),
+        reason: signedOutReason,
+      })
+    ) {
+      return;
+    }
+    navigateSignedOut('SignIn');
+  }, [
+    session,
+    apiUser,
+    isSignedIn,
+    recovery,
+    signedOutReason,
+    mediaCacheReady,
+  ]);
 
   const screenOptions = {
     headerShown: false,
@@ -166,6 +200,7 @@ export default function RootNavigator() {
     <SignedOutBranch
       recoveryLocked={recoveryLocked}
       hasSession={Boolean(session || apiUser)}
+      renderedUserId={session?.user?.id ?? apiUser?.id ?? null}
     />
   );
 }

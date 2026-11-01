@@ -418,15 +418,17 @@ assert.match(
 );
 const signOutBody = auth.slice(auth.indexOf('const signOut = useCallback'));
 assert.match(signOutBody, /markMediaCacheClearPending/);
+const mutation = read('src/lib/authSessionMutation.ts');
+const attempt = mutation.slice(mutation.indexOf('export async function runSignOutAttempt'));
 assert.ok(
-  signOutBody.indexOf('markMediaCacheClearPending()') <
-    signOutBody.indexOf("supabase.auth.signOut({ scope: 'local' })"),
+  attempt.indexOf('input.markCachePending()') <
+    attempt.indexOf('input.signOutLocal()'),
 );
-const markedFailAt = signOutBody.indexOf('!marked.ok');
+const markedFailAt = attempt.indexOf('!marked.ok');
 assert.ok(markedFailAt !== -1);
 assert.ok(
-  signOutBody.indexOf('failSignOutTransaction', markedFailAt) <
-    signOutBody.indexOf('throw new Error', markedFailAt),
+  attempt.indexOf('input.boundary.fail', markedFailAt) <
+    attempt.indexOf('throw new Error', markedFailAt),
 );
 const applyOutcome = auth.slice(auth.indexOf('const applySignedOutOutcome'));
 assert.match(applyOutcome, /clearAuthenticatedState\(\)/);
