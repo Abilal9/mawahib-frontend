@@ -9,15 +9,15 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { toImageSource } from '../../utils/image';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenContainer from '../../components/ui/ScreenContainer';
-import UserAvatar from '../../components/ui/UserAvatar';
+import ReviewRow from '../../components/reviews/ReviewRow';
+import ReviewSummaryCard from '../../components/reviews/ReviewSummaryCard';
 import { colors, spacing, radius, typography } from '../../theme';
-import { ReviewDistribution, ReviewItem, User } from '../../data/types';
+import { User } from '../../data/types';
+import { distributionFromStars } from '../../lib/reviewDistribution';
 import { useMyProfile } from '../../context/ProfileContext';
 import { useAuth } from '../../context/AuthContext';
 import { useVisitorUser } from '../../hooks/useVisitorUser';
@@ -61,23 +61,6 @@ function aggregateFor(
   if (filter === 'provider') return summary.asProvider;
   if (filter === 'client') return summary.asClient;
   return summary.overall ?? EMPTY_AGGREGATE;
-}
-
-function distributionFromStars(
-  stars: readonly number[] | undefined,
-  total: number,
-): ReviewDistribution[] | null {
-  if (!stars || stars.length !== 5) return null;
-  return ([5, 4, 3, 2, 1] as const).map((star) => ({
-    stars: star,
-    percent: total === 0 ? 0 : (stars[star - 1] ?? 0) / total,
-  }));
-}
-
-function receivedRoleLabel(role: ReviewItem['receivedAs']): string | null {
-  if (role === 'provider') return 'As Talent';
-  if (role === 'client') return 'As Client';
-  return null;
 }
 
 /**
@@ -220,7 +203,6 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
     : (distributionFromStars(active.stars, activeTotal) ??
       (listComplete ? bundle.distribution : emptyReviewDistribution()));
   const rated = summaryTotal > 0;
-  const filledStars = rated ? Math.round(summaryAverage) : 0;
 
   const reviews = useMemo(() => {
     let list = [...bundle.reviews];
@@ -317,48 +299,25 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          <View style={styles.summaryCard}>
-            <View style={styles.distCol}>
-              {distribution.map((row) => (
-                <View key={row.stars} style={styles.distRow}>
-                  <Text style={styles.distLabel}>{row.stars}</Text>
-                  <Ionicons name="star" size={10} color="#F5A623" />
-                  <View style={styles.barTrack}>
-                    {row.percent > 0 ? (
-                      <View
-                        style={[styles.barFill, { width: `${row.percent * 100}%` }]}
-                      />
-                    ) : null}
-                  </View>
-                </View>
-              ))}
-            </View>
-            <View style={styles.summaryRight}>
-              <Text style={[styles.average, !rated && styles.averageUnrated]}>
-                {summaryAverage.toFixed(1)}
-              </Text>
-              <View style={styles.summaryStars}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < filledStars ? 'star' : 'star-outline'}
-                    size={14}
-                    color={i < filledStars ? '#F5A623' : colors.border}
-                  />
-                ))}
-              </View>
-              <Text style={styles.summaryCount}>
-                {summaryTotal === 0 ? 'No reviews yet' : `${summaryTotal} Reviews`}
-              </Text>
-            </View>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <ReviewRow
-            review={item}
-            onAuthorPress={() => openUserProfile(navigation, item.authorId, me.id)}
+          <ReviewSummaryCard
+            average={summaryAverage}
+            total={summaryTotal}
+            distribution={distribution}
+            rated={rated}
           />
-        )}
+        }
+        renderItem={({ item }) => {
+          const source = apiReviews?.find((row) => row.id === item.id);
+          return (
+            <ReviewRow
+              review={item}
+              media={source?.media}
+              onAuthorPress={() =>
+                openUserProfile(navigation, item.authorId, me.id)
+              }
+            />
+          );
+        }}
         ListEmptyComponent={
           reviewsLoading ? (
             <ActivityIndicator color={colors.primary} style={styles.loadingInline} />
@@ -412,79 +371,6 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
         onClose={() => setFilterOpen(false)}
       />
     </ScreenContainer>
-  );
-}
-
-function ReviewRow({
-  review,
-  onAuthorPress,
-}: {
-  review: ReviewItem;
-  onAuthorPress: () => void;
-}) {
-  const photos = (review.images ?? []).slice(0, 4);
-  const [preview, setPreview] = useState<string | null>(null);
-  return (
-    <View style={styles.reviewRow}>
-      <TouchableOpacity onPress={onAuthorPress} activeOpacity={0.8} hitSlop={4}>
-        <UserAvatar uri={review.authorAvatar} size={40} style={styles.avatar} />
-      </TouchableOpacity>
-      <View style={styles.reviewBody}>
-        <View style={styles.reviewTop}>
-          <View style={{ flex: 1 }}>
-            <TouchableOpacity onPress={onAuthorPress} activeOpacity={0.8}>
-              <Text style={styles.author}>{review.authorName}</Text>
-            </TouchableOpacity>
-            <Text style={styles.time}>{review.timeAgo}</Text>
-            {receivedRoleLabel(review.receivedAs) ? (
-              <Text style={styles.roleTag}>{receivedRoleLabel(review.receivedAs)}</Text>
-            ) : null}
-          </View>
-          <View style={styles.ratingPill}>
-            <Ionicons name="star" size={12} color="#F5A623" />
-            <Text style={styles.ratingText}>{review.rating.toFixed(1)}</Text>
-          </View>
-        </View>
-        <Text style={styles.serviceLine}>
-          <Text style={styles.serviceLabel}>Service: </Text>
-          <Text style={styles.serviceName}>{review.serviceName}</Text>
-        </Text>
-        <Text style={styles.body}>{review.body}</Text>
-        {photos.length === 1 ? (
-          <TouchableOpacity activeOpacity={0.85} onPress={() => setPreview(photos[0])}>
-            <Image source={toImageSource(photos[0])} style={styles.thumbLarge} contentFit="cover" />
-          </TouchableOpacity>
-        ) : photos.length > 1 ? (
-          <View style={styles.photoGrid}>
-            {photos.map((uri) => (
-              <TouchableOpacity
-                key={uri}
-                activeOpacity={0.85}
-                onPress={() => setPreview(uri)}
-              >
-                <Image source={toImageSource(uri)} style={styles.thumb} contentFit="cover" />
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : review.image ? (
-          <TouchableOpacity activeOpacity={0.85} onPress={() => setPreview(review.image!)}>
-            <Image source={toImageSource(review.image)} style={styles.thumbLarge} contentFit="cover" />
-          </TouchableOpacity>
-        ) : null}
-        <Modal
-          visible={preview !== null}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setPreview(null)}
-        >
-          <Pressable style={styles.previewBackdrop} onPress={() => setPreview(null)}>
-            {preview ? (
-              <Image source={toImageSource(preview)} style={styles.previewImage} contentFit="contain" />
-            ) : null}
-          </Pressable>
-        </Modal>
-      </View>
-    </View>
   );
 }
 

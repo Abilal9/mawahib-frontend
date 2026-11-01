@@ -26,6 +26,7 @@ import ProfileHeaderChrome, {
   PROFILE_FIXED_BAR_BODY,
 } from '../../components/profile/ProfileHeaderChrome';
 import AboutTab from '../../components/profile/AboutTab';
+import ProfileVisitorActions from '../../components/profile/ProfileVisitorActions';
 import ProfileFeedPost from '../../components/profile/ProfileFeedPost';
 import ServiceMediaMosaic from '../../components/explore/ServiceMediaMosaic';
 import { shareProfile } from '../../utils/shareProfile';
@@ -262,6 +263,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
           }
         >
           {relation === 'incoming' ? (
+            <>
             <View style={styles.ctaRow}>
               <TouchableOpacity
                 style={styles.connectBtn}
@@ -284,58 +286,40 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                 <Text style={styles.messageText}>Deny</Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.ctaRow}>
+            <View style={styles.hireRow}>
               <TouchableOpacity
-                style={[
-                  styles.connectBtn,
-                  relation === 'connected' && styles.connectBtnDone,
-                  relation === 'outgoing' && styles.connectBtnPending,
-                ]}
-                onPress={onConnectPress}
-                disabled={mutationBusy}
+                style={styles.hireBtn}
+                onPress={() =>
+                  navigation.navigate('DirectRequest', { userId: user.id })
+                }
                 activeOpacity={0.85}
                 hitSlop={ACTION_HIT_SLOP}
               >
-                <Ionicons name={connectIcon} size={18} color={colors.white} />
-                <Text style={styles.connectText}>{connectLabel}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.messageBtn, relation !== 'connected' && styles.messageBtnDisabled]}
-                onPress={onMessagePress}
-                activeOpacity={0.85}
-                hitSlop={ACTION_HIT_SLOP}
-              >
-                <Ionicons
-                  name="chatbubble-outline"
-                  size={18}
-                  color={relation === 'connected' ? colors.primary : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.messageText,
-                    relation !== 'connected' && styles.messageTextDisabled,
-                  ]}
-                >
-                  Message
-                </Text>
+                <Ionicons name="briefcase-outline" size={17} color={colors.primary} />
+                <Text style={styles.hireText}>Request Work</Text>
               </TouchableOpacity>
             </View>
-          )}
-
-          <View style={styles.hireRow}>
-            <TouchableOpacity
-              style={styles.hireBtn}
-              onPress={() =>
+            </>
+          ) : (
+            <ProfileVisitorActions
+              connectLabel={connectLabel}
+              connectIcon={connectIcon}
+              connectTone={
+                relation === 'connected'
+                  ? 'done'
+                  : relation === 'outgoing'
+                    ? 'pending'
+                    : 'default'
+              }
+              messageEnabled={relation === 'connected'}
+              busy={mutationBusy}
+              onConnect={onConnectPress}
+              onMessage={onMessagePress}
+              onRequest={() =>
                 navigation.navigate('DirectRequest', { userId: user.id })
               }
-              activeOpacity={0.85}
-              hitSlop={ACTION_HIT_SLOP}
-            >
-              <Ionicons name="briefcase-outline" size={17} color={colors.primary} />
-              <Text style={styles.hireText}>Request Work</Text>
-            </TouchableOpacity>
-          </View>
+            />
+          )}
         </ProfileCollapsingHeader>
 
         <View onLayout={(e) => setTabsHeight(e.nativeEvent.layout.height)}>
@@ -359,9 +343,6 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                 services: visitorProfessional.services,
               }}
               isOwn={false}
-              onAdd={() => {}}
-              onEditSection={() => {}}
-              onEditItem={() => {}}
             />
           )}
 

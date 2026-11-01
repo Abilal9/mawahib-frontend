@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import GuestAppHeader from '../../components/layout/GuestAppHeader';
 import { listPaddingAboveTabBar } from '../../components/layout/CustomTabBar';
+import HomeSplashLoader from '../../components/ui/HomeSplashLoader';
+import HomePendingPlaceholder from '../../components/ui/HomePendingPlaceholder';
 import {
   GuestJobCard,
   GuestPostCard,
@@ -20,10 +22,44 @@ import {
   GuestStatusBlock,
   GuestTalentCard,
 } from '../../components/guest/GuestDiscoveryCards';
-import { useGuestHome } from '../../hooks/useGuestHome';
+import {
+  useGuestHome,
+  type GuestHomeSection,
+  type GuestHomeSectionKey,
+} from '../../hooks/useGuestHome';
 import { useAuthGate } from '../../context/AuthGateContext';
+import {
+  resolveHomeInitialLoader,
+  resolveHomePageEmpty,
+  resolveHomeSectionAppearance,
+  sectionHasVisibleError,
+  type HomeSectionAppearance,
+} from '../../lib/homeLoadingPresentation';
 import { colors, spacing, typography } from '../../theme';
 import type { GuestTabScreenProps } from '../../navigation/types';
+
+function sectionPending<T>(section: GuestHomeSection<T>): boolean {
+  return section.loading;
+}
+
+function GuestHomeSectionSlot({
+  appearance,
+  error,
+  onRetry,
+  children,
+}: {
+  appearance: HomeSectionAppearance;
+  error?: string | null;
+  onRetry?: () => void;
+  children: React.ReactNode;
+}) {
+  if (appearance === 'omit' || appearance === 'empty') return null;
+  if (appearance === 'placeholder') return <HomePendingPlaceholder />;
+  if (appearance === 'error') {
+    return <GuestStatusBlock error={error} onRetry={onRetry} />;
+  }
+  return <>{children}</>;
+}
 
 /** Public discovery Home. No authenticated feed, providers, or viewer flags. */
 export default function GuestHomeScreen({
@@ -35,50 +71,95 @@ export default function GuestHomeScreen({
   const openExplore = (contentType?: 'talents' | 'services' | 'jobs') =>
     navigation.navigate('SearchTab', contentType ? { contentType } : undefined);
 
-  const hasItems =
+  const hasContent =
     home.talents.items.length > 0 ||
     home.services.items.length > 0 ||
     home.jobs.items.length > 0 ||
     home.posts.items.length > 0;
-  const allEmpty = !home.initialLoading && !hasItems;
-  const allFailed =
-    allEmpty &&
-    Boolean(
-      home.talents.error &&
-        home.services.error &&
-        home.jobs.error &&
-        home.posts.error,
-    );
+  const anyPending =
+    sectionPending(home.talents) ||
+    sectionPending(home.services) ||
+    sectionPending(home.jobs) ||
+    sectionPending(home.posts);
+  const hasVisibleError =
+    sectionHasVisibleError({
+      error: home.talents.error,
+      itemCount: home.talents.items.length,
+    }) ||
+    sectionHasVisibleError({
+      error: home.services.error,
+      itemCount: home.services.items.length,
+    }) ||
+    sectionHasVisibleError({
+      error: home.jobs.error,
+      itemCount: home.jobs.items.length,
+    }) ||
+    sectionHasVisibleError({
+      error: home.posts.error,
+      itemCount: home.posts.items.length,
+    });
+  const showInitialLoader = resolveHomeInitialLoader({
+    hasContent,
+    anyPending,
+    refreshing: home.refreshing,
+    hasVisibleError,
+  });
+  const pageEmpty = resolveHomePageEmpty({
+    hasContent,
+    anyPending,
+    allFailed:
+      !hasContent &&
+      !anyPending &&
+      Boolean(
+        home.talents.error &&
+          home.services.error &&
+          home.jobs.error &&
+          home.posts.error,
+      ),
+  });
+  const appearanceFor = (section: GuestHomeSection<unknown>) =>
+    resolveHomeSectionAppearance({
+      itemCount: section.items.length,
+      loading: section.loading,
+      error: section.error,
+      showInitialLoader,
+    });
+
+  const retry = (key: GuestHomeSectionKey) => () => home.retrySection(key);
 
   return (
     <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.background}>
       <StatusBar style="dark" />
       <GuestAppHeader />
-      {home.initialLoading && !hasItems ? (
-        <GuestStatusBlock loading />
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: listPaddingAboveTabBar(insets.bottom, spacing.xl),
-          }}
-          refreshControl={
-            <RefreshControl
-              refreshing={home.refreshing}
-              onRefresh={home.refresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          {allFailed ? (
-            <GuestStatusBlock
-              error="Unable to load public discovery."
-              onRetry={home.refresh}
-            />
-          ) : home.talents.error && home.talents.items.length === 0 ? (
-            <GuestStatusBlock error={home.talents.error} onRetry={home.refresh} />
-          ) : home.talents.items.length > 0 ? (
-            <>
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: listPaddingAboveTabBar(insets.bottom, spacing.xl),
+          flexGrow: showInitialLoader ? 1 : undefined,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={home.refreshing}
+            onRefresh={home.refresh}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        {showInitialLoader ? <HomeSplashLoader fill /> : null}
+
+        {pageEmpty === 'error' ? (
+          <GuestStatusBlock
+            error="Unable to load public discovery."
+            onRetry={home.refresh}
+          />
+        ) : (
+          <>
+            <GuestHomeSectionSlot
+              appearance={appearanceFor(home.talents)}
+              error={home.talents.error}
+              onRetry={retry('talents')}
+            >
               <GuestSectionHeader
                 title="Talents & businesses"
                 onPress={() => openExplore('talents')}
@@ -97,17 +178,27 @@ export default function GuestHomeScreen({
                     onPress={() =>
                       navigation.navigate('UserProfile', { userId: item.id })
                     }
+                    onConnect={() =>
+                      requireAuth({
+                        action: 'connect',
+                        route: 'UserProfile',
+                        params: { userId: item.id },
+                      })
+                    }
                   />
                 )}
               />
-            </>
-          ) : null}
+            </GuestHomeSectionSlot>
 
-          {!allFailed && home.services.error && home.services.items.length === 0 ? (
-            <GuestStatusBlock error={home.services.error} onRetry={home.refresh} />
-          ) : !allFailed && home.services.items.length > 0 ? (
-            <>
-              <GuestSectionHeader title="Services" onPress={() => openExplore('services')} />
+            <GuestHomeSectionSlot
+              appearance={appearanceFor(home.services)}
+              error={home.services.error}
+              onRetry={retry('services')}
+            >
+              <GuestSectionHeader
+                title="Services"
+                onPress={() => openExplore('services')}
+              />
               <FlatList
                 data={home.services.items}
                 horizontal
@@ -120,7 +211,9 @@ export default function GuestHomeScreen({
                     service={item}
                     compact
                     onPress={() =>
-                      navigation.navigate('ServiceDetail', { serviceId: item.id })
+                      navigation.navigate('ServiceDetail', {
+                        serviceId: item.id,
+                      })
                     }
                     onProviderPress={() =>
                       navigation.navigate('UserProfile', {
@@ -137,14 +230,17 @@ export default function GuestHomeScreen({
                   />
                 )}
               />
-            </>
-          ) : null}
+            </GuestHomeSectionSlot>
 
-          {!allFailed && home.jobs.error && home.jobs.items.length === 0 ? (
-            <GuestStatusBlock error={home.jobs.error} onRetry={home.refresh} />
-          ) : !allFailed && home.jobs.items.length > 0 ? (
-            <>
-              <GuestSectionHeader title="Open jobs" onPress={() => openExplore('jobs')} />
+            <GuestHomeSectionSlot
+              appearance={appearanceFor(home.jobs)}
+              error={home.jobs.error}
+              onRetry={retry('jobs')}
+            >
+              <GuestSectionHeader
+                title="Open jobs"
+                onPress={() => openExplore('jobs')}
+              />
               <FlatList
                 data={home.jobs.items}
                 horizontal
@@ -171,13 +267,13 @@ export default function GuestHomeScreen({
                   />
                 )}
               />
-            </>
-          ) : null}
+            </GuestHomeSectionSlot>
 
-          {!allFailed && home.posts.error && home.posts.items.length === 0 ? (
-            <GuestStatusBlock error={home.posts.error} onRetry={home.refresh} />
-          ) : !allFailed && home.posts.items.length > 0 ? (
-            <>
+            <GuestHomeSectionSlot
+              appearance={appearanceFor(home.posts)}
+              error={home.posts.error}
+              onRetry={retry('posts')}
+            >
               <GuestSectionHeader title="Newest posts" />
               {home.posts.items.map((post) => (
                 <GuestPostCard
@@ -214,24 +310,25 @@ export default function GuestHomeScreen({
                   }
                 />
               ))}
-            </>
-          ) : null}
+            </GuestHomeSectionSlot>
 
-          {allEmpty && !allFailed ? (
-            <View style={styles.emptyCopy}>
-              <Text style={styles.emptyTitle}>Nothing public yet</Text>
-              <Text style={styles.emptyText}>
-                Public talents, services, jobs, and posts will appear here.
-              </Text>
-            </View>
-          ) : null}
-        </ScrollView>
-      )}
+            {pageEmpty === 'empty' ? (
+              <View style={styles.emptyCopy}>
+                <Text style={styles.emptyTitle}>Nothing public yet</Text>
+                <Text style={styles.emptyText}>
+                  Public talents, services, jobs, and posts will appear here.
+                </Text>
+              </View>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   carousel: {
     paddingHorizontal: spacing.screen,
     paddingBottom: spacing.sm,

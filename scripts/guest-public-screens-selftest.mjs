@@ -112,15 +112,18 @@ assert.equal(homeHook.includes("'/posts"), false);
 
 const explore = read('src/screens/guest/GuestExploreScreen.tsx');
 const exploreHook = read('src/hooks/useGuestExplore.ts');
+assert.match(explore, /ExploreTaxonomyChipRow/);
 assert.match(explore, /useGuestExplore/);
 assert.match(exploreHook, /fetchPublicExploreTalents/);
 assert.match(exploreHook, /fetchPublicExploreServices/);
 assert.match(exploreHook, /fetchPublicJobListings/);
 assert.match(exploreHook, /fetchPublicTaxonomy/);
 assert.match(exploreHook, /GUEST_EXPLORE_DEBOUNCE_MS = 300/);
-assert.match(exploreHook, /PUBLIC_Q_MIN_LENGTH/);
-assert.match(exploreHook, /blocked: true/);
-assert.equal(exploreHook.includes('categoryIds'), false);
+assert.match(exploreHook, /resolveGuestExploreQuery/);
+assert.match(read('src/lib/guestExploreQuery.ts'), /SEARCH_Q_MIN_LENGTH = 2/);
+assert.match(read('src/lib/guestExploreQuery.ts'), /blocked: true/);
+assert.match(exploreHook, /categoryIds: search.categoryIds/);
+assert.equal(exploreHook.includes('selectedCategoryName'), false);
 assert.equal(explore.includes('useSaved'), false);
 assert.equal(explore.includes('Saved'), false);
 
@@ -131,10 +134,14 @@ assert.match(profileHook, /fetchPublicUser/);
 assert.match(profileHook, /fetchPublicUserPosts/);
 assert.match(profileHook, /fetchPublicUserServices/);
 assert.match(profileHook, /fetchPublicUserPortfolio/);
-assert.match(profileHook, /fetchPublicUserReviews/);
+assert.equal(profileHook.includes('fetchPublicUserReviews'), false);
 assert.match(profile, /requireAuth/);
-assert.match(profile, /title="Connect"/);
-assert.match(profile, /title="Message"/);
+assert.match(profile, /ProfileVisitorActions/);
+assert.match(profile, /ProfileHeaderChrome/);
+assert.match(profile, /ProfileCollapsingHeader/);
+assert.match(profile, /AboutTab/);
+assert.match(profile, /accessibilityLabel="Connect"|onConnect/);
+assert.equal(profile.includes('variant="ghost"'), false);
 assert.equal(profile.includes('requestConnect'), false);
 assert.equal(profile.includes("navigate('SignIn')"), false);
 
@@ -163,9 +170,20 @@ assert.equal(job.includes('applications'), false);
 
 const reviews = read('src/screens/guest/GuestReviewsScreen.tsx');
 assert.match(reviews, /useGuestReviews/);
+assert.match(reviews, /ReviewSummaryCard/);
+assert.match(reviews, /ReviewRow/);
+assert.equal(reviews.includes('count: 1'), false);
 const reviewsHook = read('src/hooks/useGuestReviews.ts');
 assert.match(reviewsHook, /fetchPublicUserReviews/);
 assert.match(reviewsHook, /fetchPublicServiceReviews/);
+assert.match(reviewsHook, /role/);
+assert.match(read('src/components/guest/GuestDiscoveryCards.tsx'), /guestServiceCardPrice/);
+assert.equal(
+  read('src/components/guest/GuestDiscoveryCards.tsx').includes(
+    'summary={{ average: review.rating, count: 1 }}',
+  ),
+  false,
+);
 
 const portfolio = read('src/screens/guest/GuestPortfolioProjectDetailScreen.tsx');
 assert.match(portfolio, /already-fetched public project payload/);
@@ -190,7 +208,8 @@ assert.equal(create.includes("navigate('PostCreate')"), false);
 const currencyIcon = read('src/components/ui/CurrencyIcon.tsx');
 assert.match(currencyIcon, /useOptionalMyProfile/);
 assert.equal(currencyIcon.includes('useMyProfile()'), false);
-assert.match(read('src/components/guest/GuestDiscoveryCards.tsx'), /MoneyAmount/);
+assert.match(read('src/components/guest/GuestDiscoveryCards.tsx'), /guestServiceCardPrice/);
+assert.match(read('src/components/explore/ExploreServiceCard.tsx'), /MoneyAmount/);
 assert.match(read('src/context/ProfileContext.tsx'), /useOptionalMyProfile/);
 
 console.log('guest-public-screens-selftest ok');

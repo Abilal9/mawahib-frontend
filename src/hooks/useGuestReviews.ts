@@ -7,15 +7,18 @@ import {
   fetchPublicUserReviews,
   type GuestReview,
 } from '../services/publicApi';
+import type { PublicReviewRole } from '../services/publicQuery';
 
 export function useGuestReviews(input: {
   userId?: string;
   serviceId?: string;
+  role?: PublicReviewRole;
 }) {
   const mounted = useRef(true);
   const gen = useRef(0);
   const targetId = input.serviceId || input.userId;
   const kind = input.serviceId ? 'service' : 'user';
+  const role = kind === 'user' ? input.role : undefined;
   const valid = isBackendUserId(targetId);
   const [items, setItems] = useState<GuestReview[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -36,9 +39,9 @@ export function useGuestReviews(input: {
       if (kind === 'service') {
         return fetchPublicServiceReviews(targetId, { cursor, take: 20 });
       }
-      return fetchPublicUserReviews(targetId, { cursor, take: 20 });
+      return fetchPublicUserReviews(targetId, { cursor, take: 20, role });
     },
-    [kind, targetId],
+    [kind, role, targetId],
   );
 
   const load = useCallback(async () => {

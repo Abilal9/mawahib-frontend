@@ -12,8 +12,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../../components/ui/ScreenContainer';
-import GuestAppHeader from '../../components/layout/GuestAppHeader';
+import GuestAccountEntry from '../../components/layout/GuestAccountEntry';
 import { listPaddingAboveTabBar } from '../../components/layout/CustomTabBar';
+import ExploreTaxonomyChipRow from '../../components/explore/ExploreTaxonomyChipRow';
 import {
   GuestJobCard,
   GuestServiceCard,
@@ -31,7 +32,7 @@ function normalizeTab(value: string | undefined): ExploreTab {
   return 'talents';
 }
 
-/** Public Explore. Taxonomy chips map to `q` because public search has no categoryIds. */
+/** Public Explore. Taxonomy chips send canonical categoryIds, ANDed with typed `q`. */
 export default function GuestExploreScreen({
   navigation,
   route,
@@ -56,9 +57,8 @@ export default function GuestExploreScreen({
         : 'No jobs found';
 
   return (
-    <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.background}>
+    <ScreenContainer padded={false} backgroundColor={colors.background}>
       <StatusBar style="dark" />
-      <GuestAppHeader />
       <View style={styles.topBar}>
         {searchOpen ? (
           <View style={styles.searchBar}>
@@ -89,13 +89,16 @@ export default function GuestExploreScreen({
         ) : (
           <>
             <Text style={styles.pageTitle}>Explore</Text>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => setSearchOpen(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="search-outline" size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
+            <View style={styles.topActions}>
+              <GuestAccountEntry size={20} />
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => setSearchOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="search-outline" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </View>
@@ -120,31 +123,16 @@ export default function GuestExploreScreen({
         })}
       </View>
 
-      {explore.categories.length > 0 ? (
-        <FlatList
-          data={explore.categories}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.chips}
-          renderItem={({ item }) => {
-            const selected = explore.selectedCategoryId === item.id;
-            return (
-              <TouchableOpacity
-                style={[styles.chip, selected && styles.chipActive]}
-                onPress={() => explore.toggleCategory(item.id)}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextActive]}>
-                  {item.nameEn}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      ) : explore.taxonomyError ? (
-        <Text style={styles.taxonomyError}>{explore.taxonomyError}</Text>
-      ) : null}
+      <ExploreTaxonomyChipRow
+        categories={explore.categories}
+        selectedIds={explore.categoryIds}
+        onToggle={explore.toggleCategory}
+        loading={explore.taxonomyLoading && explore.categories.length === 0}
+        failed={Boolean(explore.taxonomyError) && explore.categories.length === 0}
+        onRetry={explore.retryTaxonomy}
+        filterCount={explore.categoryIds.length}
+        onClear={explore.clearCategories}
+      />
 
       {explore.searchBlocked ? (
         <Text style={styles.hint}>Type at least 2 characters to search.</Text>
@@ -160,12 +148,13 @@ export default function GuestExploreScreen({
               : item.job.id
         }
         contentContainerStyle={{
+          paddingHorizontal: spacing.screen,
           paddingBottom: listPaddingAboveTabBar(insets.bottom, spacing.xl),
           flexGrow: 1,
         }}
         refreshControl={
           <RefreshControl
-            refreshing={false}
+            refreshing={explore.refreshing}
             onRefresh={explore.refresh}
             tintColor={colors.primary}
           />
@@ -194,6 +183,13 @@ export default function GuestExploreScreen({
                 talent={item.talent}
                 onPress={() =>
                   navigation.navigate('UserProfile', { userId: item.talent.id })
+                }
+                onConnect={() =>
+                  requireAuth({
+                    action: 'connect',
+                    route: 'UserProfile',
+                    params: { userId: item.talent.id },
+                  })
                 }
               />
             );
@@ -256,6 +252,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   pageTitle: { fontSize: 20, lineHeight: 28, fontWeight: '600', color: colors.text },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   iconButton: {
     width: 36,
     height: 36,
@@ -291,28 +288,6 @@ const styles = StyleSheet.create({
   mainTabLabelActive: { borderBottomColor: colors.primary },
   mainTabText: { ...typography.body, color: colors.textSecondary },
   mainTabTextActive: { color: colors.text, fontWeight: '600' },
-  chips: {
-    paddingHorizontal: spacing.screen,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.white,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginRight: spacing.sm,
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: colors.white },
-  chipText: { ...typography.caption, color: colors.textSecondary },
-  chipTextActive: { color: colors.primary, fontWeight: '600' },
-  taxonomyError: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    paddingHorizontal: spacing.screen,
-  },
   hint: {
     ...typography.caption,
     color: colors.textSecondary,

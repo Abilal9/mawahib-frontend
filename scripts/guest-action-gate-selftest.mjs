@@ -55,9 +55,10 @@ assert.match(guestFiles.home, /requireAuth/);
 assert.match(guestFiles.explore, /action: 'save'/);
 assert.match(guestFiles.explore, /requireAuth/);
 
-assert.match(guestFiles.profile, /action: 'connect'/);
-assert.match(guestFiles.profile, /action: 'message'/);
-assert.match(guestFiles.profile, /action: 'request'/);
+assert.match(guestFiles.profile, /gate\('connect'\)/);
+assert.match(guestFiles.profile, /gate\('message'\)/);
+assert.match(guestFiles.profile, /gate\('request'\)/);
+assert.match(guestFiles.profile, /action: 'connect' \| 'message' \| 'request'/);
 assert.match(guestFiles.profile, /action: 'like'/);
 assert.match(guestFiles.profile, /action: 'save'/);
 assert.equal(guestFiles.profile.includes("navigate('Chat')"), false);

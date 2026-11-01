@@ -9,7 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../ui/UserAvatar';
 import { colors, spacing, typography } from '../../theme';
-import { User } from '../../data/types';
+import type { User } from '../../data/types';
 import { PROFILE_COVER_HEIGHT, displayProfileTitle } from '../../constants/profile';
 import { formatRatingValue, hasRealReviews } from '../../utils/profileRating';
 import {
@@ -20,8 +20,20 @@ export const PROFILE_COLLAPSE_DISTANCE = 100;
 /** Cover / pink strip under nav — matches Edit cover crop frame. */
 export const PROFILE_WAVE_MAX = PROFILE_COVER_HEIGHT;
 
+/** Presentation-only identity. Optional fields stay omitted, never faked. */
+export type ProfileHeaderIdentity = {
+  name: string;
+  title?: string | null;
+  avatar?: string | number | null;
+  location?: string | null;
+  isVerified?: boolean;
+  rating?: number;
+  reviewCount?: number;
+  reviewSummary?: User['reviewSummary'];
+};
+
 interface ProfileCollapsingHeaderProps {
-  user: User;
+  user: ProfileHeaderIdentity;
   scrollY: Animated.Value;
   children?: React.ReactNode;
   onReviewsPress?: () => void;
@@ -184,6 +196,7 @@ export default function ProfileCollapsingHeader({
           <TouchableOpacity
             style={styles.ratingRow}
             onPress={onReviewsPress}
+            disabled={!onReviewsPress}
             activeOpacity={0.8}
           >
             {showRating ? (
@@ -203,9 +216,15 @@ export default function ProfileCollapsingHeader({
               <Text style={styles.reviewsLink}>No reviews yet</Text>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={onConnectionsPress} activeOpacity={0.8}>
-            <Text style={styles.connections}>{connections}</Text>
-          </TouchableOpacity>
+          {connectionsLabel ? (
+            onConnectionsPress ? (
+              <TouchableOpacity onPress={onConnectionsPress} activeOpacity={0.8}>
+                <Text style={styles.connections}>{connections}</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.connections}>{connections}</Text>
+            )
+          ) : null}
         </Animated.View>
       </Animated.View>
 

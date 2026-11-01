@@ -180,6 +180,8 @@ export type GuestReview = {
   createdAt: string;
   reviewer: GuestActorCard;
   media: GuestReviewMedia[];
+  contextLabel?: string;
+  receivedAs?: 'provider' | 'client';
 };
 
 export type GuestReviewPage = {
@@ -210,6 +212,9 @@ export type GuestExploreService = {
   images: string[];
   reviewSummary: GuestReviewAggregate;
   provider: GuestActorCard;
+  startingPrice: number | null;
+  currency: string | null;
+  fromPrice: boolean;
 };
 
 export type GuestExplorePage<T> = {

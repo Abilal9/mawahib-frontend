@@ -138,6 +138,7 @@ assert.equal(isInactiveTaxonomyFilterError('Could not load talents'), false);
 
 const screen = read('src/screens/search/SearchScreen.tsx');
 const filters = read('src/components/explore/ExploreTaxonomyFilters.tsx');
+const chips = read('src/components/explore/ExploreTaxonomyChipRow.tsx');
 const api = read('src/services/exploreApi.ts');
 const jobs = read('src/services/marketplaceApi.ts');
 const domain = read('src/domain/exploreTaxonomy.ts');
@@ -161,7 +162,8 @@ assert.equal(screen.includes('skillIds'), false);
 assert.equal(filters.includes('supabase.from'), false);
 assert.equal(filters.includes('loadTaxonomy'), true);
 assert.equal(filters.includes('categoriesForExploreTab'), true);
-assert.equal(filters.includes('Clear filters'), true);
+assert.equal(chips.includes('Clear filters'), true);
+assert.equal(filters.includes('ExploreTaxonomyChipRow'), true);
 assert.equal(filters.includes('Skill filters'), false);
 assert.equal(filters.includes('ExploreSkillFilterSheet'), false);
 assert.equal(domain.includes('skillIds'), false);

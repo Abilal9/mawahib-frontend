@@ -6,12 +6,10 @@ import {
   fetchPublicUser,
   fetchPublicUserPortfolio,
   fetchPublicUserPosts,
-  fetchPublicUserReviews,
   fetchPublicUserServices,
   type GuestPortfolio,
   type GuestPost,
   type GuestProfile,
-  type GuestReview,
   type GuestService,
 } from '../services/publicApi';
 
@@ -39,7 +37,6 @@ export function useGuestProfile(userId: string | undefined) {
   const [posts, setPosts] = useState<Section<GuestPost>>(emptySection);
   const [services, setServices] = useState<Section<GuestService>>(emptySection);
   const [portfolio, setPortfolio] = useState<Section<GuestPortfolio>>(emptySection);
-  const [reviews, setReviews] = useState<Section<GuestReview>>(emptySection);
 
   useEffect(() => {
     return () => {
@@ -63,7 +60,6 @@ export function useGuestProfile(userId: string | undefined) {
     setPosts(emptySection());
     setServices(emptySection());
     setPortfolio(emptySection());
-    setReviews(emptySection());
 
     try {
       const next = await fetchPublicUser(userId);
@@ -80,7 +76,6 @@ export function useGuestProfile(userId: string | undefined) {
       setPosts({ items: [], loading: false, error: null });
       setServices({ items: [], loading: false, error: null });
       setPortfolio({ items: [], loading: false, error: null });
-      setReviews({ items: [], loading: false, error: null });
       return;
     }
 
@@ -88,7 +83,6 @@ export function useGuestProfile(userId: string | undefined) {
       fetchPublicUserPosts(userId, { take: 20 }),
       fetchPublicUserServices(userId),
       fetchPublicUserPortfolio(userId),
-      fetchPublicUserReviews(userId, { take: 20 }),
     ]);
     if (requestGen !== gen.current || !mounted.current) return;
 
@@ -114,7 +108,6 @@ export function useGuestProfile(userId: string | undefined) {
     applyPage(settled[0], setPosts);
     applyPage(settled[1], setServices);
     applyPage(settled[2], setPortfolio);
-    applyPage(settled[3], setReviews);
   }, [userId, valid]);
 
   useEffect(() => {
@@ -129,7 +122,6 @@ export function useGuestProfile(userId: string | undefined) {
     posts,
     services,
     portfolio,
-    reviews,
     refresh: load,
   };
 }

@@ -18,6 +18,16 @@ import BookmarkButton from '../../components/ui/BookmarkButton';
 import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import AppHeader from '../../components/ui/AppHeader';
+import HomeSplashLoader from '../../components/ui/HomeSplashLoader';
+import HomePendingPlaceholder from '../../components/ui/HomePendingPlaceholder';
+import {
+  resolveHomeInitialLoader,
+  resolveHomePaginationIndicator,
+  resolveHomePageEmpty,
+  resolveHomeSectionAppearance,
+  sectionHasVisibleError,
+} from '../../lib/homeLoadingPresentation';
+import { feedInitialPending } from '../../lib/feedLifecycle';
 import { colors, spacing, radius, typography } from '../../theme';
 import { useSidebar } from '../../context/SidebarContext';
 import { useMyProfile } from '../../context/ProfileContext';
@@ -374,7 +384,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
   const { user: me } = useMyProfile();
   const {
     posts: feedPosts,
-    loading: feedLoading,
+    feedPhase,
     error: feedError,
     hasMore,
     loadingMore,
@@ -389,8 +399,11 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
   const { unreadCount } = useNotifications();
   const [jobList, setJobList] = useState<Job[]>([]);
   const [jobsError, setJobsError] = useState<string | null>(null);
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [serviceList, setServiceList] = useState(() => catalogService.listServices());
   const [talentList, setTalentList] = useState(() => catalogService.listTalents());
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [likesPostId, setLikesPostId] = useState<string | null>(null);
 
@@ -415,18 +428,21 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
       if (jobsResult.ok) {
         setJobList(jobsResult.jobs);
         setJobsError(null);
+        setJobsLoading(false);
       } else {
         setJobsError(jobsResult.message);
         setJobList([]);
+        setJobsLoading(false);
       }
 
       if (catalogResult.ok) {
         setServiceList(catalogResult.catalog.services);
         setTalentList(catalogResult.catalog.talents);
+        setCatalogError(null);
       } else {
-        setServiceList([]);
-        setTalentList([]);
+        setCatalogError(catalogResult.message);
       }
+      setCatalogLoading(false);
     })();
   }, []);
 
@@ -457,10 +473,33 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         if (catalogResult.ok) {
           setServiceList(catalogResult.catalog.services);
           setTalentList(catalogResult.catalog.talents);
+          setCatalogError(null);
+        } else {
+          setCatalogError('Failed to load explore catalog');
         }
+        setCatalogLoading(false);
       })(),
     ]);
     setRefreshing(false);
+  };
+
+  const retryCatalog = () => {
+    void (async () => {
+      setCatalogLoading(serviceList.length === 0 && talentList.length === 0);
+      setCatalogError(null);
+      try {
+        const catalog = await catalogService.refresh();
+        setServiceList(catalog.services);
+        setTalentList(catalog.talents);
+        setCatalogError(null);
+      } catch (e) {
+        setCatalogError(
+          e instanceof Error ? e.message : 'Failed to load explore catalog',
+        );
+      } finally {
+        setCatalogLoading(false);
+      }
+    })();
   };
 
   const sharePost = async (post: Post) => {
@@ -540,6 +579,57 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
     );
   };
 
+  const feedPending = feedInitialPending(feedPhase);
+  const catalogItemCount = serviceList.length + talentList.length;
+  const hasContent =
+    feedPosts.length > 0 ||
+    jobList.length > 0 ||
+    serviceList.length > 0 ||
+    talentList.length > 0;
+  const anyPending = feedPending || jobsLoading || catalogLoading;
+  const hasVisibleError =
+    sectionHasVisibleError({ error: feedError, itemCount: feedPosts.length }) ||
+    sectionHasVisibleError({ error: jobsError, itemCount: jobList.length }) ||
+    sectionHasVisibleError({ error: catalogError, itemCount: catalogItemCount });
+  const showInitialLoader = resolveHomeInitialLoader({
+    hasContent,
+    anyPending,
+    refreshing,
+    hasVisibleError,
+  });
+  const pageEmpty = resolveHomePageEmpty({
+    hasContent,
+    anyPending,
+    allFailed:
+      !hasContent &&
+      !anyPending &&
+      Boolean(feedError && jobsError && catalogError),
+  });
+  const feedAppearance = resolveHomeSectionAppearance({
+    itemCount: feedPosts.length,
+    loading: feedPending,
+    error: feedError,
+    showInitialLoader,
+    showSettledEmpty: true,
+  });
+  const jobsAppearance = resolveHomeSectionAppearance({
+    itemCount: jobList.length,
+    loading: jobsLoading,
+    error: jobsError,
+    showInitialLoader,
+    showSettledEmpty: true,
+  });
+  const catalogAppearance = resolveHomeSectionAppearance({
+    itemCount: catalogItemCount,
+    loading: catalogLoading,
+    error: catalogError,
+    showInitialLoader,
+  });
+  const showPagination = resolveHomePaginationIndicator({
+    showInitialLoader,
+    loadingMore,
+  });
+
   return (
     <ScreenContainer padded={false} safeBottom={false} safeTop={false}>
       <StatusBar style="dark" />
@@ -550,8 +640,12 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
       />
 
       <ScrollView
+        style={styles.flex}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          showInitialLoader ? styles.scrollFill : null,
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -570,15 +664,10 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         }}
         scrollEventThrottle={400}
       >
-        {feedLoading && feedPosts.length === 0 ? (
-          <View style={{ paddingHorizontal: spacing.screen, paddingVertical: spacing.lg }}>
-            <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
-              Loading feed…
-            </Text>
-          </View>
-        ) : null}
+        {showInitialLoader ? <HomeSplashLoader fill /> : null}
 
-        {feedError && feedPosts.length === 0 ? (
+        {feedAppearance === 'placeholder' ? <HomePendingPlaceholder /> : null}
+        {feedAppearance === 'error' ? (
           <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.error }}>{feedError}</Text>
             <TouchableOpacity onPress={() => void refreshFeed()}>
@@ -595,8 +684,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
             </TouchableOpacity>
           </View>
         ) : null}
-
-        {!feedLoading && !feedError && feedPosts.length === 0 ? (
+        {feedAppearance === 'empty' ? (
           <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
               No posts yet. Follow people and share your work to fill Home.
@@ -606,24 +694,31 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
 
         {feedPosts[0] ? renderFeedPost(feedPosts[0]) : null}
 
-        <SectionHeader
-          title="Jobs matches for you"
-          onPress={() => openExplore('jobs')}
-        />
-        {jobsError ? (
+        {jobsAppearance !== 'omit' ? (
+          <SectionHeader
+            title="Jobs matches for you"
+            onPress={() => openExplore('jobs')}
+          />
+        ) : null}
+        {jobsAppearance === 'placeholder' ? <HomePendingPlaceholder /> : null}
+        {jobsAppearance === 'error' ? (
           <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.error }}>{jobsError}</Text>
             <TouchableOpacity
               onPress={() => {
                 void (async () => {
+                  setJobsLoading(jobList.length === 0);
+                  setJobsError(null);
                   try {
                     const jobs = await jobService.refresh();
                     setJobList(jobs);
                     setJobsError(null);
+                    setJobsLoading(false);
                   } catch (e) {
                     setJobsError(
                       e instanceof Error ? e.message : 'Failed to load jobs',
                     );
+                    setJobsLoading(false);
                   }
                 })();
               }}
@@ -640,13 +735,15 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
               </Text>
             </TouchableOpacity>
           </View>
-        ) : jobList.length === 0 ? (
+        ) : null}
+        {jobsAppearance === 'empty' ? (
           <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
               No open job listings yet.
             </Text>
           </View>
-        ) : (
+        ) : null}
+        {jobsAppearance === 'content' ? (
           <FlatList
             data={jobList}
             horizontal
@@ -666,10 +763,30 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
               />
             )}
           />
-        )}
+        ) : null}
 
         {feedPosts[1] ? renderFeedPost(feedPosts[1]) : null}
 
+        {catalogAppearance === 'placeholder' ? <HomePendingPlaceholder /> : null}
+        {catalogAppearance === 'error' ? (
+          <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
+            <Text style={{ ...typography.bodySmall, color: colors.error }}>
+              {catalogError}
+            </Text>
+            <TouchableOpacity onPress={retryCatalog}>
+              <Text
+                style={{
+                  ...typography.bodySmall,
+                  color: colors.primary,
+                  fontWeight: '600',
+                  marginTop: spacing.xs,
+                }}
+              >
+                Retry
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         {serviceList.length > 0 ? (
           <>
             <SectionHeader
@@ -729,12 +846,12 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
           </>
         ) : null}
 
-        {/* Any remaining posts after the suggested carousels */}
         {feedPosts.slice(3).map((post) => renderFeedPost(post))}
-        {loadingMore ? (
-          <View style={{ padding: spacing.lg, alignItems: 'center' }}>
+        {showPagination ? <HomeSplashLoader compact /> : null}
+        {pageEmpty === 'empty' && feedAppearance !== 'empty' ? (
+          <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
-              Loading more…
+              Nothing to show on Home yet.
             </Text>
           </View>
         ) : null}
@@ -751,7 +868,9 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   scroll: { paddingBottom: 120 },
+  scrollFill: { flexGrow: 1 },
   storiesList: {
     paddingHorizontal: 0,
     paddingTop: spacing.sm,

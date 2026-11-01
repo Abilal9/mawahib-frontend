@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
@@ -20,17 +19,14 @@ import ExploreFilterSheet, {
   locationLabel,
 } from '../../components/explore/ExploreFilterSheet';
 import ExploreTaxonomyFilters from '../../components/explore/ExploreTaxonomyFilters';
-import ServiceMediaMosaic from '../../components/explore/ServiceMediaMosaic';
-import { toImageSource } from '../../utils/image';
-import UserAvatar from '../../components/ui/UserAvatar';
+import ExploreTalentCard from '../../components/explore/ExploreTalentCard';
+import ExploreServiceCard from '../../components/explore/ExploreServiceCard';
+import ExploreJobCard from '../../components/explore/ExploreJobCard';
 import { colors, spacing, radius, typography } from '../../theme';
-import MoneyAmount from '../../components/ui/MoneyAmount';
 import { serviceDetailRoute } from '../../domain/truthfulFacts';
-import { stripCurrencyCodeTokens } from '../../utils/money';
 import { exploreTabs, ExploreTab } from '../../data/mock/explore';
 import { normalizeExploreTab } from '../../utils/explore';
 import { TabScreenProps } from '../../navigation/types';
-import { displayProfileTitle } from '../../constants/profile';
 import {
   Job,
   Service,
@@ -40,7 +36,6 @@ import {
 } from '../../data/types';
 import { useMyProfile } from '../../context/ProfileContext';
 import { useSaved } from '../../context/SavedContext';
-import BookmarkButton from '../../components/ui/BookmarkButton';
 import { useConnections } from '../../context/ConnectionsContext';
 import {
   exploreApi,
@@ -101,12 +96,6 @@ function relationToConnectStatus(relation: ConnectionRelation): TalentConnectSta
   if (relation === 'outgoing') return 'request-sent';
   if (relation === 'incoming') return 'incoming';
   return 'connect';
-}
-
-function postedLabel(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function markPending<T>(
@@ -664,82 +653,24 @@ function TalentCard({
   onPress: () => void;
   onConnect: () => void;
 }) {
-  const connectStyle =
-    connectStatus === 'added'
-      ? styles.connectAdded
-      : connectStatus === 'incoming'
-        ? styles.connectIncoming
-        : connectStatus === 'request-sent'
-          ? styles.connectPending
-          : styles.connectDefault;
-  const connectIcon: keyof typeof Ionicons.glyphMap =
-    connectStatus === 'added'
-      ? 'checkmark'
-      : connectStatus === 'incoming'
-        ? 'arrow-down'
-        : connectStatus === 'request-sent'
-          ? 'time-outline'
-          : 'person-add-outline';
-  const studio = talent.user.accountType === 'business';
-
   return (
-    <TouchableOpacity style={styles.talentCard} onPress={onPress} activeOpacity={0.9}>
-      <View style={styles.talentRow}>
-        <UserAvatar uri={talent.user.avatar} size={36} style={styles.talentAvatar} />
-        <View style={styles.talentBody}>
-          <View style={styles.nameRow}>
-            <Text style={styles.talentName}>{talent.user.name}</Text>
-            {talent.user.isVerified ? (
-              <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-            ) : null}
-            {studio ? (
-              <View style={styles.studioBadge}>
-                <Text style={styles.studioText}>Studio</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.talentTitle}>{displayProfileTitle(talent.user.title)}</Text>
-          {talent.user.location ? (
-            <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={14} color={colors.text} />
-              <Text style={styles.metaText}>{talent.user.location}</Text>
-            </View>
-          ) : null}
-          {talent.skills.length > 0 ? (
-            <Text style={styles.skillLine} numberOfLines={1}>
-              {talent.skills.slice(0, 3).join(' · ')}
-            </Text>
-          ) : null}
-          {(talent.reviewCount ?? 0) > 0 ? (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={colors.warning} />
-              <Text style={styles.ratingValue}>{talent.rating.toFixed(1)}</Text>
-              <Text style={styles.ratingCount}>({talent.reviewCount ?? 0})</Text>
-            </View>
-          ) : null}
-        </View>
-        <TouchableOpacity
-          style={[styles.connectBtn, connectStyle]}
-          onPress={onConnect}
-          accessibilityLabel={
-            connectStatus === 'incoming'
-              ? 'Accept connection request'
-              : connectStatus === 'request-sent'
-                ? 'Cancel connection request'
-                : connectStatus === 'added'
-                  ? 'Confirm disconnect'
-                  : 'Connect'
-          }
-          activeOpacity={0.85}
-        >
-          <Ionicons
-            name={connectIcon}
-            size={16}
-            color={connectStatus === 'request-sent' ? colors.text : colors.white}
-          />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+    <ExploreTalentCard
+      talent={{
+        id: talent.id,
+        name: talent.user.name,
+        title: talent.user.title ?? null,
+        avatarUrl: talent.user.avatar,
+        location: talent.user.location ?? null,
+        skills: talent.skills,
+        rating: talent.rating,
+        reviewCount: talent.reviewCount ?? 0,
+        studio: talent.user.accountType === 'business',
+        isVerified: talent.user.isVerified,
+      }}
+      connectStatus={connectStatus}
+      onPress={onPress}
+      onConnect={onConnect}
+    />
   );
 }
 
@@ -756,56 +687,32 @@ export function ServiceCard({
 }) {
   const saved = useSaved();
   const shown = saved.isSaved('service', service.id, Boolean(service.isSaved));
-  const serviceReviews = service.reviewCount ?? 0;
   return (
-    <TouchableOpacity style={styles.serviceCard} onPress={onPress} activeOpacity={0.9}>
-      <ServiceMediaMosaic images={service.images} />
-      <View style={styles.serviceBody}>
-        <View style={styles.serviceTitleRow}>
-          <Text style={styles.serviceTitle} numberOfLines={1}>
-            {service.title}
-          </Text>
-          <BookmarkButton
-            kind="service"
-            saved={shown}
-            onPress={() => {
-              if (onBookmark) onBookmark();
-              else void saved.setDesired('service', service.id, !shown, Boolean(service.isSaved));
-            }}
-          />
-        </View>
-        {service.category ? <Text style={styles.categoryText}>{service.category}</Text> : null}
-        <Text style={styles.serviceDesc} numberOfLines={2}>
-          {service.description}
-        </Text>
-        <TouchableOpacity style={styles.providerRow} onPress={onProviderPress} activeOpacity={0.85}>
-          <UserAvatar uri={service.provider.avatar} size={20} style={styles.providerAvatar} />
-          <Text style={styles.providerName}>{service.provider.name}</Text>
-          {service.provider.isVerified ? (
-            <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-          ) : null}
-        </TouchableOpacity>
-        {service.provider.location ? (
-          <Text style={styles.serviceMeta}>{service.provider.location}</Text>
-        ) : null}
-        {serviceReviews > 0 ? (
-          <Text style={styles.providerRating}>
-            {service.rating.toFixed(1)} ({serviceReviews === 1 ? '1 review' : `${serviceReviews} reviews`})
-          </Text>
-        ) : (
-          <Text style={styles.providerRating}>No reviews yet</Text>
-        )}
-        {service.duration ? <Text style={styles.serviceMeta}>{service.duration}</Text> : null}
-        {service.price != null ? (
-          <MoneyAmount
-            amount={service.price}
-            currency={service.currency}
-            size={14}
-            color={colors.textTertiary}
-          />
-        ) : null}
-      </View>
-    </TouchableOpacity>
+    <ExploreServiceCard
+      service={{
+        id: service.id,
+        title: service.title,
+        description: service.description,
+        category: service.category,
+        images: service.images,
+        providerName: service.provider.name,
+        providerAvatar: service.provider.avatar,
+        providerVerified: service.provider.isVerified,
+        providerLocation: service.provider.location,
+        rating: service.rating,
+        reviewCount: service.reviewCount ?? 0,
+        price: service.price,
+        currency: service.currency,
+        duration: service.duration,
+      }}
+      onPress={onPress}
+      onProviderPress={onProviderPress}
+      saved={shown}
+      onBookmark={() => {
+        if (onBookmark) onBookmark();
+        else void saved.setDesired('service', service.id, !shown, Boolean(service.isSaved));
+      }}
+    />
   );
 }
 
@@ -820,62 +727,28 @@ export function JobCard({
 }) {
   const saved = useSaved();
   const shown = saved.isSaved('job', job.id, Boolean(job.isSaved));
-  const badge = jobTypeBadge(job.type);
   return (
-    <TouchableOpacity style={styles.jobCard} onPress={onPress} activeOpacity={0.9}>
-      <View style={styles.jobLogoWrap}>
-        {job.logo ? (
-          <Image source={toImageSource(job.logo)} style={styles.jobLogo} contentFit="cover" />
-        ) : (
-          <Text style={styles.jobLogoText}>{job.company.charAt(0)}</Text>
-        )}
-      </View>
-      <View style={styles.jobBody}>
-        <Text style={styles.jobTitle}>{job.title}</Text>
-        <View style={styles.nameRow}>
-          <Text style={styles.jobCompany}>{job.company}</Text>
-          {job.companyVerified ? (
-            <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-          ) : null}
-        </View>
-        <Text style={styles.jobMeta}>{job.location}</Text>
-        <MoneyAmount
-          amount={stripCurrencyCodeTokens(job.salary) || 'Negotiable'}
-          currency={job.currency}
-          size={14}
-          color={colors.textTertiary}
-          rawLabel
-        />
-        {job.postedAt ? <Text style={styles.jobMeta}>Posted {postedLabel(job.postedAt)}</Text> : null}
-      </View>
-      <View style={styles.jobAside}>
-        <BookmarkButton
-          kind="job"
-          saved={shown}
-          onPress={() => {
-            if (onBookmark) onBookmark();
-            else void saved.setDesired('job', job.id, !shown, Boolean(job.isSaved));
-          }}
-        />
-        <View style={[styles.jobBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-          <Text style={[styles.jobBadgeText, { color: badge.text }]}>{badge.label}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+    <ExploreJobCard
+      job={{
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        companyVerified: job.companyVerified,
+        logo: job.logo,
+        location: job.location,
+        salary: job.salary,
+        currency: job.currency,
+        type: job.type,
+        postedAt: job.postedAt,
+      }}
+      onPress={onPress}
+      saved={shown}
+      onBookmark={() => {
+        if (onBookmark) onBookmark();
+        else void saved.setDesired('job', job.id, !shown, Boolean(job.isSaved));
+      }}
+    />
   );
-}
-
-function jobTypeBadge(type: Job['type']) {
-  if (type === 'part-time') {
-    return { label: 'Part-time', bg: '#EFF6FF', border: '#DBEAFE', text: '#193CB8' };
-  }
-  if (type === 'full-time') {
-    return { label: 'Full-time', bg: '#FEFCE8', border: '#FEF9C2', text: '#894B00' };
-  }
-  if (type === 'gig' || type === 'freelance') {
-    return { label: type === 'gig' ? 'Gig' : 'Freelance', bg: '#F0FDF4', border: '#DCFCE7', text: '#016630' };
-  }
-  return { label: 'Contract', bg: '#FDF2F8', border: '#FCE7F3', text: colors.primary };
 }
 
 const styles = StyleSheet.create({
@@ -952,99 +825,4 @@ const styles = StyleSheet.create({
   emptyText: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center' },
   retry: { ...typography.bodySmall, color: colors.primary, fontWeight: '600' },
   footer: { paddingVertical: spacing.md },
-  talentCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  talentRow: { flexDirection: 'row', gap: spacing.sm },
-  talentAvatar: {},
-  talentBody: { flex: 1, gap: 2 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  talentName: { ...typography.body, color: colors.text, fontWeight: '600' },
-  studioBadge: {
-    backgroundColor: '#FDF2F8',
-    borderRadius: radius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  studioText: { ...typography.caption, color: colors.primary, fontWeight: '600' },
-  talentTitle: { ...typography.bodySmall, color: colors.textSecondary },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { ...typography.caption, color: colors.text },
-  skillLine: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  ratingValue: { ...typography.caption, color: colors.text },
-  ratingCount: { ...typography.caption, color: '#829AB1' },
-  connectBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  connectDefault: { backgroundColor: colors.primary },
-  connectPending: { backgroundColor: colors.borderLight },
-  connectIncoming: { backgroundColor: colors.warning },
-  connectAdded: { backgroundColor: colors.success },
-  serviceCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: spacing.sm,
-    overflow: 'hidden',
-  },
-  serviceBody: { padding: spacing.md, gap: 4 },
-  serviceTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  serviceTitle: { ...typography.body, color: colors.text, fontWeight: '600', flex: 1 },
-  categoryText: { ...typography.caption, color: colors.primary },
-  serviceDesc: { ...typography.bodySmall, color: colors.textSecondary },
-  providerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  providerAvatar: {},
-  providerName: { ...typography.bodySmall, color: colors.text },
-  serviceMeta: { ...typography.caption, color: colors.textTertiary },
-  providerRating: { ...typography.caption, color: colors.text, fontWeight: '600' },
-  jobCard: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  jobLogoWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.button,
-    backgroundColor: colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  jobLogo: { width: 44, height: 44 },
-  jobLogoText: { ...typography.body, fontWeight: '700', color: colors.text },
-  jobBody: { flex: 1, gap: 2 },
-  jobTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
-  jobCompany: { ...typography.bodySmall, color: colors.textSecondary },
-  jobMeta: { ...typography.caption, color: colors.textTertiary },
-  jobAside: { alignItems: 'flex-end', gap: spacing.sm },
-  jobBadge: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: radius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  jobBadgeText: { ...typography.caption, fontWeight: '600' },
 });

@@ -40,18 +40,21 @@ export default function SplashLoadingDots() {
   }, [dot1, dot2, dot3]);
 
   return (
-    <View style={styles.dotsRow}>
+    <View style={splashLoadingDotStyles.dotsRow}>
       {[dot1, dot2, dot3].map((dot, index) => (
         <Animated.View
           key={index}
-          style={[styles.dot, { opacity: dot, transform: [{ scale: dot }] }]}
+          style={[
+            splashLoadingDotStyles.dot,
+            { opacity: dot, transform: [{ scale: dot }] },
+          ]}
         />
       ))}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+export const splashLoadingDotStyles = StyleSheet.create({
   dotsRow: {
     flexDirection: 'row',
     alignItems: 'center',

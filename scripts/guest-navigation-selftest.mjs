@@ -154,6 +154,8 @@ assert.equal(guestHeader.includes('useMyProfile'), false);
 assert.equal(guestHeader.includes('notifications-outline'), false);
 assert.equal(guestHeader.includes('UserAvatar'), false);
 assert.match(guestHeader, /GuestAccountEntry/);
+assert.match(guestExplore, /GuestAccountEntry/);
+assert.equal(guestExplore.includes('GuestAppHeader'), false);
 
 assert.match(signedOut, /GuestUserProfileScreen/);
 assert.equal(signedOut.includes('component={UserProfileScreen}'), false);

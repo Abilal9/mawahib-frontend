@@ -37,11 +37,11 @@ const BIO_PREVIEW_CHARS = 150;
 interface AboutTabProps {
   content: ProfileContent;
   isOwn: boolean;
-  onAdd: (key: AboutSectionKey) => void;
+  onAdd?: (key: AboutSectionKey) => void;
   /** Section-level edit (Bio / Talents). */
-  onEditSection: (key: AboutSectionKey) => void;
+  onEditSection?: (key: AboutSectionKey) => void;
   /** Structured item edit by stable id. */
-  onEditItem: (key: AboutSectionKey, itemId: string) => void;
+  onEditItem?: (key: AboutSectionKey, itemId: string) => void;
 }
 
 function ExpandableBio({ text }: { text: string }) {
@@ -115,7 +115,7 @@ export default function AboutTab({
           <SectionHeader
             title="Bio"
             isOwn={isOwn}
-            onEdit={() => onEditSection('bio')}
+            onEdit={() => onEditSection?.('bio')}
           />
           <ExpandableBio text={content.bio} />
         </View>
@@ -126,7 +126,7 @@ export default function AboutTab({
           <SectionHeader
             title="Languages"
             isOwn={isOwn}
-            onAdd={() => onAdd('languages')}
+            onAdd={() => onAdd?.('languages')}
           />
           {content.languages.map((lang, index) => (
             <View key={lang.id}>
@@ -135,7 +135,7 @@ export default function AboutTab({
                 style={styles.langRow}
                 disabled={!isOwn}
                 activeOpacity={isOwn ? 0.8 : 1}
-                onPress={() => isOwn && onEditItem('languages', lang.id)}
+                onPress={() => isOwn && onEditItem?.('languages', lang.id)}
               >
                 <View style={styles.flagCircle}>
                   <Text style={styles.flag}>{lang.flag || '🌐'}</Text>
@@ -158,8 +158,8 @@ export default function AboutTab({
           <SectionHeader
             title="Talents"
             isOwn={isOwn}
-            onEdit={() => onEditSection('talents')}
-            onAdd={() => onAdd('talents')}
+            onEdit={() => onEditSection?.('talents')}
+            onAdd={() => onAdd?.('talents')}
           />
           <View style={styles.chipWrap}>
             {content.talents.map((talent, index) => {
@@ -179,7 +179,7 @@ export default function AboutTab({
           <SectionHeader
             title="Education"
             isOwn={isOwn}
-            onAdd={() => onAdd('education')}
+            onAdd={() => onAdd?.('education')}
           />
           {education.map((item, index) => (
             <View key={item.id}>
@@ -188,7 +188,7 @@ export default function AboutTab({
                 style={styles.timelineRow}
                 disabled={!isOwn}
                 activeOpacity={isOwn ? 0.8 : 1}
-                onPress={() => isOwn && onEditItem('education', item.id)}
+                onPress={() => isOwn && onEditItem?.('education', item.id)}
               >
                 <View
                   style={[
@@ -229,7 +229,7 @@ export default function AboutTab({
           <SectionHeader
             title="Experience"
             isOwn={isOwn}
-            onAdd={() => onAdd('experience')}
+            onAdd={() => onAdd?.('experience')}
           />
           {experience.map((item, index) => (
             <View key={item.id}>
@@ -238,7 +238,7 @@ export default function AboutTab({
                 style={styles.timelineRow}
                 disabled={!isOwn}
                 activeOpacity={isOwn ? 0.8 : 1}
-                onPress={() => isOwn && onEditItem('experience', item.id)}
+                onPress={() => isOwn && onEditItem?.('experience', item.id)}
               >
                 <View
                   style={[
@@ -281,7 +281,7 @@ export default function AboutTab({
           <SectionHeader
             title="Certifications"
             isOwn={isOwn}
-            onAdd={() => onAdd('certifications')}
+            onAdd={() => onAdd?.('certifications')}
           />
           {certifications.map((item, index) => (
             <View key={item.id}>
@@ -290,7 +290,7 @@ export default function AboutTab({
                 style={styles.timelineRow}
                 disabled={!isOwn}
                 activeOpacity={isOwn ? 0.8 : 1}
-                onPress={() => isOwn && onEditItem('certifications', item.id)}
+                onPress={() => isOwn && onEditItem?.('certifications', item.id)}
               >
                 <View style={styles.timelineBody}>
                   <Text style={styles.cardTitle}>{item.name}</Text>
@@ -333,7 +333,9 @@ export default function AboutTab({
           <TouchableOpacity
             key={key}
             style={styles.emptyRow}
-            onPress={() => (key === 'bio' || key === 'talents' ? onEditSection(key) : onAdd(key))}
+            onPress={() =>
+              key === 'bio' || key === 'talents' ? onEditSection?.(key) : onAdd?.(key)
+            }
             activeOpacity={0.8}
           >
             <Text style={styles.emptyLabel}>{ABOUT_SECTION_ADD_LABELS[key]}</Text>

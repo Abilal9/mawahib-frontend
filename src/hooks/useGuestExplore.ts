@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { categoriesForExploreTab } from '../domain/exploreTaxonomy';
+import {
+  categoriesForExploreTab,
+  toggleExploreCategory,
+} from '../domain/exploreTaxonomy';
+import { resolveGuestExploreQuery } from '../lib/guestExploreQuery';
 import { isStaleIdentityError } from '../lib/identityFences';
 import { publicErrorMessage } from '../lib/publicErrors';
 import {
@@ -9,7 +13,6 @@ import {
   fetchPublicTaxonomy,
   PUBLIC_MAX_SKIP,
   PUBLIC_MAX_TAKE,
-  PUBLIC_Q_MIN_LENGTH,
   type GuestExploreService,
   type GuestExploreTalent,
   type GuestJob,
@@ -18,6 +21,7 @@ import {
 import type { ExploreTab } from '../data/mock/explore';
 
 export const GUEST_EXPLORE_DEBOUNCE_MS = 300;
+export const GUEST_EXPLORE_REFRESH_WATCHDOG_MS = 30_000;
 
 export type GuestExploreItem =
   | { kind: 'talent'; talent: GuestExploreTalent }
@@ -28,6 +32,7 @@ type Bucket = {
   items: GuestExploreItem[];
   error: string | null;
   initialLoading: boolean;
+  refreshing: boolean;
   loadingMore: boolean;
   hasMore: boolean;
 };
@@ -36,39 +41,36 @@ const emptyBucket = (): Bucket => ({
   items: [],
   error: null,
   initialLoading: true,
+  refreshing: false,
   loadingMore: false,
   hasMore: false,
 });
 
-function effectiveSearchQ(
-  typed: string,
-  categoryName: string | null,
-): { blocked: boolean; q?: string } {
-  const trimmed = typed.trim();
-  if (trimmed.length === 1) return { blocked: true };
-  if (trimmed.length >= PUBLIC_Q_MIN_LENGTH) return { blocked: false, q: trimmed };
-  if (categoryName && categoryName.trim().length >= PUBLIC_Q_MIN_LENGTH) {
-    return { blocked: false, q: categoryName.trim() };
-  }
-  return { blocked: false };
-}
-
 export function useGuestExplore(initialTab: ExploreTab = 'talents') {
   const mounted = useRef(true);
   const gen = useRef(0);
+  const refreshWatchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearRefreshWatchdog = () => {
+    if (refreshWatchdog.current) {
+      clearTimeout(refreshWatchdog.current);
+      refreshWatchdog.current = null;
+    }
+  };
   const [tab, setTab] = useState<ExploreTab>(initialTab);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
-  );
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [taxonomy, setTaxonomy] = useState<PublicTaxonomyCategory[]>([]);
   const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(true);
+  const [taxonomyAttempt, setTaxonomyAttempt] = useState(0);
   const [bucket, setBucket] = useState<Bucket>(emptyBucket);
 
   useEffect(() => {
     return () => {
       mounted.current = false;
+      clearRefreshWatchdog();
     };
   }, []);
 
@@ -81,48 +83,61 @@ export function useGuestExplore(initialTab: ExploreTab = 'talents') {
 
   useEffect(() => {
     let cancelled = false;
+    setTaxonomyLoading(true);
     void fetchPublicTaxonomy()
       .then((catalog) => {
         if (cancelled || !mounted.current) return;
         setTaxonomy(catalog.categories);
         setTaxonomyError(null);
+        setTaxonomyLoading(false);
       })
       .catch((error) => {
         if (cancelled || !mounted.current) return;
-        if (isStaleIdentityError(error)) return;
+        if (isStaleIdentityError(error)) {
+          setTaxonomyLoading(false);
+          return;
+        }
         setTaxonomyError(publicErrorMessage(error));
+        setTaxonomyLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [taxonomyAttempt]);
 
   const categories = useMemo(
     () => categoriesForExploreTab(taxonomy, tab),
     [taxonomy, tab],
   );
 
-  const selectedCategoryName = useMemo(() => {
-    if (!selectedCategoryId) return null;
-    return categories.find((item) => item.id === selectedCategoryId)?.nameEn ?? null;
-  }, [categories, selectedCategoryId]);
-
-  const search = effectiveSearchQ(debouncedQuery, selectedCategoryName);
+  const search = resolveGuestExploreQuery(debouncedQuery, categoryIds);
 
   const load = useCallback(
     async (mode: 'reset' | 'more' | 'refresh') => {
-      if (search.blocked) return;
+      if (search.blocked) {
+        if (mode === 'refresh') {
+          clearRefreshWatchdog();
+          setBucket((current) => ({ ...current, refreshing: false }));
+        }
+        return;
+      }
       const requestGen = mode === 'more' ? gen.current : ++gen.current;
+      if (mode !== 'more') clearRefreshWatchdog();
       if (mode === 'reset') {
         setBucket({
           items: [],
           error: null,
           initialLoading: true,
+          refreshing: false,
           loadingMore: false,
           hasMore: false,
         });
       } else if (mode === 'refresh') {
-        setBucket((current) => ({ ...current, error: null }));
+        setBucket((current) => ({ ...current, error: null, refreshing: true }));
+        refreshWatchdog.current = setTimeout(() => {
+          if (requestGen !== gen.current || !mounted.current) return;
+          setBucket((current) => ({ ...current, refreshing: false }));
+        }, GUEST_EXPLORE_REFRESH_WATCHDOG_MS);
       } else {
         setBucket((current) => ({ ...current, loadingMore: true }));
       }
@@ -138,6 +153,7 @@ export function useGuestExplore(initialTab: ExploreTab = 'talents') {
           q: search.q,
           skip,
           take: PUBLIC_MAX_TAKE,
+          categoryIds: search.categoryIds,
         };
         let nextItems: GuestExploreItem[] = [];
         let pageLen = 0;
@@ -159,48 +175,54 @@ export function useGuestExplore(initialTab: ExploreTab = 'talents') {
         }
 
         if (requestGen !== gen.current || !mounted.current) return;
+        clearRefreshWatchdog();
         setBucket((current) => {
           const items = mode === 'more' ? [...current.items, ...nextItems] : nextItems;
           return {
             items,
             error: null,
             initialLoading: false,
+            refreshing: false,
             loadingMore: false,
             hasMore:
               pageLen >= PUBLIC_MAX_TAKE && skip + pageLen <= PUBLIC_MAX_SKIP,
           };
         });
       } catch (error) {
-        if (isStaleIdentityError(error)) return;
         if (requestGen !== gen.current || !mounted.current) return;
+        clearRefreshWatchdog();
+        if (isStaleIdentityError(error)) {
+          setBucket((current) => ({
+            ...current,
+            initialLoading: false,
+            refreshing: false,
+            loadingMore: false,
+          }));
+          return;
+        }
         setBucket((current) => ({
           items: mode === 'reset' ? [] : current.items,
           error: publicErrorMessage(error),
           initialLoading: false,
+          refreshing: false,
           loadingMore: false,
           hasMore: false,
         }));
       }
     },
-    [bucket.items.length, search.blocked, search.q, tab],
+    [bucket.items.length, search.blocked, search.q, categoryIds, tab],
   );
 
   useEffect(() => {
-    setSelectedCategoryId(null);
+    setCategoryIds([]);
   }, [tab]);
-
-  useEffect(() => {
-    if (debouncedQuery.trim().length >= PUBLIC_Q_MIN_LENGTH) {
-      setSelectedCategoryId(null);
-    }
-  }, [debouncedQuery]);
 
   useEffect(() => {
     if (search.blocked) return;
     void load('reset');
-    // Intentionally reload when tab or effective q changes, not on load identity.
+    // Reload when tab, text query, or category IDs change — not on load identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, search.blocked, search.q]);
+  }, [tab, search.blocked, search.q, categoryIds]);
 
   const loadMore = useCallback(() => {
     if (
@@ -220,7 +242,15 @@ export function useGuestExplore(initialTab: ExploreTab = 'talents') {
   }, [load]);
 
   const toggleCategory = useCallback((id: string) => {
-    setSelectedCategoryId((current) => (current === id ? null : id));
+    setCategoryIds((current) => toggleExploreCategory(current, id));
+  }, []);
+
+  const clearCategories = useCallback(() => {
+    setCategoryIds([]);
+  }, []);
+
+  const retryTaxonomy = useCallback(() => {
+    setTaxonomyAttempt((current) => current + 1);
   }, []);
 
   return {
@@ -229,12 +259,16 @@ export function useGuestExplore(initialTab: ExploreTab = 'talents') {
     query,
     setQuery,
     categories,
-    selectedCategoryId,
+    categoryIds,
     toggleCategory,
+    clearCategories,
+    taxonomyLoading,
     taxonomyError,
+    retryTaxonomy,
     items: bucket.items,
     error: bucket.error,
     initialLoading: bucket.initialLoading,
+    refreshing: bucket.refreshing,
     loadingMore: bucket.loadingMore,
     hasMore: bucket.hasMore,
     searchBlocked: search.blocked,

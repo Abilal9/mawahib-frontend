@@ -14,10 +14,21 @@ import { ApiError } from '../lib/apiClient';
 import { useAuth } from './AuthContext';
 import { useSaved } from './SavedContext';
 import { postService } from '../services/postService';
+import {
+  clearFeedRequest,
+  initialFeedRequest,
+  isCurrentFeedRequest,
+  replaceFeedRequest,
+  settleFeedFailure,
+  settleFeedSuccess,
+  type FeedPhase,
+} from '../lib/feedLifecycle';
 
 interface PostsContextValue {
   posts: Post[];
   loading: boolean;
+  /** Idle and pending are initial loads. Ready includes a completed empty feed. */
+  feedPhase: FeedPhase;
   loadingMore: boolean;
   error: string | null;
   hasMore: boolean;
@@ -46,6 +57,8 @@ export function PostsProvider({ children }: { children: ReactNode }) {
   const saved = useSaved();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const feedRef = useRef(initialFeedRequest());
+  const [feedPhase, setFeedPhase] = useState<FeedPhase>(feedRef.current.phase);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -54,28 +67,51 @@ export function PostsProvider({ children }: { children: ReactNode }) {
   const postsRef = useRef(posts);
   postsRef.current = posts;
 
+  const commitFeed = (next: ReturnType<typeof replaceFeedRequest>) => {
+    feedRef.current = next;
+    setFeedPhase(next.phase);
+  };
+
   const refresh = useCallback(async () => {
     if (!isSignedIn || !userId) {
+      commitFeed(clearFeedRequest(feedRef.current));
       setPosts([]);
       setNextCursor(null);
       setHasMore(false);
       setError(null);
+      setLoading(false);
       return;
     }
+    const ownerChanged = feedRef.current.ownerId !== userId;
+    const started = replaceFeedRequest(feedRef.current, userId);
+    commitFeed(started);
+    if (ownerChanged) {
+      setPosts([]);
+      setNextCursor(null);
+      setHasMore(false);
+      setError(null);
+    }
     setLoading(true);
-    setError(null);
+    if (started.phase === 'pending') setError(null);
     try {
       const page = await postService.listFeed(undefined, 20);
+      if (!isCurrentFeedRequest(feedRef.current, userId, started.requestId)) return;
       setPosts(page.items);
       setNextCursor(page.nextCursor);
       setHasMore(page.hasMore);
+      setError(null);
+      commitFeed(settleFeedSuccess(feedRef.current, userId, started.requestId));
     } catch (e) {
+      if (!isCurrentFeedRequest(feedRef.current, userId, started.requestId)) return;
       setError(e instanceof ApiError || e instanceof Error ? e.message : 'Failed to load feed');
       setPosts([]);
       setNextCursor(null);
       setHasMore(false);
+      commitFeed(settleFeedFailure(feedRef.current, userId, started.requestId));
     } finally {
-      setLoading(false);
+      if (isCurrentFeedRequest(feedRef.current, userId, started.requestId)) {
+        setLoading(false);
+      }
     }
   }, [isSignedIn, userId]);
 
@@ -245,6 +281,7 @@ export function PostsProvider({ children }: { children: ReactNode }) {
     () => ({
       posts,
       loading,
+      feedPhase,
       loadingMore,
       error,
       hasMore,
@@ -264,6 +301,7 @@ export function PostsProvider({ children }: { children: ReactNode }) {
     [
       posts,
       loading,
+      feedPhase,
       loadingMore,
       error,
       hasMore,

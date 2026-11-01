@@ -38,6 +38,7 @@ export function mapApiReviewToItem(
     serviceName: review.contextLabel,
     body: review.body,
     images: (review.media ?? [])
+      .filter((item) => item.url && (!item.mimeType || /^image\//i.test(item.mimeType)))
       .map((item) => item.url)
       .filter((url): url is string => typeof url === 'string' && url.length > 0)
       .slice(0, 4),

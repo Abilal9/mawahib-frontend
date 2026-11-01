@@ -4,13 +4,16 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../ui/UserAvatar';
 import BookmarkButton from '../ui/BookmarkButton';
-import ServiceMediaMosaic from '../explore/ServiceMediaMosaic';
 import PostMediaPreview from '../ui/PostMediaPreview';
-import MoneyAmount from '../ui/MoneyAmount';
+import ExploreTalentCard from '../explore/ExploreTalentCard';
+import ExploreServiceCard from '../explore/ExploreServiceCard';
+import ExploreJobCard from '../explore/ExploreJobCard';
+import ReviewRow from '../reviews/ReviewRow';
 import { colors, spacing, radius, typography } from '../../theme';
 import { displayProfileTitle } from '../../constants/profile';
 import { toImageSource } from '../../utils/image';
 import { getMediaCacheKey } from '../../lib/mediaCacheKey';
+import { guestReviewToItem } from '../../lib/guestReviewPresentation';
 import type {
   GuestActorCard,
   GuestExploreService,
@@ -20,6 +23,7 @@ import type {
   GuestPost,
   GuestReview,
   GuestReviewAggregate,
+  GuestService,
 } from '../../services/publicApi';
 
 export function publicTimeAgo(iso: string): string {
@@ -141,39 +145,65 @@ export function GuestStatusBlock({
 export function GuestTalentCard({
   talent,
   onPress,
+  onConnect,
   compact,
 }: {
   talent: GuestExploreTalent;
   onPress: () => void;
+  onConnect?: () => void;
   compact?: boolean;
 }) {
-  const location = guestLocationLabel(talent.locationCity, talent.locationCountry);
+  const overall = talent.reviewSummary?.overall;
   return (
-    <TouchableOpacity
-      style={[styles.card, compact && styles.compactCard]}
+    <ExploreTalentCard
+      talent={{
+        id: talent.id,
+        name: talent.displayName,
+        title: talent.title,
+        avatarUrl: talent.avatarUrl,
+        location: guestLocationLabel(talent.locationCity, talent.locationCountry),
+        skills: talent.skills ?? [],
+        rating: overall?.average ?? 0,
+        reviewCount: overall?.count ?? 0,
+        studio: talent.accountType === 'business',
+      }}
+      connectStatus="connect"
       onPress={onPress}
-      activeOpacity={0.9}
-    >
-      <UserAvatar uri={talent.avatarUrl} size={compact ? 48 : 56} />
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {talent.displayName}
-        </Text>
-        <Text style={styles.cardMeta} numberOfLines={1}>
-          {displayProfileTitle(talent.title)}
-        </Text>
-        {accountTypeLabel(talent.accountType) ? (
-          <Text style={styles.cardMeta}>{accountTypeLabel(talent.accountType)}</Text>
-        ) : null}
-        <GuestRating summary={talent.reviewSummary?.overall} />
-        {location ? (
-          <Text style={styles.cardMeta} numberOfLines={1}>
-            {location}
-          </Text>
-        ) : null}
-      </View>
-    </TouchableOpacity>
+      onConnect={onConnect}
+      compact={compact}
+    />
   );
+}
+
+function guestServiceCardPrice(service: GuestExploreService | GuestService): {
+  amount: number;
+  currency: string;
+  fromPrice: boolean;
+} | null {
+  if ('startingPrice' in service && service.startingPrice != null && service.currency) {
+    return {
+      amount: service.startingPrice,
+      currency: service.currency,
+      fromPrice: Boolean(service.fromPrice),
+    };
+  }
+  if (!('packages' in service) || !service.packages?.length || !service.currency) {
+    return null;
+  }
+  const amounts = service.packages
+    .filter(
+      (pkg) =>
+        pkg.currency === service.currency &&
+        Number.isFinite(pkg.price) &&
+        pkg.price >= 0,
+    )
+    .map((pkg) => pkg.price);
+  if (amounts.length === 0) return null;
+  return {
+    amount: Math.min(...amounts),
+    currency: service.currency,
+    fromPrice: new Set(amounts).size > 1,
+  };
 }
 
 export function GuestServiceCard({
@@ -183,55 +213,36 @@ export function GuestServiceCard({
   onSave,
   compact,
 }: {
-  service: GuestExploreService | { id: string; title: string; description: string; category: string | null; images: string[]; reviewSummary: GuestReviewAggregate; provider: GuestActorCard };
+  service: GuestExploreService | GuestService;
   onPress: () => void;
   onProviderPress?: () => void;
   onSave?: () => void;
   compact?: boolean;
 }) {
+  const price = guestServiceCardPrice(service);
   return (
-    <TouchableOpacity
-      style={[styles.serviceCard, compact && styles.compactServiceCard]}
+    <ExploreServiceCard
+      service={{
+        id: service.id,
+        title: service.title,
+        description: 'description' in service ? service.description : undefined,
+        category: service.category,
+        images: service.images ?? [],
+        providerName: service.provider.displayName,
+        providerAvatar: service.provider.avatarUrl,
+        rating: service.reviewSummary?.average ?? 0,
+        reviewCount: service.reviewSummary?.count ?? 0,
+        price: price?.amount ?? null,
+        currency: price?.currency ?? null,
+        fromPrice: price?.fromPrice,
+      }}
       onPress={onPress}
-      activeOpacity={0.9}
-    >
-      <ServiceMediaMosaic images={service.images ?? []} />
-      <View style={styles.serviceBody}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.cardTitle, { flex: 1 }]} numberOfLines={2}>
-            {service.title}
-          </Text>
-          {onSave ? (
-            <BookmarkButton kind="service" saved={false} onPress={onSave} />
-          ) : null}
-        </View>
-        {service.category ? (
-          <Text style={styles.cardMeta}>{service.category}</Text>
-        ) : null}
-        <TouchableOpacity
-          style={styles.providerRow}
-          onPress={onProviderPress}
-          disabled={!onProviderPress}
-          activeOpacity={0.85}
-        >
-          <UserAvatar uri={service.provider.avatarUrl} size={20} />
-          <Text style={styles.providerName} numberOfLines={1}>
-            {service.provider.displayName}
-          </Text>
-        </TouchableOpacity>
-        <GuestRating summary={service.reviewSummary} />
-      </View>
-    </TouchableOpacity>
+      onProviderPress={onProviderPress}
+      saved={false}
+      onBookmark={onSave}
+      compact={compact}
+    />
   );
-}
-
-function jobTypeLabel(type: string): string {
-  if (type === 'part-time') return 'Part-time';
-  if (type === 'full-time') return 'Full-time';
-  if (type === 'gig') return 'Gig';
-  if (type === 'freelance') return 'Freelance';
-  if (type === 'contract') return 'Contract';
-  return type;
 }
 
 export function GuestJobCard({
@@ -246,37 +257,25 @@ export function GuestJobCard({
   compact?: boolean;
 }) {
   const company = job.companyName || job.poster.displayName;
-  const pay = job.salaryLabel?.trim() || null;
+  const pay = job.salaryLabel?.trim() || job.fixedAmount;
   return (
-    <TouchableOpacity
-      style={[styles.jobCard, compact && styles.compactCard]}
+    <ExploreJobCard
+      job={{
+        id: job.id,
+        title: job.title,
+        company,
+        logo: job.poster.avatarUrl,
+        location: job.location,
+        salary: pay ?? 'Negotiable',
+        currency: job.currency,
+        type: job.employmentType,
+        postedAt: job.postedAt,
+      }}
       onPress={onPress}
-      activeOpacity={0.9}
-    >
-      <UserAvatar uri={job.poster.avatarUrl} size={48} />
-      <View style={styles.cardBody}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.cardTitle, { flex: 1 }]} numberOfLines={2}>
-            {job.title}
-          </Text>
-          {onSave ? <BookmarkButton kind="job" saved={false} onPress={onSave} /> : null}
-        </View>
-        <Text style={styles.cardMeta} numberOfLines={1}>
-          {company}
-        </Text>
-        {job.location ? (
-          <Text style={styles.cardMeta} numberOfLines={1}>
-            {job.location}
-          </Text>
-        ) : null}
-        {pay ? (
-          <MoneyAmount amount={pay} currency={job.currency} size={14} rawLabel />
-        ) : job.fixedAmount != null ? (
-          <MoneyAmount amount={job.fixedAmount} currency={job.currency} size={14} />
-        ) : null}
-        <Text style={styles.badge}>{jobTypeLabel(job.employmentType)}</Text>
-      </View>
-    </TouchableOpacity>
+      saved={false}
+      onBookmark={onSave}
+      compact={compact}
+    />
   );
 }
 
@@ -344,27 +343,19 @@ export function GuestPostCard({
   );
 }
 
-export function GuestReviewCard({ review }: { review: GuestReview }) {
+export function GuestReviewCard({
+  review,
+  onAuthorPress,
+}: {
+  review: GuestReview;
+  onAuthorPress?: () => void;
+}) {
   return (
-    <View style={styles.reviewCard}>
-      <View style={styles.postHeader}>
-        <UserAvatar uri={review.reviewer.avatarUrl} size={36} />
-        <View style={styles.cardBody}>
-          <Text style={styles.cardTitle}>{review.reviewer.displayName}</Text>
-          <Text style={styles.cardMeta}>{publicTimeAgo(review.createdAt)}</Text>
-        </View>
-        <GuestRating summary={{ average: review.rating, count: 1 }} />
-      </View>
-      {review.text ? <Text style={styles.caption}>{review.text}</Text> : null}
-      {review.media[0]?.url ? (
-        <Image
-          source={toImageSource(review.media[0].url)}
-          style={styles.reviewImage}
-          contentFit="cover"
-          recyclingKey={getMediaCacheKey(review.media[0].url) ?? review.media[0].url}
-        />
-      ) : null}
-    </View>
+    <ReviewRow
+      review={guestReviewToItem(review)}
+      media={review.media}
+      onAuthorPress={onAuthorPress}
+    />
   );
 }
 
@@ -444,6 +435,13 @@ const styles = StyleSheet.create({
   serviceBody: { padding: spacing.md, gap: 4 },
   providerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   providerName: { ...typography.bodySmall, color: colors.text, flex: 1 },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 0,
+  },
+  fromLabel: { ...typography.caption, color: colors.textSecondary },
   jobCard: {
     flexDirection: 'row',
     gap: spacing.md,

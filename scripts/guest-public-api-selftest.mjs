@@ -51,7 +51,9 @@ assert.match(publicApi, /\/public\/explore\/services/);
 assert.match(publicApi, /\/public\/taxonomy/);
 assert.equal(publicApi.includes('/media/'), false);
 assert.equal(publicApi.includes('status:'), false);
-assert.equal(publicApi.includes('categoryIds'), false);
+assert.equal(publicApi.includes('locationCode'), false);
+assert.match(publicApi, /startingPrice/);
+assert.match(publicApi, /fromPrice/);
 assert.equal(publicApi.includes('locationCode'), false);
 
 assert.match(apiClient, /executePublicRequest/);
@@ -93,7 +95,25 @@ assert.equal(
 
 const browse = buildPublicSearchQuery({ skip: 0, take: 8 });
 assert.equal(browse.includes('q='), false);
+assert.equal(browse.includes('categoryIds='), false);
 assert.match(browse, /take=8/);
+const CATEGORY = '55555555-5555-4555-8555-555555555555';
+const filtered = buildPublicSearchQuery({
+  q: 'ab',
+  skip: 0,
+  take: 20,
+  categoryIds: [CATEGORY, 'not-a-uuid', CATEGORY],
+});
+assert.match(filtered, new RegExp(`categoryIds=${CATEGORY}`));
+assert.equal(filtered.includes('not-a-uuid'), false);
+assert.equal(
+  buildPublicSearchQuery({
+    categoryIds: ['not-a-uuid'],
+  }).includes('categoryIds='),
+  false,
+);
+assert.equal(buildPublicSearchQuery({ q: 'ab' }).includes('locationCode'), false);
+assert.equal(buildPublicSearchQuery({ q: 'ab' }).includes('status='), false);
 const oneChar = buildPublicSearchQuery({ q: 'a', skip: 0, take: 20 });
 assert.equal(oneChar.includes('q='), false);
 assert.equal(PUBLIC_Q_MIN_LENGTH, 2);
