@@ -209,7 +209,25 @@ Authenticated + email-verified user
 
 ## Forgot password and change password
 
-Password recovery is an email OTP. It is not a normal application session.
+Password recovery in the app is an email OTP. While this app holds a recovery lock, it stays on the recovery flow and does not enter the product. The lock blocks that app instance's product calls. It is an app restriction, not a server-enforced recovery-session boundary, and it does not prevent a direct API request.
+
+### Accepted recovery-session policy
+
+For an active account, the hosted six-digit recovery flow's valid OTP session may access ordinary private Mawahib APIs. Existing account-status, ownership, participation, and authorization checks still apply.
+
+This is not a claim that every recovery session is admitted, or that every recovery session is rejected.
+
+- The observed signup verification session and the observed six-digit recovery-code session both carried authentication method `otp`.
+- The backend cannot treat every OTP token as recovery. That would affect legitimate signup.
+- Tokens that explicitly carry authentication method `recovery` remain rejected.
+- The hosted recovery OTP session is admitted under this policy. The live check demonstrated `GET /users/me` before and after one refresh. Other private capabilities were inferred from source and were not exercised.
+- No additional recovery classifier is being introduced.
+
+Someone who controls the recovery inbox can use that verified session before changing the password. This allows a less visible period of account access while the original password and other sessions may remain usable. Mailbox control does not eliminate that risk.
+
+This acceptance applies to the current feature scope. Real payments, payouts, bank-detail changes, account deletion, and other high-impact capabilities require a separate assessment of server-enforced reauthentication or step-up controls before launch. That assessment has to include recovery users and the authentication methods the product supports. It does not assume one factor is universal.
+
+Two questions stay unresolved here. One is the product decision about the current 3600-second access-token validity window. The other is the project's Supabase secure email-change and secure password-change settings, which were not inspected. Revoking a refresh token does not invalidate an access token that was already issued.
 
 ```text
 Sign In → Forgot password?
@@ -228,7 +246,7 @@ Sign In → Forgot password?
   → Sign In
 ```
 
-While `verifying` or `recovery-session` is stored:
+While this app has `verifying` or `recovery-session` stored, it follows the rules below. These are app rules. They do not mean the server rejects the hosted recovery OTP session:
 
 - do not call `/users/me` or `/auth/bootstrap`
 - do not treat `SIGNED_IN` or `TOKEN_REFRESHED` as app entry
