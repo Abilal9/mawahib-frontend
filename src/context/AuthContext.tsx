@@ -57,6 +57,8 @@ import { enqueueAuthMutation } from '../lib/authMutationQueue';
 import {
   finishCredentialEstablish,
   ownedSession,
+  passwordUpdateAttributes,
+  runOtherSessionSignOut,
   runPasswordChange,
   sameOwnedSession,
   runRecoveryCompletion,
@@ -87,6 +89,7 @@ import {
 } from '../lib/signedOutDestination';
 import {
   beginSignOutTransaction,
+  clearSignOutNotice,
   clearSignOutTransaction,
   completeSignOutTransaction,
   failSignOutTransaction,
@@ -230,7 +233,29 @@ interface AuthContextValue {
   changePassword: (
     currentPassword: string,
     newPassword: string,
-  ) => Promise<{ otherSessionsRevoked: boolean }>;
+  ) => Promise<{
+    otherSessionsRevoked: boolean;
+    userId: string;
+    sessionId: string;
+    generation: number;
+  }>;
+  /**
+   * Retry only other-device sign-out for the session that changed its password.
+   * Does not send either password.
+   */
+  retryOtherDeviceSignOut: (expected: {
+    userId: string;
+    sessionId: string;
+    generation: number;
+  }) => Promise<
+    | 'revoked'
+    | 'unconfirmed'
+    | 'account-changed'
+    | 'session-missing'
+    | 'unavailable'
+    | 'superseded'
+    | 'in-flight'
+  >;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -320,16 +345,47 @@ async function readOwnedSession(): Promise<
   };
 }
 
-async function updatePassword(password: string): Promise<void> {
+async function updatePassword(
+  password: string,
+  currentPassword?: string,
+): Promise<void> {
   try {
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser(
+      passwordUpdateAttributes(password, currentPassword),
+    );
     if (!error) return;
     if (isAuthNetworkError(error)) throw uncertainPasswordChange();
-    throw new PasswordFlowError(mapAuthError(error), 'update');
+    const code =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof error.code === 'string'
+        ? error.code
+        : '';
+    const failureCode =
+      code === 'current_password_invalid' || code === 'current_password_required'
+        ? 'current-password'
+        : 'update';
+    throw new PasswordFlowError(
+      passwordUpdateMessage(mapAuthError(error), [password, currentPassword]),
+      failureCode,
+    );
   } catch (err) {
     if (err instanceof PasswordFlowError) throw err;
     throw uncertainPasswordChange();
   }
+}
+
+function passwordUpdateMessage(
+  message: string,
+  secrets: Array<string | undefined>,
+): string {
+  for (const secret of secrets) {
+    if (secret && secret.length >= 4 && message.includes(secret)) {
+      return 'Could not change your password. Please try again.';
+    }
+  }
+  return message;
 }
 
 function isEmailConfirmed(session: Session): boolean {
@@ -1876,6 +1932,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               },
               readLive: readOwnedSession,
               updatePassword: () => updatePassword(password),
+              clearSuccessNotice: () => {
+                clearSignOutNotice(getActiveSignOutTransaction()?.id);
+              },
               signOutGlobal: async () => {
                 try {
                   const result = await supabase.auth.signOut({ scope: 'global' });
@@ -1990,7 +2049,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             refreshToken: session.refresh_token,
           });
         },
-        updatePassword: () => updatePassword(newPassword),
+        updatePassword: () => updatePassword(newPassword, currentPassword),
         signOutOthers: async () => {
           try {
             const others = await supabase.auth.signOut({ scope: 'others' });
@@ -2007,6 +2066,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         enqueue: enqueueAuthMutation,
         raise: raisePasswordFlow,
+        currentGeneration: () => getSessionGeneration(),
+      });
+    },
+    [],
+  );
+
+  const retryOtherDeviceSignOut = useCallback(
+    (expected: { userId: string; sessionId: string; generation: number }) => {
+      return runOtherSessionSignOut({
+        expectedUserId: expected.userId,
+        expectedSessionId: expected.sessionId,
+        generationAtCall: expected.generation,
+        currentGeneration: () => getSessionGeneration(),
+        readLive: () => readOwnedSession(),
+        recoveryLocked: () => Boolean(loadRecoveryState()),
+        signOutOthers: async () => {
+          try {
+            const others = await supabase.auth.signOut({ scope: 'others' });
+            return !others.error;
+          } catch {
+            return false;
+          }
+        },
+        enqueue: enqueueAuthMutation,
       });
     },
     [],
@@ -2055,6 +2138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       discardInterruptedRecovery,
       completePasswordReset,
       changePassword,
+      retryOtherDeviceSignOut,
     }),
     [
       accountType,
@@ -2094,6 +2178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       discardInterruptedRecovery,
       completePasswordReset,
       changePassword,
+      retryOtherDeviceSignOut,
     ],
   );
 

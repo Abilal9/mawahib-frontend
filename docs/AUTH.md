@@ -258,10 +258,12 @@ Change Password is a real Settings row:
 
 - current password is checked with `signInWithPassword` for the signed-in account's own email
 - the returned user id must match
-- `updateUser({ password })`
-- `signOut({ scope: 'others' })` revokes other refresh sessions
+- the signed-in update calls `updateUser({ password, current_password })`
+- recovery completion calls `updateUser({ password })` and does not send the old password
+- `signOut({ scope: 'others' })` asks the provider to end other refresh sessions
 - this device stays signed in
-- if the other-session call fails, say the password changed and do not ask for another change
+- if that other-session call fails, the password change still succeeded. The screen offers one retry of only `signOut({ scope: 'others' })` for that same session. A newer sign-in, including to the same account, does not keep the retry. It does not send the password again. A failed retry stops there
+- sending `current_password` does not prove the provider is enforcing it. When that requirement is enabled, current public Auth code can still exempt `otp`, `magiclink`, and `recovery` sessions. That control is separate from Secure password change, which asks for a reauthentication code when a session is older than 24 hours. Secure password change stays off until the app can handle that code
 
 Nest does not store or change passwords. Existing access tokens can keep working until they expire.
 

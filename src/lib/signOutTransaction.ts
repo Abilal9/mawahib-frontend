@@ -104,6 +104,13 @@ export function clearSignOutTransaction(): void {
   active = null;
 }
 
+/** Drop the success notice before a recovery sign-out that was only local. */
+export function clearSignOutNotice(id?: number): void {
+  if (!active || active.status !== 'started') return;
+  if (id != null && active.id !== id) return;
+  active = { ...active, notice: undefined };
+}
+
 export function getActiveSignOutTransaction(): SignOutTransaction | null {
   return active;
 }

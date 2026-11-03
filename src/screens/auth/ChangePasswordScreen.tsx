@@ -18,19 +18,95 @@ import { colors, spacing, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { isPasswordValid } from '../../lib/passwordRules';
+import { offersAnotherOtherDeviceRetry } from '../../lib/authSessionMutation';
 import { PasswordFlowError } from '../../lib/recoveryState';
+
+const PASSWORD_CHANGED_TITLE = 'Password changed';
+const OTHER_DEVICES_SIGNED_OUT =
+  'This device stays signed in. Other devices may keep access for up to an hour before they need to sign in again.';
+const OTHER_DEVICES_UNCONFIRMED =
+  'Your password was changed, but we could not confirm that your other devices were signed out.';
 
 export default function ChangePasswordScreen({
   navigation,
 }: ScreenProps<'ChangePassword'>) {
-  const { changePassword } = useAuth();
+  const { changePassword, retryOtherDeviceSignOut } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const saveRef = useRef(false);
+  const retryRef = useRef(false);
   const passwordOk = isPasswordValid(password);
   const passwordsMatch = password.length > 0 && password === confirmPassword;
+
+  const promptOtherDeviceRetry = (operation: {
+    userId: string;
+    sessionId: string;
+    generation: number;
+  }) => {
+    if (!offersAnotherOtherDeviceRetry('initial-failure')) return;
+    Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_UNCONFIRMED, [
+      {
+        text: 'Not now',
+        style: 'cancel',
+        onPress: () => navigation.goBack(),
+      },
+      {
+        text: 'Try again',
+        onPress: () => {
+          void retryOtherDevices(operation);
+        },
+      },
+    ]);
+  };
+
+  const retryOtherDevices = async (operation: {
+    userId: string;
+    sessionId: string;
+    generation: number;
+  }) => {
+    if (retryRef.current) return;
+    retryRef.current = true;
+    try {
+      const outcome = await retryOtherDeviceSignOut(operation);
+      if (outcome === 'in-flight') return;
+      if (outcome === 'revoked') {
+        Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_SIGNED_OUT, [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
+      if (outcome === 'account-changed' || outcome === 'superseded') {
+        Alert.alert(
+          'Could not sign out other devices',
+          'This sign-in changed, so other devices were not signed out.',
+        );
+        return;
+      }
+      if (outcome === 'unavailable') {
+        Alert.alert(
+          'Could not sign out other devices',
+          'Password reset is in progress, so other devices were not signed out.',
+        );
+        return;
+      }
+      if (outcome === 'session-missing') {
+        Alert.alert(
+          'Could not sign out other devices',
+          'This device is no longer signed in, so other devices could not be signed out from here.',
+        );
+        return;
+      }
+      if (offersAnotherOtherDeviceRetry('retry-finished')) {
+        promptOtherDeviceRetry(operation);
+        return;
+      }
+      Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_UNCONFIRMED);
+    } finally {
+      retryRef.current = false;
+    }
+  };
 
   const submit = async () => {
     if (saveRef.current) return;
@@ -57,18 +133,16 @@ export default function ChangePasswordScreen({
       setPassword('');
       setConfirmPassword('');
       if (!result.otherSessionsRevoked) {
-        Alert.alert(
-          'Password changed',
-          'Your password was changed, but we could not confirm sign-out on your other devices. Those devices may keep working until their current access expires.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }],
-        );
+        promptOtherDeviceRetry({
+          userId: result.userId,
+          sessionId: result.sessionId,
+          generation: result.generation,
+        });
         return;
       }
-      Alert.alert(
-        'Password changed',
-        'This device stays signed in. Other devices will need the new password the next time they refresh their session.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
-      );
+      Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_SIGNED_OUT, [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (err) {
       const message =
         err instanceof PasswordFlowError

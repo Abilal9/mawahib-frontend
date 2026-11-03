@@ -17,6 +17,7 @@ import { colors, spacing, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { isPasswordValid } from '../../lib/passwordRules';
+import { recoveryCleanupMessage } from '../../lib/authSessionMutation';
 import {
   loadRecoveryState,
   PasswordFlowError,
@@ -53,8 +54,8 @@ export default function ResetPasswordScreen({
       const ok = await discardInterruptedRecovery();
       if (!ok) {
         Alert.alert(
-          'Password was changed',
-          'This device could not be signed out yet. You are not signed in to Mawahib. Try again.',
+          'Password changed',
+          recoveryCleanupMessage('sign-out-failed'),
         );
         return;
       }
@@ -65,7 +66,6 @@ export default function ResetPasswordScreen({
             name: 'SignIn',
             params: {
               email: recovery?.email,
-              notice: 'password-updated',
             },
           },
         ],
@@ -109,8 +109,8 @@ export default function ResetPasswordScreen({
       const result = await completePasswordReset(password);
       if (result.status === 'local-signed-out') {
         Alert.alert(
-          'Password was changed',
-          'This device is signed out. Other sessions could not be confirmed signed out. They can keep working until their current access expires.',
+          'Password changed',
+          recoveryCleanupMessage('local-signed-out'),
         );
         navigation.reset({
           index: 0,
@@ -119,7 +119,6 @@ export default function ResetPasswordScreen({
               name: 'SignIn',
               params: {
                 email: emailForSignIn,
-                notice: 'password-updated',
               },
             },
           ],
@@ -129,8 +128,8 @@ export default function ResetPasswordScreen({
       if (result.status === 'sign-out-failed') {
         setNeedsSignOut(true);
         Alert.alert(
-          'Password was changed',
-          'This device could not be signed out yet. You are not signed in to Mawahib.',
+          'Password changed',
+          recoveryCleanupMessage('sign-out-failed'),
         );
         return;
       }

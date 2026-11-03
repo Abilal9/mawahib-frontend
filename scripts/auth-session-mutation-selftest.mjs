@@ -29,13 +29,20 @@ const {
   LOGOUT_FAILURE_MESSAGE,
   finishCredentialEstablish,
   ownedSession,
+  offersAnotherOtherDeviceRetry,
+  passwordUpdateAttributes,
+  recoveryCleanupMessage,
+  resetOtherSessionSignOutForTests,
+  runOtherSessionSignOut,
   runPasswordChange,
   runRecoveryCompletion,
   runSignOutAttempt,
   sameOwnedSession,
 } = await import('../src/lib/authSessionMutation.ts');
+const { mapAuthError } = await import('../src/lib/authErrors.ts');
 const {
   beginSignOutTransaction,
+  clearSignOutNotice,
   clearSignOutTransaction,
   failSignOutTransaction,
   getActiveSignOutTransaction,
@@ -109,6 +116,7 @@ function reset() {
   mem.clear();
   resetAuthMutationQueueForTests();
   resetSignOutTransactionForTests();
+  resetOtherSessionSignOutForTests();
   resetSessionGenerationForTests();
   resetSignOutInflightForTests();
   resetSignedOutReasonForTests();
@@ -1261,6 +1269,349 @@ reset();
     /SESSION_SUPERSEDED/,
   );
   assert.equal(calls, 1);
+}
+
+// Signed-in password updates include current_password. Recovery updates omit it.
+reset();
+{
+  const signedIn = passwordUpdateAttributes('new-secret', 'old-secret');
+  assert.deepEqual(signedIn, {
+    password: 'new-secret',
+    current_password: 'old-secret',
+  });
+  const recovery = passwordUpdateAttributes('new-secret');
+  assert.deepEqual(Object.keys(recovery), ['password']);
+  assert.equal(recovery.password, 'new-secret');
+  const blank = passwordUpdateAttributes('new-secret', '');
+  assert.equal('current_password' in blank, false);
+}
+
+// A failed password update does not report other-session revocation.
+reset();
+{
+  let others = 0;
+  await assert.rejects(
+    runPasswordChange({
+      recoveryLocked: () => false,
+      readLive: async () => ({
+        ...ownedOf(makeSession(USER_A, 'sess-a', 'a@example.com')),
+        email: 'a@example.com',
+      }),
+      signIn: async () => ownedOf(makeSession(USER_A, 'sess-a', 'a@example.com')),
+      updatePassword: async () => {
+        throw new PasswordFlowError('Current password is incorrect.', 'update');
+      },
+      signOutOthers: async () => {
+        others += 1;
+        return true;
+      },
+      signOutLocal: async () => {},
+      suppressHydrate: () => {},
+      enqueue: enqueueAuthMutation,
+      raise: (message, code) => {
+        throw new PasswordFlowError(message, code);
+      },
+    }),
+    (err) => err instanceof PasswordFlowError && err.code === 'update',
+  );
+  assert.equal(others, 0);
+}
+
+// A successful update followed by a failed other-session sign-out is partial.
+reset();
+{
+  const result = await runPasswordChange({
+    recoveryLocked: () => false,
+    readLive: async () => ({
+      ...ownedOf(makeSession(USER_A, 'sess-a', 'a@example.com')),
+      email: 'a@example.com',
+    }),
+    signIn: async () => ownedOf(makeSession(USER_A, 'sess-a', 'a@example.com')),
+    updatePassword: async () => {},
+    signOutOthers: async () => false,
+    signOutLocal: async () => {
+      throw new Error('must not sign out this device');
+    },
+    suppressHydrate: () => {},
+    enqueue: enqueueAuthMutation,
+    raise: (message, code) => {
+      throw new PasswordFlowError(message, code);
+    },
+  });
+  assert.equal(result.otherSessionsRevoked, false);
+  assert.equal(result.userId, USER_A);
+}
+
+function otherDeviceRetry(overrides = {}) {
+  return {
+    expectedUserId: USER_A,
+    expectedSessionId: 'sess-a',
+    generationAtCall: 1,
+    currentGeneration: () => 1,
+    readLive: async () => ({ userId: USER_A, sessionId: 'sess-a' }),
+    recoveryLocked: () => false,
+    signOutOthers: async () => true,
+    enqueue: enqueueAuthMutation,
+    ...overrides,
+  };
+}
+
+// Retry signs out other sessions once and keeps no password.
+reset();
+{
+  let calls = 0;
+  const gate = deferred();
+  const retryState = { userId: USER_A, sessionId: 'sess-a', generation: 1 };
+  const first = runOtherSessionSignOut(
+    otherDeviceRetry({
+      expectedUserId: retryState.userId,
+      expectedSessionId: retryState.sessionId,
+      generationAtCall: retryState.generation,
+      signOutOthers: async () => {
+        calls += 1;
+        await gate.promise;
+        return true;
+      },
+    }),
+  );
+  const second = await runOtherSessionSignOut(otherDeviceRetry());
+  assert.equal(second, 'in-flight');
+  assert.deepEqual(Object.keys(retryState).sort(), [
+    'generation',
+    'sessionId',
+    'userId',
+  ]);
+  gate.resolve();
+  assert.equal(await first, 'revoked');
+  assert.equal(calls, 1);
+  assert.equal(offersAnotherOtherDeviceRetry('initial-failure'), true);
+  assert.equal(offersAnotherOtherDeviceRetry('retry-finished'), false);
+}
+
+// An account change does not sign out the new account's other sessions.
+reset();
+{
+  let calls = 0;
+  const changed = await runOtherSessionSignOut(
+    otherDeviceRetry({
+      readLive: async () => ({ userId: USER_B, sessionId: 'sess-b' }),
+      signOutOthers: async () => {
+        calls += 1;
+        return true;
+      },
+    }),
+  );
+  assert.equal(changed, 'account-changed');
+  assert.equal(calls, 0);
+}
+
+// A missing session is not treated as revoked.
+reset();
+{
+  let calls = 0;
+  const missing = await runOtherSessionSignOut(
+    otherDeviceRetry({
+      readLive: async () => null,
+      signOutOthers: async () => {
+        calls += 1;
+        return true;
+      },
+    }),
+  );
+  assert.equal(missing, 'session-missing');
+  assert.equal(calls, 0);
+}
+
+// A different account after the sign-out call is not reported as revoked.
+reset();
+{
+  let live = { userId: USER_A, sessionId: 'sess-a' };
+  const switched = await runOtherSessionSignOut(
+    otherDeviceRetry({
+      readLive: async () => live,
+      signOutOthers: async () => {
+        live = { userId: USER_B, sessionId: 'sess-b' };
+        return true;
+      },
+    }),
+  );
+  assert.equal(switched, 'account-changed');
+}
+
+// The same account with a replaced session does not keep the old retry.
+reset();
+{
+  let calls = 0;
+  let generation = 1;
+  let live = { userId: USER_A, sessionId: 'sess-a' };
+  const gate = deferred();
+  const blocker = enqueueAuthMutation(() => gate.promise);
+  const retry = runOtherSessionSignOut(
+    otherDeviceRetry({
+      generationAtCall: 1,
+      currentGeneration: () => generation,
+      readLive: async () => live,
+      signOutOthers: async () => {
+        calls += 1;
+        return true;
+      },
+    }),
+  );
+  generation = 2;
+  live = { userId: USER_A, sessionId: 'sess-new' };
+  gate.resolve();
+  await blocker;
+  assert.equal(await retry, 'superseded');
+  assert.equal(calls, 0);
+}
+
+// A refresh that keeps the session id can still sign out other devices.
+reset();
+{
+  let calls = 0;
+  const refreshed = await runOtherSessionSignOut(
+    otherDeviceRetry({
+      signOutOthers: async () => {
+        calls += 1;
+        return true;
+      },
+    }),
+  );
+  assert.equal(refreshed, 'revoked');
+  assert.equal(calls, 1);
+}
+
+// Recovery lock blocks the retry.
+reset();
+{
+  let calls = 0;
+  const locked = await runOtherSessionSignOut(
+    otherDeviceRetry({
+      recoveryLocked: () => true,
+      signOutOthers: async () => {
+        calls += 1;
+        return true;
+      },
+    }),
+  );
+  assert.equal(locked, 'unavailable');
+  assert.equal(calls, 0);
+}
+
+// Provider current-password and reauthentication errors stay generic.
+reset();
+{
+  assert.equal(
+    mapAuthError({
+      code: 'current_password_invalid',
+      message: 'Current password required when setting new password.',
+    }),
+    'Current password is incorrect.',
+  );
+  assert.equal(
+    mapAuthError({
+      code: 'current_password_required',
+      message: 'Current password required when setting new password.',
+    }),
+    'Enter your current password and try again.',
+  );
+  assert.equal(
+    mapAuthError({
+      code: 'reauthentication_needed',
+      message: 'Password update requires reauthentication',
+    }),
+    'Sign in again, then change your password.',
+  );
+}
+
+// Local recovery cleanup clears the global-success notice before navigation.
+reset();
+armRecovery();
+{
+  const sessionA = makeSession(USER_A, 'sess-recovery', 'a@example.com');
+  let store = sessionA;
+  const order = [];
+  const status = await enqueueAuthMutation(() =>
+    runRecoveryCompletion({
+      readLock: () => ({
+        email: 'a@example.com',
+        userId: USER_A,
+        phase: 'recovery-session',
+      }),
+      readLive: async () => (store ? { ...ownedOf(store), email: store.email } : null),
+      updatePassword: async () => {},
+      signOutGlobal: async () => true,
+      signOutLocal: async () => {
+        store = null;
+        return false;
+      },
+      prepareCache: async () => true,
+      begin: beginSignOutTransaction,
+      fail: (id) => {
+        failSignOutTransaction(id);
+      },
+      clear: clearSignOutTransaction,
+      getActive: getActiveSignOutTransaction,
+      hasInflight: hasSignOutInflight,
+      inflightKey: signOutInflightKey,
+      clearLockIfSame: () => clearRecoveryState(),
+      clearSuccessNotice: () => {
+        order.push('clear-notice');
+        clearSignOutNotice(getActiveSignOutTransaction()?.id);
+        assert.equal(getActiveSignOutTransaction()?.notice, undefined);
+      },
+      onSignedOut: () => {
+        order.push('signed-out');
+        assert.equal(getActiveSignOutTransaction()?.notice, undefined);
+      },
+    }),
+  );
+  assert.equal(status, 'local-signed-out');
+  assert.deepEqual(order, ['clear-notice', 'signed-out']);
+  assert.match(
+    recoveryCleanupMessage('local-signed-out'),
+    /This device is signed out/,
+  );
+  assert.doesNotMatch(
+    recoveryCleanupMessage('sign-out-failed'),
+    /This device is signed out/,
+  );
+}
+
+// Unconfirmed local cleanup does not count as signed out.
+reset();
+armRecovery();
+{
+  const sessionA = makeSession(USER_A, 'sess-recovery', 'a@example.com');
+  let store = sessionA;
+  const status = await enqueueAuthMutation(() =>
+    runRecoveryCompletion({
+      readLock: () => ({
+        email: 'a@example.com',
+        userId: USER_A,
+        phase: 'recovery-session',
+      }),
+      readLive: async () => (store ? { ...ownedOf(store), email: store.email } : null),
+      updatePassword: async () => {},
+      signOutGlobal: async () => true,
+      signOutLocal: async () => true,
+      prepareCache: async () => true,
+      begin: beginSignOutTransaction,
+      fail: (id) => {
+        failSignOutTransaction(id);
+      },
+      clear: clearSignOutTransaction,
+      getActive: getActiveSignOutTransaction,
+      hasInflight: hasSignOutInflight,
+      inflightKey: signOutInflightKey,
+      clearLockIfSame: () => clearRecoveryState(),
+      onSignedOut: () => {
+        throw new Error('must not announce sign-out');
+      },
+    }),
+  );
+  assert.equal(status, 'sign-out-failed');
+  assert.equal(store.userId, USER_A);
 }
 
 console.log('auth-session-mutation-selftest ok');

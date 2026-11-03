@@ -48,6 +48,22 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     return 'Incorrect email or password.';
   }
 
+  if (code === 'current_password_required') {
+    return 'Enter your current password and try again.';
+  }
+
+  if (code === 'current_password_invalid' || lower.includes('current password')) {
+    return 'Current password is incorrect.';
+  }
+
+  if (
+    code === 'reauthentication_needed' ||
+    code === 'reauthentication_not_valid' ||
+    lower.includes('reauthentication')
+  ) {
+    return 'Sign in again, then change your password.';
+  }
+
   if (
     lower.includes('user already registered') ||
     lower.includes('already been registered') ||

@@ -75,6 +75,117 @@ export type OwnedSession = {
   sessionId: string;
 };
 
+/**
+ * Body for GoTrue PUT /user via auth-js updateUser.
+ * Recovery omits current_password. A signed-in change includes it.
+ * An empty current password is omitted so it is not sent as a blank field.
+ */
+export function passwordUpdateAttributes(
+  password: string,
+  currentPassword?: string,
+): { password: string; current_password?: string } {
+  if (currentPassword) {
+    return { password, current_password: currentPassword };
+  }
+  return { password };
+}
+
+export type OtherSessionSignOutResult =
+  | 'revoked'
+  | 'unconfirmed'
+  | 'account-changed'
+  | 'session-missing'
+  | 'unavailable'
+  | 'superseded'
+  | 'in-flight';
+
+/** The first failure may offer one retry. A finished retry does not offer another. */
+export function offersAnotherOtherDeviceRetry(
+  phase: 'initial-failure' | 'retry-finished',
+): boolean {
+  return phase === 'initial-failure';
+}
+
+export function recoveryCleanupMessage(
+  status: 'local-signed-out' | 'sign-out-failed',
+): string {
+  if (status === 'local-signed-out') {
+    return 'This device is signed out. We could not confirm that your other devices were signed out.';
+  }
+  return 'Your password was changed. This device could not be signed out yet.';
+}
+
+let otherSessionSignOutInflight: Promise<OtherSessionSignOutResult> | null =
+  null;
+
+export function resetOtherSessionSignOutForTests(): void {
+  otherSessionSignOutInflight = null;
+}
+
+/**
+ * One deliberate signOut({ scope: 'others' }) for the account that just
+ * changed its password. Does not update the password or sign in again.
+ */
+export async function runOtherSessionSignOut(input: {
+  expectedUserId: string;
+  expectedSessionId: string;
+  generationAtCall: number;
+  currentGeneration: () => number;
+  readLive: () => Promise<OwnedSession | null>;
+  recoveryLocked: () => boolean;
+  signOutOthers: () => Promise<boolean>;
+  enqueue: <T>(fn: () => Promise<T>) => Promise<T>;
+}): Promise<OtherSessionSignOutResult> {
+  if (otherSessionSignOutInflight) return 'in-flight';
+  const run = input.enqueue(async () => {
+    try {
+      if (input.recoveryLocked()) return 'unavailable' as const;
+      if (input.generationAtCall !== input.currentGeneration()) {
+        return 'superseded' as const;
+      }
+      const live = await input.readLive();
+      if (!live?.userId || !live.sessionId) return 'session-missing' as const;
+      if (live.userId !== input.expectedUserId) {
+        return 'account-changed' as const;
+      }
+      // Refresh keeps this session id. Logout, login, or a later password
+      // change replaces it and must not reuse this retry.
+      if (live.sessionId !== input.expectedSessionId) {
+        return 'superseded' as const;
+      }
+      let revoked = false;
+      try {
+        revoked = await input.signOutOthers();
+      } catch {
+        revoked = false;
+      }
+      if (!revoked) return 'unconfirmed' as const;
+      if (input.generationAtCall !== input.currentGeneration()) {
+        return 'superseded' as const;
+      }
+      const after = await input.readLive();
+      if (!after?.userId || !after.sessionId) return 'session-missing' as const;
+      if (after.userId !== input.expectedUserId) {
+        return 'account-changed' as const;
+      }
+      if (after.sessionId !== input.expectedSessionId) {
+        return 'superseded' as const;
+      }
+      return 'revoked' as const;
+    } catch {
+      return 'unconfirmed' as const;
+    }
+  });
+  otherSessionSignOutInflight = run;
+  try {
+    return await run;
+  } finally {
+    if (otherSessionSignOutInflight === run) {
+      otherSessionSignOutInflight = null;
+    }
+  }
+}
+
 export type RecoveryCompletionLock = {
   email: string;
   userId: string;
@@ -204,6 +315,11 @@ export async function runRecoveryCompletion(input: {
   signOutLocal: () => Promise<boolean>;
   prepareCache: () => Promise<boolean>;
   onSignedOut: () => void;
+  /**
+   * Called only when global sign-out failed and this device is no longer
+   * in that recovery session. Removes the password-updated success notice.
+   */
+  clearSuccessNotice?: () => void;
   clearLockIfSame: (lock: RecoveryCompletionLock) => void;
   begin: SignOutBoundary['begin'];
   fail: SignOutBoundary['fail'];
@@ -279,8 +395,14 @@ export async function runRecoveryCompletion(input: {
         return 'rejected';
       }
       if (still && sameOwnedSession(still, owned)) {
-        const localFailed = await input.signOutLocal();
-        if (localFailed) {
+        try {
+          await input.signOutLocal();
+        } catch {
+          // The read below decides whether this device still holds the session.
+        }
+        const afterLocal = await input.readLive();
+        const gone = !afterLocal || !sameOwnedSession(afterLocal, owned);
+        if (!gone) {
           input.fail(begun.txn.id);
           return 'sign-out-failed';
         }
@@ -295,6 +417,7 @@ export async function runRecoveryCompletion(input: {
       }
       const active = input.getActive();
       if (active?.id === begun.txn.id && active.status === 'started') {
+        input.clearSuccessNotice?.();
         input.onSignedOut();
       }
       return 'local-signed-out';
@@ -337,7 +460,13 @@ export async function runPasswordChange(input: {
   suppressHydrate: (on: boolean) => void;
   enqueue: <T>(fn: () => Promise<T>) => Promise<T>;
   raise: (message: string, code: 'unavailable' | 'identity') => never;
-}): Promise<{ otherSessionsRevoked: boolean }> {
+  currentGeneration?: () => number;
+}): Promise<{
+  otherSessionsRevoked: boolean;
+  userId: string;
+  sessionId: string;
+  generation: number;
+}> {
   if (input.recoveryLocked()) {
     input.raise(
       'Finish or cancel password reset before changing your password.',
@@ -390,7 +519,12 @@ export async function runPasswordChange(input: {
           'identity',
         );
       }
-      return { otherSessionsRevoked: await input.signOutOthers() };
+      return {
+        otherSessionsRevoked: await input.signOutOthers(),
+        userId: after.userId,
+        sessionId: after.sessionId,
+        generation: input.currentGeneration?.() ?? 0,
+      };
     } finally {
       input.suppressHydrate(false);
     }

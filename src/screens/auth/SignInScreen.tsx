@@ -99,7 +99,10 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
 
   useEffect(() => {
     if (route.params?.notice !== 'password-updated') return;
-    Alert.alert('Password updated', 'Sign in with your new password.');
+    Alert.alert(
+      'Password changed',
+      'Sign in with your new password. Other devices may keep access for up to an hour.',
+    );
     navigation.setParams({ notice: undefined });
   }, [navigation, route.params?.notice]);
 
