@@ -227,7 +227,7 @@ Someone who controls the recovery inbox can use that verified session before cha
 
 This acceptance applies to the current feature scope. Real payments, payouts, bank-detail changes, account deletion, and other high-impact capabilities require a separate assessment of server-enforced reauthentication or step-up controls before launch. That assessment has to include recovery users and the authentication methods the product supports. It does not assume one factor is universal.
 
-Two questions stay unresolved here. One is the product decision about the current 3600-second access-token validity window. The other is the project's Supabase secure email-change and secure password-change settings, which were not inspected. Revoking a refresh token does not invalidate an access token that was already issued.
+The accepted access-token lifetime is 3600 seconds. Revoking a refresh session does not invalidate an access token that was already issued. Nest does not look up the provider session on each request. Secure email change is enabled. Secure password change, the separate reauthentication control, remains disabled.
 
 ```text
 Sign In → Forgot password?
@@ -263,7 +263,9 @@ Change Password is a real Settings row:
 - `signOut({ scope: 'others' })` asks the provider to end other refresh sessions
 - this device stays signed in
 - if that other-session call fails, the password change still succeeded. The screen offers one retry of only `signOut({ scope: 'others' })` for that same session. A newer sign-in, including to the same account, does not keep the retry. It does not send the password again. A failed retry stops there
-- sending `current_password` does not prove the provider is enforcing it. When that requirement is enabled, current public Auth code can still exempt `otp`, `magiclink`, and `recovery` sessions. That control is separate from Secure password change, which asks for a reauthentication code when a session is older than 24 hours. Secure password change stays off until the app can handle that code
+- Require current password when updating is enabled. Secure password change remains the separate control, and it is off. The app does not collect its reauthentication code
+- A hosted password session that omitted `current_password` was rejected with `current_password_required`. An incorrect `current_password` was rejected with `current_password_invalid`, and the existing password still worked. A correct signed-in update then succeeded, followed by a successful other-session sign-out. That success used the app's call sequence, not taps through the screen
+- With the requirement enabled, the tested six-digit recovery session still updated the password through `updateUser({ password })` only. Its method was `otp`. Global sign-out and a later sign-in both succeeded. This is one hosted recovery observation. It does not show that every OTP, magic-link, phone, or future provider session is exempt. The accepted recovery-admission policy is unchanged, and the app recovery lock remains a navigation restriction
 
 Nest does not store or change passwords. Existing access tokens can keep working until they expire.
 
