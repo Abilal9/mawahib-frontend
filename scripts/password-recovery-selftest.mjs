@@ -84,6 +84,8 @@ assert.match(recoveryRun, /'sign-out-failed'/);
 const resetFn = between(auth, 'const completePasswordReset', 'const changePassword');
 assert.match(resetFn, /runRecoveryCompletion/);
 assert.match(resetFn, /enqueueAuthMutation/);
+assert.match(resetFn, /updatePassword:\s*\(\)\s*=>\s*updatePassword\(password\)/);
+assert.equal(resetFn.includes('updatePassword(password,'), false);
 assert.ok(
   resetFn.indexOf("scope: 'global'") < resetFn.indexOf('clearRecoveryState()'),
 );
@@ -106,7 +108,10 @@ const changeFn = between(auth, 'const changePassword', 'const value = useMemo');
 assert.ok(changeFn.indexOf('signInWithPassword') < changeFn.indexOf('updatePassword('));
 assert.ok(changeFn.indexOf('updatePassword(') < changeFn.indexOf("scope: 'others'"));
 assert.match(changeFn, /runPasswordChange/);
-assert.match(changeFn, /updatePassword\(newPassword\)/);
+assert.match(
+  changeFn,
+  /updatePassword\(\s*newPassword\s*,\s*currentPassword\s*\)/,
+);
 
 const verifySignup = between(auth, 'const verifySignupOtp', 'const sendPhoneOtp');
 assert.match(verifySignup, /type: 'email'/);
