@@ -27,6 +27,7 @@ import ProfileHeaderChrome, {
 } from '../../components/profile/ProfileHeaderChrome';
 import AboutTab from '../../components/profile/AboutTab';
 import ProfileVisitorActions from '../../components/profile/ProfileVisitorActions';
+import ContentReportSheet from '../../components/report/ContentReportSheet';
 import ProfileFeedPost from '../../components/profile/ProfileFeedPost';
 import ServiceMediaMosaic from '../../components/explore/ServiceMediaMosaic';
 import { shareProfile } from '../../utils/shareProfile';
@@ -52,6 +53,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
   const [activeTab, setActiveTab] = useState<ProfileTab>('About');
   const [unconnectOpen, setUnconnectOpen] = useState(false);
   const [messageOpening, setMessageOpening] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [tabsHeight, setTabsHeight] = useState(TABS_FALLBACK);
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -230,7 +232,17 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
         onRightPress={() =>
           shareProfile({ userId: user.id, userName: user.name })
         }
+        secondaryRightIcon="ellipsis-horizontal"
+        onSecondaryRightPress={() => setReportOpen(true)}
         coverUrl={user.coverImage}
+      />
+
+      <ContentReportSheet
+        visible={reportOpen}
+        title="Report account"
+        targetType="user"
+        targetId={user.id}
+        onClose={() => setReportOpen(false)}
       />
 
       <Animated.ScrollView

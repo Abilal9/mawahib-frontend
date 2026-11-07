@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import ReviewRow from '../../components/reviews/ReviewRow';
+import ContentReportSheet from '../../components/report/ContentReportSheet';
 import ReviewSummaryCard from '../../components/reviews/ReviewSummaryCard';
 import { colors, spacing, radius, typography } from '../../theme';
 import { User } from '../../data/types';
@@ -69,6 +70,7 @@ function aggregateFor(
  */
 export default function ReviewsScreen({ navigation, route }: ScreenProps<'Reviews'>) {
   const { user: me } = useMyProfile();
+  const [reportReviewId, setReportReviewId] = useState<string | null>(null);
   const { accessToken, refreshMe } = useAuth();
   const targetId = route.params?.userId ?? me.id;
   const isOwn = targetId === me.id;
@@ -293,6 +295,13 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
         })}
       </View>
 
+      <ContentReportSheet
+        visible={reportReviewId !== null}
+        title="Report review"
+        targetType="engagement_review"
+        targetId={reportReviewId}
+        onClose={() => setReportReviewId(null)}
+      />
       <FlatList
         data={reviews}
         keyExtractor={(item) => item.id}
@@ -315,6 +324,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
               onAuthorPress={() =>
                 openUserProfile(navigation, item.authorId, me.id)
               }
+              onReport={item.authorId === me.id ? undefined : () => setReportReviewId(item.id)}
             />
           );
         }}

@@ -13,6 +13,15 @@ export const REPORT_REASONS = [
 
 export type ReportReasonId = (typeof REPORT_REASONS)[number]['id']
 
+export type ContentReportTarget =
+  | 'post_comment'
+  | 'work_request'
+  | 'user'
+  | 'post'
+  | 'engagement_review'
+  | 'job_listing'
+  | 'service_offering'
+
 export function reportCanSend(reason: ReportReasonId | null, details: string): boolean {
   const text = details.trim()
   if (!reason) return false
@@ -26,7 +35,7 @@ export type ReportSubmitResult =
   | { outcome: 'unavailable' | 'own' | 'limited' | 'unconfirmed' }
 
 export async function submitContentReport(input: {
-  targetType: 'post_comment' | 'work_request'
+  targetType: ContentReportTarget
   targetId: string
   reason: ReportReasonId
   details: string
@@ -54,7 +63,10 @@ export async function submitContentReport(input: {
   }
 }
 
-export function reportResultMessage(result: ReportSubmitResult): { title: string; message: string; confirmed: boolean } {
+export function reportResultMessage(
+  result: ReportSubmitResult,
+  target: ContentReportTarget = 'post_comment',
+): { title: string; message: string; confirmed: boolean } {
   if (result.outcome === 'sent') {
     return { title: 'Report sent', message: 'Mawahib staff can review this report. The other person is not told who reported it.', confirmed: true }
   }
@@ -65,7 +77,8 @@ export function reportResultMessage(result: ReportSubmitResult): { title: string
     return { title: 'Unavailable', message: 'This is no longer available.', confirmed: false }
   }
   if (result.outcome === 'own') {
-    return { title: 'Not sent', message: 'You cannot report your own comment.', confirmed: false }
+    const subject = target === 'user' ? 'account' : target === 'post' ? 'post' : target === 'post_comment' ? 'comment' : target === 'engagement_review' ? 'review' : target === 'job_listing' ? 'job' : target === 'service_offering' ? 'service' : 'request'
+    return { title: 'Not sent', message: `You cannot report your own ${subject}.`, confirmed: false }
   }
   if (result.outcome === 'limited') {
     return { title: 'Too many reports', message: 'Try again later.', confirmed: false }

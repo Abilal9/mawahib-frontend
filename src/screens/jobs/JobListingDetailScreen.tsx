@@ -33,6 +33,7 @@ import {
 import { useUserJobs } from '../../context/UserJobsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useSaved } from '../../context/SavedContext';
+import ContentReportSheet from '../../components/report/ContentReportSheet';
 import BookmarkButton from '../../components/ui/BookmarkButton';
 import { useMarketplaceSuccess } from '../../hooks/useMarketplaceSuccess';
 import { ScreenProps } from '../../navigation/types';
@@ -65,6 +66,7 @@ export default function JobListingDetailScreen({
   const [loading, setLoading] = useState(!job);
   const [error, setError] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [ownerActionError, setOwnerActionError] = useState<string | null>(null);
   const [ownerBusy, setOwnerBusy] = useState(false);
@@ -403,6 +405,15 @@ export default function JobListingDetailScreen({
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job Details</Text>
+        {apiListing && !isOwner ? (
+          <TouchableOpacity
+            onPress={() => setReportOpen(true)}
+            style={styles.headerButton}
+            accessibilityLabel="Report job"
+          >
+            <Ionicons name="flag-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+        ) : null}
         {apiListing &&
         apiListing.status !== 'draft' &&
         apiListing.status !== 'archived' ? (
@@ -638,6 +649,14 @@ export default function JobListingDetailScreen({
           setConfirm(null);
           pending.run();
         }}
+      />
+
+      <ContentReportSheet
+        visible={reportOpen}
+        title="Report job"
+        targetType="job_listing"
+        targetId={listingId}
+        onClose={() => setReportOpen(false)}
       />
 
       <ActionBusyOverlay

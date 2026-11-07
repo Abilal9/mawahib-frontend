@@ -18,6 +18,7 @@ import MoneyAmount from '../../components/ui/MoneyAmount';
 import CurrencyIcon from '../../components/ui/CurrencyIcon';
 import { toImageSource } from '../../utils/image';
 import UserAvatar from '../../components/ui/UserAvatar';
+import ContentReportSheet from '../../components/report/ContentReportSheet';
 import { colors, spacing, radius, typography } from '../../theme';
 import {
   servicesApi,
@@ -147,6 +148,8 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
 
   const [activePackage, setActivePackage] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [reportServiceOpen, setReportServiceOpen] = useState(false);
+  const [reportReviewId, setReportReviewId] = useState<string | null>(null);
   const [serviceReviews, setServiceReviews] = useState<ApiServiceReview[]>([]);
 
   useEffect(() => {
@@ -232,6 +235,11 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
                   }}
                 />
               ) : null}
+              {isVisitorView && ownerUserId && ownerUserId !== me.id && profileOffering && profileOffering.status !== 'draft' && profileOffering.status !== 'archived' ? (
+                <TouchableOpacity hitSlop={8} onPress={() => setReportServiceOpen(true)} accessibilityLabel="Report service">
+                  <Ionicons name="flag-outline" size={20} color={colors.text} />
+                </TouchableOpacity>
+              ) : null}
               {!isVisitorView ? (
                 <View style={styles.ownerActions}>
                   <TouchableOpacity
@@ -263,6 +271,9 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
               <View key={review.id}>
                 <Text style={styles.description}>
                   {review.reviewer.displayName} · {review.rating.toFixed(1)}
+                  {review.reviewer.id !== me.id ? (
+                    <Text onPress={() => setReportReviewId(review.id)}>  Report</Text>
+                  ) : null}
                 </Text>
                 {review.body ? (
                   <Text style={styles.description}>{review.body}</Text>
@@ -388,6 +399,20 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
             </Pressable>
           </Pressable>
         </Modal>
+        <ContentReportSheet
+          visible={reportServiceOpen}
+          title="Report service"
+          targetType="service_offering"
+          targetId={profileOffering?.id ?? null}
+          onClose={() => setReportServiceOpen(false)}
+        />
+        <ContentReportSheet
+          visible={reportReviewId !== null}
+          title="Report review"
+          targetType="engagement_review"
+          targetId={reportReviewId}
+          onClose={() => setReportReviewId(null)}
+        />
       </ScreenContainer>
     );
   }

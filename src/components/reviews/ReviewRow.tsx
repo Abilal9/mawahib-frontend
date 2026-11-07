@@ -29,10 +29,12 @@ export default function ReviewRow({
   review,
   media,
   onAuthorPress,
+  onReport,
 }: {
   review: ReviewItem;
   media?: ReviewMediaItem[];
   onAuthorPress?: () => void;
+  onReport?: () => void;
 }) {
   const photos = reviewImageUrls(media, review.images ?? (review.image ? [review.image] : []), 4);
   const videoOnly = photos.length === 0 && reviewHasUnsupportedVideo(media);
@@ -66,6 +68,11 @@ export default function ReviewRow({
               nameBlock
             )}
           </View>
+          {onReport ? (
+            <TouchableOpacity onPress={onReport} hitSlop={8} accessibilityLabel="Report review">
+              <Ionicons name="flag-outline" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.ratingPill} accessibilityLabel={`Rating ${review.rating.toFixed(1)}`}>
             <Ionicons name="star" size={12} color="#F5A623" />
             <Text style={styles.ratingText}>{review.rating.toFixed(1)}</Text>

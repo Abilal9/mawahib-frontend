@@ -18,6 +18,7 @@ import {
 import { Image } from 'expo-image';
 import { toImageSource } from '../../utils/image';
 import { Ionicons } from '@expo/vector-icons';
+import ContentReportSheet from '../../components/report/ContentReportSheet';
 import {
   REPORT_REASONS,
   reportCanSend,
@@ -84,6 +85,7 @@ export default function PostDetailScreen({
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
   const reportBusyRef = useRef(false);
+  const [reportPostOpen, setReportPostOpen] = useState(false);
   const [reportSuccessOpen, setReportSuccessOpen] = useState(false);
   const [reportSuccessTitle, setReportSuccessTitle] = useState('Report sent');
   const [likesOpen, setLikesOpen] = useState(false);
@@ -321,23 +323,13 @@ export default function PostDetailScreen({
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Post</Text>
         <View style={styles.headerRight}>
-          {isOwnPost ? (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => setMenuOpen(true)}
-              hitSlop={8}
-            >
-              <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => void sharePost()}
-              hitSlop={8}
-            >
-              <Ionicons name="share-outline" size={22} color={colors.text} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setMenuOpen(true)}
+            hitSlop={8}
+          >
+            <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -540,19 +532,33 @@ export default function PostDetailScreen({
               <Ionicons name="share-outline" size={22} color={colors.text} />
               <Text style={styles.sheetRowText}>Share</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.sheetRow}
-              onPress={() => {
-                setMenuOpen(false);
-                setDeleteOpen(true);
-              }}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="trash-outline" size={22} color={colors.error} />
-              <Text style={[styles.sheetRowText, styles.sheetRowDanger]}>
-                Delete
-              </Text>
-            </TouchableOpacity>
+            {isOwnPost ? (
+              <TouchableOpacity
+                style={styles.sheetRow}
+                onPress={() => {
+                  setMenuOpen(false);
+                  setDeleteOpen(true);
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="trash-outline" size={22} color={colors.error} />
+                <Text style={[styles.sheetRowText, styles.sheetRowDanger]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.sheetRow}
+                onPress={() => {
+                  setMenuOpen(false);
+                  setReportPostOpen(true);
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="flag-outline" size={22} color={colors.text} />
+                <Text style={styles.sheetRowText}>Report post</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.sheetRow, styles.sheetCancel]}
               onPress={() => setMenuOpen(false)}
@@ -738,6 +744,14 @@ export default function PostDetailScreen({
           </Pressable>
         </Pressable>
       </Modal>
+
+      <ContentReportSheet
+        visible={reportPostOpen}
+        title="Report post"
+        targetType="post"
+        targetId={post.id}
+        onClose={() => setReportPostOpen(false)}
+      />
 
       <PostLikesModal
         visible={likesOpen}
