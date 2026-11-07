@@ -18,6 +18,13 @@ import {
 import { Image } from 'expo-image';
 import { toImageSource } from '../../utils/image';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  REPORT_REASONS,
+  reportCanSend,
+  reportResultMessage,
+  submitContentReport,
+  type ReportReasonId,
+} from '../../lib/contentReports';
 import { StatusBar } from 'expo-status-bar';
 import { useIsFocused } from '@react-navigation/native';
 import ScreenContainer from '../../components/ui/ScreenContainer';
@@ -35,7 +42,6 @@ import { openUserProfile } from '../../utils/openUserProfile';
 import { ScreenProps } from '../../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const REPORT_MIN_CHARS = 10;
 const REPORT_MAX_CHARS = 1000;
 
 export default function PostDetailScreen({
@@ -73,10 +79,13 @@ export default function PostDetailScreen({
   );
   const [isDeletingComment, setIsDeletingComment] = useState(false);
   const [reportTarget, setReportTarget] = useState<Comment | null>(null);
+  const [reportReason, setReportReason] = useState<ReportReasonId | null>(null);
   const [reportText, setReportText] = useState('');
+  const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
   const reportBusyRef = useRef(false);
   const [reportSuccessOpen, setReportSuccessOpen] = useState(false);
+  const [reportSuccessTitle, setReportSuccessTitle] = useState('Report sent');
   const [likesOpen, setLikesOpen] = useState(false);
 
   useEffect(() => {
@@ -186,41 +195,50 @@ export default function PostDetailScreen({
 
   const openCommentReport = useCallback((target: Comment) => {
     setCommentMenuId(null);
+    setReportReason(null);
     setReportText('');
+    setReportNotice(null);
     setReportTarget(target);
   }, []);
 
   const closeCommentReport = useCallback(() => {
     if (reportBusyRef.current) return;
     setReportTarget(null);
+    setReportReason(null);
     setReportText('');
+    setReportNotice(null);
   }, []);
 
   const submitCommentReport = useCallback(async () => {
     if (reportBusyRef.current || !reportTarget || !post) return;
     const description = reportText.trim();
-    if (description.length < REPORT_MIN_CHARS) return;
+    if (!reportCanSend(reportReason, description) || !reportReason) return;
     reportBusyRef.current = true;
     setReportBusy(true);
+    setReportNotice(null);
     try {
-      // Deferred: moderation phase will replace this stub with
-      // POST /comments/:commentId/report { reason, postId, reportedUserId }.
-      const _futurePayload = {
-        commentId: reportTarget.id,
-        postId: post.id,
-        reportedUserId: reportTarget.userId,
-        reason: description,
-      };
-      void _futurePayload;
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      setReportTarget(null);
-      setReportText('');
-      setReportSuccessOpen(true);
+      const result = await submitContentReport({
+        targetType: 'post_comment',
+        targetId: reportTarget.id,
+        reason: reportReason,
+        details: description,
+      });
+      const message = reportResultMessage(result);
+      if (message.confirmed || result.outcome === 'unavailable' || result.outcome === 'own') {
+        setReportTarget(null);
+        setReportReason(null);
+        setReportText('');
+        setReportSuccessTitle(message.title);
+        setReportNotice(message.message);
+        setReportSuccessOpen(true);
+      } else {
+        setReportNotice(message.message);
+      }
     } finally {
       reportBusyRef.current = false;
       setReportBusy(false);
     }
-  }, [post, reportTarget, reportText]);
+  }, [post, reportReason, reportTarget, reportText]);
 
   if (loading && !post) {
     return (
@@ -260,8 +278,7 @@ export default function PostDetailScreen({
     : false;
   const menuCanReport = menuComment ? menuComment.userId !== user.id : false;
   const reportTextTrimmed = reportText.trim();
-  const canSendReport =
-    reportTextTrimmed.length >= REPORT_MIN_CHARS && !reportBusy;
+  const canSendReport = reportCanSend(reportReason, reportTextTrimmed) && !reportBusy;
 
   const sharePost = async () => {
     setMenuOpen(false);
@@ -678,12 +695,20 @@ export default function PostDetailScreen({
             <View style={styles.sheetHandle} />
             <Text style={styles.modalTitle}>Report comment</Text>
             <Text style={styles.reportDescription}>
-              What’s wrong with this comment?
+              Choose a reason. Add details if you want.
             </Text>
-            <Text style={styles.reportBeta}>
-              <Text style={styles.reportBetaMark}>BETA</Text>
-              {' — sending this does not file a report yet.'}
-            </Text>
+            <View style={styles.reportReasons}>
+              {REPORT_REASONS.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => setReportReason(item.id)}
+                  disabled={reportBusy}
+                  style={[styles.reportReason, reportReason === item.id && styles.reportReasonOn]}
+                >
+                  <Text style={styles.reportReasonText}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <TextInput
               placeholder="Describe the issue..."
               placeholderTextColor={colors.textSecondary}
@@ -694,12 +719,7 @@ export default function PostDetailScreen({
               editable={!reportBusy}
               maxLength={REPORT_MAX_CHARS}
             />
-            {reportTextTrimmed.length > 0 &&
-            reportTextTrimmed.length < REPORT_MIN_CHARS ? (
-              <Text style={styles.reportHint}>
-                Please enter at least {REPORT_MIN_CHARS} characters.
-              </Text>
-            ) : null}
+            {reportNotice ? <Text style={styles.reportHint}>{reportNotice}</Text> : null}
             <View style={styles.reportActions}>
               <Button
                 title="Cancel"
@@ -728,8 +748,8 @@ export default function PostDetailScreen({
 
       <SuccessConfirmationModal
         visible={reportSuccessOpen}
-        title="Report not sent"
-        message="BETA — nothing was sent for review, and no one from Mawahib will contact you about it."
+        title={reportSuccessTitle}
+        message={reportNotice ?? 'Mawahib staff can review this report.'}
         onDone={() => setReportSuccessOpen(false)}
       />
     </ScreenContainer>
@@ -921,6 +941,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     color: colors.text,
   },
+  reportReasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  reportReason: { borderWidth: 1, borderColor: colors.borderLight, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  reportReasonOn: { borderColor: colors.primary, backgroundColor: '#FDE7F2' },
+  reportReasonText: { ...typography.caption, color: colors.text },
   reportInput: {
     minHeight: 120,
     borderWidth: 1,

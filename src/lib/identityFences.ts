@@ -203,6 +203,7 @@ export type AuthenticatedRequestInit = RequestInit & {
    */
   accessToken?: string;
   principal?: AuthenticatedRequestPrincipal;
+  acceptedStatuses?: number[];
 };
 
 export type AuthenticatedRequestDeps = {
@@ -293,7 +294,7 @@ export async function executeAuthenticatedRequest<T>(
   init: AuthenticatedRequestInit,
   deps: AuthenticatedRequestDeps,
 ): Promise<T> {
-  const { accessToken: preferredToken, principal: _ignored, ...rest } = init;
+  const { accessToken: preferredToken, principal: _ignored, acceptedStatuses, ...rest } = init;
   const method = (rest.method ?? 'GET').toString();
   const allowGetRetry = isGetRequestMethod(method);
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -336,6 +337,9 @@ export async function executeAuthenticatedRequest<T>(
         deps.onAccountSuspended?.(token);
       }
       throw error;
+    }
+    if (acceptedStatuses && !acceptedStatuses.includes(consumed.status)) {
+      throw new ApiError(consumed.status, 'The response was not a confirmation.');
     }
 
     if (consumed.status === 204 || consumed.json === undefined) {

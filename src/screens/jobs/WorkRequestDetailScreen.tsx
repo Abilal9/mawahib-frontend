@@ -12,6 +12,13 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  REPORT_REASONS,
+  reportCanSend,
+  reportResultMessage,
+  submitContentReport,
+  type ReportReasonId,
+} from '../../lib/contentReports';
 import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
@@ -484,10 +491,13 @@ export default function WorkRequestDetailScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReasonId | null>(null);
   const [reportText, setReportText] = useState('');
+  const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const reportSubmittingRef = useRef(false);
   const [reportSuccessOpen, setReportSuccessOpen] = useState(false);
+  const [reportSuccessTitle, setReportSuccessTitle] = useState('Report sent');
   /** Client delivery note sheet: dispute (→ disputed) or request changes (→ in_progress). */
   const [deliveryNoteMode, setDeliveryNoteMode] = useState<
     'dispute' | 'changes' | null
@@ -1068,7 +1078,9 @@ export default function WorkRequestDetailScreen({
         });
         return;
       case 'report':
+        setReportReason(null);
         setReportText('');
+        setReportNotice(null);
         setReportOpen(true);
         return;
       default:
@@ -1083,15 +1095,28 @@ export default function WorkRequestDetailScreen({
 
   const submitReport = async () => {
     const description = reportText.trim();
-    if (description.length < 10 || reportSubmittingRef.current) return;
+    if (!reportCanSend(reportReason, description) || !reportReason || reportSubmittingRef.current || !request) return;
     reportSubmittingRef.current = true;
     setReportSubmitting(true);
+    setReportNotice(null);
     try {
-      // Moderation phase will replace this stub with a real report API.
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      setReportOpen(false);
-      setReportText('');
-      setReportSuccessOpen(true);
+      const result = await submitContentReport({
+        targetType: 'work_request',
+        targetId: request.id,
+        reason: reportReason,
+        details: description,
+      });
+      const message = reportResultMessage(result);
+      if (message.confirmed || result.outcome === 'unavailable') {
+        setReportOpen(false);
+        setReportReason(null);
+        setReportText('');
+        setReportSuccessTitle(message.title);
+        setReportNotice(message.message);
+        setReportSuccessOpen(true);
+      } else {
+        setReportNotice(message.message);
+      }
     } finally {
       reportSubmittingRef.current = false;
       setReportSubmitting(false);
@@ -2078,12 +2103,26 @@ export default function WorkRequestDetailScreen({
             <View style={styles.sheetHandle} />
             <Text style={styles.modalTitle}>Report Request</Text>
             <Text style={styles.reportDescription}>
-              Please describe the issue you experienced.
+              Choose a reason. Add details if you want.
             </Text>
-            <Text style={styles.reportBeta}>
-              <Text style={styles.reportBetaMark}>BETA</Text>
-              {' — sending this does not file a report yet.'}
-            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              {REPORT_REASONS.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => setReportReason(item.id)}
+                  disabled={reportSubmitting}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: reportReason === item.id ? '#E60076' : '#D9E2EC',
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <TextInput
               placeholder="Describe what happened..."
               placeholderTextColor={colors.textSecondary}
@@ -2093,11 +2132,7 @@ export default function WorkRequestDetailScreen({
               onChangeText={setReportText}
               editable={!reportSubmitting}
             />
-            {reportText.trim().length > 0 && reportText.trim().length < 10 ? (
-              <Text style={styles.reportHint}>
-                Please enter at least 10 characters.
-              </Text>
-            ) : null}
+            {reportNotice ? <Text style={styles.reportHint}>{reportNotice}</Text> : null}
             <View style={styles.reportActions}>
               <Button
                 title="Cancel"
@@ -2109,7 +2144,7 @@ export default function WorkRequestDetailScreen({
               <Button
                 title="Send Report"
                 style={styles.halfBtn}
-                disabled={reportSubmitting || reportText.trim().length < 10}
+                disabled={reportSubmitting || !reportCanSend(reportReason, reportText)}
                 onPress={() => void submitReport()}
               />
             </View>
@@ -2217,8 +2252,8 @@ export default function WorkRequestDetailScreen({
 
       <SuccessConfirmationModal
         visible={reportSuccessOpen}
-        title="Report not sent"
-        message="BETA — nothing was sent for review, and no one from Mawahib will contact you about it."
+        title={reportSuccessTitle}
+        message={reportNotice ?? 'Mawahib staff can review this report.'}
         onDone={() => setReportSuccessOpen(false)}
       />
     </ScreenContainer>
