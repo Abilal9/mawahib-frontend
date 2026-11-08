@@ -37,10 +37,19 @@ export interface MarkAllReadResult {
 }
 
 export const notificationsApi = {
-  list(accessToken?: string): Promise<ApiNotification[]> {
-    return apiRequest<ApiNotification[]>('/users/me/notifications', {
-      accessToken,
-    });
+  list(options: {
+    accessToken?: string;
+    cursor?: string | null;
+    take?: number;
+  } = {}): Promise<{ items: ApiNotification[]; nextCursor: string | null }> {
+    const qs = new URLSearchParams();
+    if (options.cursor) qs.set('cursor', options.cursor);
+    if (options.take) qs.set('take', String(options.take));
+    const suffix = qs.toString() ? `?${qs}` : '';
+    return apiRequest<{ items: ApiNotification[]; nextCursor: string | null }>(
+      `/users/me/notifications${suffix}`,
+      { accessToken: options.accessToken },
+    );
   },
 
   unreadSummary(accessToken?: string): Promise<NotificationUnreadSummary> {

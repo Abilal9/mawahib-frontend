@@ -71,7 +71,7 @@ export type SignedOutStackParamList = {
   UserProfile: { userId: string };
   ServiceDetail: { serviceId: string; userId?: string };
   JobListingDetail: { listingId: string };
-  PostDetail: { postId: string; focusComments?: boolean };
+  PostDetail: { postId: string; focusComments?: boolean; commentId?: string };
   Reviews: { userId?: string; serviceId?: string } | undefined;
   PortfolioProjectDetail: {
     projectId: string;
@@ -115,7 +115,7 @@ export type RootStackParamList = {
   ProfileSetup: { step?: number };
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Notifications: undefined;
-  PostDetail: { postId: string; focusComments?: boolean };
+  PostDetail: { postId: string; focusComments?: boolean; commentId?: string };
   UserPosts: { userId?: string } | undefined;
   PostCreate: undefined;
   PhotoCapture: undefined;

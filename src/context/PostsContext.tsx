@@ -175,8 +175,9 @@ export function PostsProvider({ children }: { children: ReactNode }) {
         return next;
       });
       return post;
-    } catch {
-      return undefined;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return undefined;
+      throw error;
     }
   }, []);
 

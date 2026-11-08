@@ -156,8 +156,15 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
     showSuccess,
     completeSuccess,
   } = useMarketplaceSuccess(navigation, refresh);
-  const {
+    const {
     notifications,
+    loading,
+    failed,
+    loadingMore,
+    moreFailed,
+    hasMore,
+    loadMore,
+    refresh: refreshNotifications,
     markRead,
     markAllRead,
     clearActions,
@@ -278,7 +285,11 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
       const postId =
         (typeof params.postId === 'string' && params.postId) || item.postId;
       if (postId) {
-        navigation.navigate('PostDetail', { postId });
+        navigation.navigate('PostDetail', {
+          postId,
+          focusComments: typeof params.commentId === 'string',
+          commentId: typeof params.commentId === 'string' ? params.commentId : undefined,
+        });
       } else {
         Alert.alert(
           'Post unavailable',
@@ -331,9 +342,20 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
           navigation.navigate('Connections');
         }
         break;
-      case 'system':
+      case 'system': {
+        const postId =
+          (typeof params.postId === 'string' && params.postId) || item.postId;
+        if (postId) {
+          navigation.navigate('PostDetail', {
+            postId,
+            focusComments: typeof params.commentId === 'string',
+            commentId: typeof params.commentId === 'string' ? params.commentId : undefined,
+          });
+          break;
+        }
         navigation.navigate('MainTabs', { screen: 'HomeTab' });
         break;
+      }
       case 'like':
       case 'comment':
         if (item.postId) {
@@ -488,8 +510,37 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <Text style={styles.empty}>No notifications in this category.</Text>
+          loading ? (
+            <Text style={styles.empty}>Loading notifications</Text>
+          ) : failed ? (
+            <TouchableOpacity onPress={() => void refreshNotifications()}>
+              <Text style={styles.empty}>Couldn’t load notifications. Tap to try again.</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.empty}>
+              {activeTab === 'All' ? 'No notifications yet.' : 'No notifications in this category.'}
+            </Text>
+          )
         }
+        ListFooterComponent={
+          notifications.length === 0 ? null : loadingMore ? (
+            <Text style={styles.empty}>Loading older notifications</Text>
+          ) : moreFailed ? (
+            <TouchableOpacity onPress={loadMore}>
+              <Text style={styles.empty}>Couldn’t load older notifications. Tap to try again.</Text>
+            </TouchableOpacity>
+          ) : hasMore ? (
+            <TouchableOpacity onPress={loadMore} style={styles.loadOlder}>
+              <Text style={styles.loadOlderText}>Load older notifications</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.empty}>No older notifications</Text>
+          )
+        }
+        onEndReached={() => {
+          if (hasMore && !loadingMore) loadMore();
+        }}
+        onEndReachedThreshold={0.4}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
@@ -654,6 +705,22 @@ const styles = StyleSheet.create({
     marginLeft: spacing.screen + 40 + spacing.md,
   },
   empty: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.screen,
+  },
+  loadOlder: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  loadOlderText: {
+    ...typography.label,
+    color: colors.primary,
+  },
     ...typography.bodySmall,
     color: colors.textSecondary,
     textAlign: 'center',

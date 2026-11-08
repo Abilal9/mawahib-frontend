@@ -62,6 +62,7 @@ export default function PostDetailScreen({
   } = usePosts();
   const saved = useSaved();
   const focusComments = route.params.focusComments === true;
+  const commentId = route.params.commentId;
   const postId = route.params.postId;
   const { user, removePostId } = useMyProfile();
   const isFocused = useIsFocused();
@@ -69,6 +70,9 @@ export default function PostDetailScreen({
   const commentsY = useRef(0);
   const [post, setPost] = useState<Post | undefined>(() => getPostById(postId));
   const [loading, setLoading] = useState(!post);
+  const [unavailable, setUnavailable] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [commentMissing, setCommentMissing] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
@@ -104,19 +108,33 @@ export default function PostDetailScreen({
       }
       const remote = await fetchPostById(postId);
       if (cancelled) return;
-      if (remote) setPost(remote);
+      if (remote) {
+        setPost(remote);
+        setUnavailable(false);
+        setLoadFailed(false);
+      } else if (!getPostById(postId)) {
+        setPost(undefined);
+        setUnavailable(true);
+      }
       setLoading(false);
       try {
         const list = await getComments(postId);
-        if (!cancelled) setComments(list);
+        if (!cancelled) {
+          setComments(list);
+          setCommentMissing(Boolean(commentId) && !list.some((item) => item.id === commentId));
+        }
       } catch {
         if (!cancelled) setComments([]);
       }
-    })();
+    })().catch(() => {
+      if (cancelled) return;
+      setLoading(false);
+      if (!getPostById(postId)) setLoadFailed(true);
+    });
     return () => {
       cancelled = true;
     };
-  }, [postId, isFocused, getPostById, fetchPostById, getComments]);
+  }, [postId, commentId, isFocused, getPostById, fetchPostById, getComments]);
 
   // Keep engagement in sync with PostsContext (source of truth for like/save/count).
   useEffect(() => {
@@ -257,7 +275,11 @@ export default function PostDetailScreen({
     return (
       <ScreenContainer>
         <View style={styles.missingWrap}>
-          <Text style={styles.missingText}>Post not found</Text>
+          <Text style={styles.missingText}>
+            {loadFailed && !unavailable
+              ? 'Couldn’t open this post. Try again.'
+              : 'This post is no longer available.'}
+          </Text>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.missingBack}
@@ -462,6 +484,9 @@ export default function PostDetailScreen({
           <Text style={styles.commentsTitle}>
             Comments{post.comments > 0 ? ` · ${post.comments}` : ''}
           </Text>
+          {commentMissing ? (
+            <Text style={styles.hiddenNotice}>This comment is no longer available.</Text>
+          ) : null}
           {comments.map((c) => (
             <View key={c.id} style={styles.comment}>
               <TouchableOpacity

@@ -214,9 +214,19 @@ export function mapApiNotification(api: ApiNotification): Notification {
 }
 
 export const notificationService = {
-  async list(accessToken?: string): Promise<Notification[]> {
-    const items = await notificationsApi.list(accessToken);
-    return items.map(mapApiNotification);
+  async listPage(
+    accessToken?: string,
+    options?: { cursor?: string | null; take?: number },
+  ): Promise<{ items: Notification[]; nextCursor: string | null }> {
+    const page = await notificationsApi.list({
+      accessToken,
+      cursor: options?.cursor,
+      take: options?.take,
+    });
+    return {
+      items: page.items.map(mapApiNotification),
+      nextCursor: page.nextCursor,
+    };
   },
 
   async markRead(id: string, accessToken?: string): Promise<void> {
