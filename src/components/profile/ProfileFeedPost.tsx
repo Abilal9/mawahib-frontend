@@ -6,6 +6,7 @@ import { toImageSource } from '../../utils/image';
 import UserAvatar from '../ui/UserAvatar';
 import { colors, spacing, radius, typography } from '../../theme';
 import { Post } from '../../data/types';
+import { HIDDEN_BY_MAWAHIB } from '../../lib/hiddenContent';
 import BookmarkButton from '../ui/BookmarkButton';
 import { displayProfileTitle } from '../../constants/profile';
 
@@ -44,6 +45,7 @@ export default function ProfileFeedPost({
           </Text>
         </View>
       </TouchableOpacity>
+      {post.hiddenByMawahib ? <Text style={styles.hiddenNotice}>{HIDDEN_BY_MAWAHIB}</Text> : null}
       <Text style={styles.feedCaption}>
         {truncated}
         {post.caption.length > 110 ? (
@@ -64,7 +66,7 @@ export default function ProfileFeedPost({
         </View>
         <Ionicons name="arrow-redo-outline" size={18} color={colors.textSecondary} />
         <View style={{ flex: 1 }} />
-        {onBookmark ? (
+        {onBookmark && !post.hiddenByMawahib ? (
           <BookmarkButton kind="post" saved={saved} onPress={onBookmark} size={18} idleColor={colors.textSecondary} />
         ) : null}
       </View>
@@ -85,6 +87,11 @@ const styles = StyleSheet.create({
   feedAvatar: { width: 40, height: 40, borderRadius: 20 },
   feedName: { ...typography.label, color: colors.text },
   feedMeta: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  hiddenNotice: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
   feedCaption: { ...typography.bodySmall, color: colors.text, lineHeight: 20 },
   seeMore: { color: colors.primary },
   feedImage: {

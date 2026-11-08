@@ -31,6 +31,7 @@ export interface ApiFeedPost {
   };
   text: string;
   visibility: string;
+  moderation?: { hiddenByMawahib: true } | null;
   media: Array<{ mediaAssetId: string; url: string | null; position: number }>;
   engagement: {
     likeCount: number;
@@ -53,6 +54,7 @@ export interface ApiComment {
   postId: string;
   text: string;
   createdAt: string;
+  moderation?: { hiddenByMawahib: true } | null;
   author: ApiFeedAuthor;
   canDelete: boolean;
 }
@@ -125,6 +127,7 @@ export function mapFeedPost(dto: ApiFeedPost): Post {
     feedSource: dto.feedSource,
     relationship: dto.relationship,
     visibility: dto.visibility,
+    hiddenByMawahib: dto.moderation?.hiddenByMawahib === true,
   };
 }
 
@@ -137,6 +140,7 @@ export function mapApiComment(c: ApiComment): Comment {
     text: c.text,
     time: timeAgo(c.createdAt),
     canDelete: Boolean(c.canDelete),
+    hiddenByMawahib: c.moderation?.hiddenByMawahib === true,
   };
 }
 

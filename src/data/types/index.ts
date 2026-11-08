@@ -64,6 +64,8 @@ export interface Post {
     connectionRequestId: string | null;
   };
   visibility?: string;
+  /** Present when Mawahib hid this post and the viewer is its author. */
+  hiddenByMawahib?: boolean;
 }
 
 
@@ -76,6 +78,8 @@ export interface Comment {
   time: string;
   /** Server-computed: comment author or post owner. */
   canDelete?: boolean;
+  /** Present when Mawahib hid this comment and the viewer wrote it. */
+  hiddenByMawahib?: boolean;
 }
 
 export interface Story {

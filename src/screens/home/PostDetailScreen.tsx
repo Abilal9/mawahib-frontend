@@ -19,6 +19,7 @@ import { Image } from 'expo-image';
 import { toImageSource } from '../../utils/image';
 import { Ionicons } from '@expo/vector-icons';
 import ContentReportSheet from '../../components/report/ContentReportSheet';
+import { HIDDEN_BY_MAWAHIB } from '../../lib/hiddenContent';
 import {
   REPORT_REASONS,
   reportCanSend,
@@ -388,8 +389,10 @@ export default function PostDetailScreen({
           <View style={styles.actionsLeft}>
             <TouchableOpacity
               onPress={() => {
+                if (post.hiddenByMawahib) return;
                 void toggleLike(post.id);
               }}
+              disabled={Boolean(post.hiddenByMawahib)}
               style={styles.actionBtn}
             >
               <Ionicons
@@ -411,7 +414,11 @@ export default function PostDetailScreen({
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionBtn}
-              onPress={() => void sharePost()}
+              disabled={Boolean(post.hiddenByMawahib)}
+              onPress={() => {
+                if (post.hiddenByMawahib) return;
+                void sharePost();
+              }}
             >
               <Ionicons name="paper-plane-outline" size={24} color={colors.text} />
             </TouchableOpacity>
@@ -422,6 +429,7 @@ export default function PostDetailScreen({
             size={24}
             idleColor={colors.text}
             onPress={() => {
+              if (post.hiddenByMawahib) return;
               const shown = saved.isSaved('post', post.id, post.isSaved);
               void saved.setDesired('post', post.id, !shown, post.isSaved);
             }}
@@ -435,6 +443,9 @@ export default function PostDetailScreen({
         ) : (
           <Text style={styles.likes}>0 likes</Text>
         )}
+        {post.hiddenByMawahib ? (
+          <Text style={styles.hiddenNotice}>{HIDDEN_BY_MAWAHIB}</Text>
+        ) : null}
         {post.caption ? (
           <Text style={styles.caption}>
             <Text style={styles.captionAuthor}>{post.author.name} </Text>
@@ -484,6 +495,9 @@ export default function PostDetailScreen({
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.commentText}>{c.text}</Text>
+                {c.hiddenByMawahib ? (
+                  <Text style={styles.hiddenNotice}>{HIDDEN_BY_MAWAHIB}</Text>
+                ) : null}
                 <Text style={styles.commentTime}>{c.time}</Text>
               </View>
             </View>
@@ -491,7 +505,7 @@ export default function PostDetailScreen({
         </View>
       </ScrollView>
 
-      <View style={styles.inputBar}>
+      {post.hiddenByMawahib ? null : <View style={styles.inputBar}>
         <UserAvatar uri={user.avatar} size={32} style={styles.inputAvatar} />
         <TextInput
           style={styles.commentInput}
@@ -514,7 +528,7 @@ export default function PostDetailScreen({
             {isSubmittingComment ? 'Posting…' : 'Post'}
           </Text>
         </TouchableOpacity>
-      </View>
+      </View>}
 
       <Modal
         visible={menuOpen}
@@ -526,7 +540,10 @@ export default function PostDetailScreen({
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <TouchableOpacity
               style={styles.sheetRow}
-              onPress={() => void sharePost()}
+              onPress={() => {
+                if (post.hiddenByMawahib) return;
+                void sharePost();
+              }}
               activeOpacity={0.85}
             >
               <Ionicons name="share-outline" size={22} color={colors.text} />
@@ -820,6 +837,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingHorizontal: spacing.screen,
     marginTop: spacing.sm,
+  },
+  hiddenNotice: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.screen,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   caption: {
     ...typography.bodySmall,
