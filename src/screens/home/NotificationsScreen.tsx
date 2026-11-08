@@ -721,9 +721,4 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.primary,
   },
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xxxl,
-  },
 });
