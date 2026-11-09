@@ -1,34 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ProfileContent, User } from '../data/types';
 import { emptyProfileContent } from '../context/ProfileContext';
+import { ApiError } from '../lib/apiClient';
+import { protectedRecordDenied, sameShownRecord } from '../lib/screenLoadingPresentation';
 import { authApi, mapApiUserToUser } from '../services/authApi';
 
 /**
  * Loads another user's public profile header from Nest (`GET /users/:id/public`).
  * Includes structured about sections when present on the API user.
  * Call `refresh` on screen focus so visitor sees latest cover/About after owner edits.
+ * A refresh of the same person keeps the current header. A different person,
+ * a denial, or a missing account clears it before the next paint.
  */
 export function useVisitorUser(userId: string | undefined) {
   const [user, setUser] = useState<User | null>(null);
   const [about, setAbout] = useState<ProfileContent>(emptyProfileContent());
   const [loading, setLoading] = useState(Boolean(userId));
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
+  const [shownFor, setShownFor] = useState<string | undefined>(userId);
+
+  if (shownFor !== userId) {
+    setShownFor(userId);
+    setUser(null);
+    setAbout(emptyProfileContent());
+    setError(null);
+    setRefreshing(false);
+    setLoading(Boolean(userId));
+  }
 
   const refresh = useCallback(() => {
     setVersion((v) => v + 1);
   }, []);
 
   useEffect(() => {
-    if (!userId) {
-      setUser(null);
-      setAbout(emptyProfileContent());
-      setLoading(false);
-      return;
-    }
+    if (!userId) return;
 
     let cancelled = false;
-    setLoading(true);
+    const keepCurrent = sameShownRecord(user?.id, userId);
+    if (keepCurrent) setRefreshing(true);
+    else setLoading(true);
     setError(null);
 
     (async () => {
@@ -50,11 +62,18 @@ export function useVisitorUser(userId: string | undefined) {
         });
       } catch (err) {
         if (cancelled) return;
-        setUser(null);
-        setAbout(emptyProfileContent());
+        const denied =
+          err instanceof ApiError && protectedRecordDenied(err.status);
+        if (!keepCurrent || denied) {
+          setUser(null);
+          setAbout(emptyProfileContent());
+        }
         setError(err instanceof Error ? err.message : 'Failed to load user');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     })();
 
@@ -63,5 +82,5 @@ export function useVisitorUser(userId: string | undefined) {
     };
   }, [userId, version]);
 
-  return { user, about, loading, error, refresh };
+  return { user, about, loading, refreshing, error, refresh };
 }

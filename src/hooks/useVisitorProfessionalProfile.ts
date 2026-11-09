@@ -18,14 +18,18 @@ export function useVisitorProfessionalProfile(userId: string | undefined) {
   const [services, setServices] = useState<ServiceOffering[]>([]);
   const [loading, setLoading] = useState(Boolean(userId));
   const [error, setError] = useState<string | null>(null);
+  const [shownFor, setShownFor] = useState(userId);
+
+  if (shownFor !== userId) {
+    setShownFor(userId);
+    setPortfolio([]);
+    setServices([]);
+    setError(null);
+    setLoading(Boolean(userId));
+  }
 
   useEffect(() => {
-    if (!userId) {
-      setPortfolio([]);
-      setServices([]);
-      setLoading(false);
-      return;
-    }
+    if (!userId) return;
 
     let cancelled = false;
     setLoading(true);

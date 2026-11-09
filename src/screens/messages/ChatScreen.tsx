@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenContainer from '../../components/ui/ScreenContainer';
+import { LoadingBlock, LoadingSkeleton } from '../../components/ui/LoadingPlaceholder';
 import AppToast from '../../components/ui/AppToast';
 import ConfirmActionModal from '../../components/ui/ConfirmActionModal';
 import ProfileOverviewSheet from '../../components/messaging/ProfileOverviewSheet';
@@ -254,6 +255,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     PendingAttachment[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [attaching, setAttaching] = useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
@@ -309,6 +311,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     setText('');
     setPendingAttachments([]);
     setLoading(true);
+    setRefreshing(false);
     setSending(false);
     setLoadFailed(false);
     setMissing(false);
@@ -350,6 +353,10 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         !isStale(started.userId, started.epoch);
       try {
         if (!stillCurrent()) return;
+        const showingCached =
+          messagesRef.current.length > 0 &&
+          conversationRef.current?.id === conversationId;
+        if (showingCached) setRefreshing(true);
         const pagePromise = messageService.getMessages(conversationId, {
           limit: 50,
         });
@@ -403,12 +410,19 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         if (e instanceof ApiError && (e.status === 404 || e.status === 403)) {
           setMissing(true);
           setLoadFailed(false);
+          messagesRef.current = [];
+          setMessages([]);
+          conversationRef.current = null;
+          setConversation(null);
         } else {
           console.warn('[chat] load failed', e);
           setLoadFailed(true);
         }
       } finally {
-        if (stillCurrent()) setLoading(false);
+        if (stillCurrent()) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [conversationId, isStale, scrollToLatest, snapshot],
@@ -549,6 +563,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       focusedRef.current = true;
       setFocused(true);
       setLoading(true);
+      setRefreshing(false);
       messagesRef.current = [];
       setMessages([]);
       setOlderCursor(null);
@@ -1003,17 +1018,34 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
             size={40}
             style={styles.headerAvatar}
           />
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerName} numberOfLines={1}>
-              {peer?.displayName ?? (loading ? 'Loading…' : 'Conversation')}
-            </Text>
-            {headerSubtitle ? (
-              <Text style={styles.headerStatus} numberOfLines={1}>
-                {headerSubtitle}
-              </Text>
-            ) : null}
-          </View>
-        </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              {peer?.displayName ? (
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {peer.displayName}
+                </Text>
+              ) : loading ? (
+                <LoadingSkeleton label="Loading conversation">
+                  <LoadingBlock width={120} height={14} />
+                </LoadingSkeleton>
+              ) : (
+                <Text style={styles.headerName} numberOfLines={1}>
+                  Conversation
+                </Text>
+              )}
+              {headerSubtitle ? (
+                <Text style={styles.headerStatus} numberOfLines={1}>
+                  {headerSubtitle}
+                </Text>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+          {refreshing ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              accessibilityLabel="Updating conversation"
+            />
+          ) : null}
         {work ? (
           <TouchableOpacity
             style={styles.backButton}
@@ -1100,9 +1132,12 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         keyboardVerticalOffset={0}
       >
         {loading && messages.length === 0 ? (
-          <View style={styles.centered}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
+          <LoadingSkeleton label="Loading messages" style={styles.messageSkeleton}>
+            <LoadingBlock width="72%" height={54} style={styles.skeletonIncoming} />
+            <LoadingBlock width="64%" height={42} style={styles.skeletonOutgoing} />
+            <LoadingBlock width="78%" height={54} style={styles.skeletonIncoming} />
+            <LoadingBlock width="48%" height={42} style={styles.skeletonOutgoing} />
+          </LoadingSkeleton>
         ) : (
           <View style={styles.flex}>
             <FlatList
@@ -1580,6 +1615,14 @@ const styles = StyleSheet.create({
   rateTitle: { ...typography.label, color: colors.text },
   rateSubtitle: { ...typography.caption, color: colors.textSecondary },
   messageList: { padding: spacing.screen, paddingBottom: spacing.lg, flexGrow: 1 },
+  messageSkeleton: {
+    flex: 1,
+    padding: spacing.screen,
+    gap: spacing.md,
+    justifyContent: 'flex-end',
+  },
+  skeletonIncoming: { alignSelf: 'flex-start' },
+  skeletonOutgoing: { alignSelf: 'flex-end' },
   olderLoading: {
     paddingVertical: spacing.sm,
     alignItems: 'center',

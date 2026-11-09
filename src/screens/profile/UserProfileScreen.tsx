@@ -18,6 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../../components/ui/ScreenContainer';
+import { LoadingBlock, LoadingSkeleton } from '../../components/ui/LoadingPlaceholder';
 import MoneyAmount from '../../components/ui/MoneyAmount';
 import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
 import ProfileTabs from '../../components/profile/ProfileTabs';
@@ -124,27 +125,34 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
     }
   }, [user?.id, me.id, navigation]);
 
-  if (visitorUser.loading) {
-    return (
-      <ScreenContainer>
-        <View style={styles.missingWrap}>
-          <Text style={styles.missingText}>Loading profile…</Text>
-        </View>
-      </ScreenContainer>
-    );
-  }
-
   if (!user) {
     return (
-      <ScreenContainer>
-        <View style={styles.missingWrap}>
-          <Text style={styles.missingText}>
-            {visitorUser.error || 'User not found'}
-          </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.missingBack}>
-            <Text style={styles.missingBackText}>Go back</Text>
+      <ScreenContainer padded={false}>
+        <View style={[styles.skeletonBar, { paddingTop: insets.top }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.skeletonBack}
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
+        {visitorUser.loading ? (
+          <LoadingSkeleton label="Loading profile" style={styles.skeletonBody}>
+            <LoadingBlock width={96} height={96} round />
+            <LoadingBlock width="55%" height={18} />
+            <LoadingBlock width="35%" height={14} />
+            <LoadingBlock width="100%" height={44} />
+            <LoadingBlock width="100%" height={14} />
+            <LoadingBlock width="80%" height={14} />
+          </LoadingSkeleton>
+        ) : (
+          <View style={styles.missingWrap}>
+            <Text style={styles.missingText}>
+              {visitorUser.error || 'User not found'}
+            </Text>
+          </View>
+        )}
       </ScreenContainer>
     );
   }
@@ -236,6 +244,16 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
         onSecondaryRightPress={() => setReportOpen(true)}
         coverUrl={user.coverImage}
       />
+      {visitorUser.refreshing ? (
+        <LoadingSkeleton label="Updating profile">
+          <LoadingBlock width="100%" height={3} />
+        </LoadingSkeleton>
+      ) : null}
+      {visitorUser.error ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{visitorUser.error}</Text>
+        </View>
+      ) : null}
 
       <ContentReportSheet
         visible={reportOpen}
@@ -360,9 +378,11 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
 
           {activeTab === 'Portfolio' &&
             (visitorProfessional.loading ? (
-              <View style={styles.tabPad}>
-                <Text style={styles.emptyCopy}>Loading portfolio…</Text>
-              </View>
+              <LoadingSkeleton label="Loading portfolio" style={styles.tabPad}>
+                <LoadingBlock width="100%" height={120} />
+                <LoadingBlock width="70%" height={16} />
+                <LoadingBlock width="100%" height={120} />
+              </LoadingSkeleton>
             ) : visitorProfessional.portfolio.length === 0 ? (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
@@ -430,9 +450,11 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
 
           {activeTab === 'Services' &&
             (visitorProfessional.loading ? (
-              <View style={styles.tabPad}>
-                <Text style={styles.emptyCopy}>Loading services…</Text>
-              </View>
+              <LoadingSkeleton label="Loading services" style={styles.tabPad}>
+                <LoadingBlock width="100%" height={88} />
+                <LoadingBlock width="60%" height={16} />
+                <LoadingBlock width="100%" height={88} />
+              </LoadingSkeleton>
             ) : visitorProfessional.services.length === 0 ? (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
@@ -803,6 +825,21 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xxl,
+  },
+  skeletonBar: {
+    paddingHorizontal: spacing.screen,
+    paddingBottom: spacing.sm,
+  },
+  skeletonBack: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skeletonBody: {
+    paddingHorizontal: spacing.screen,
+    paddingTop: spacing.lg,
+    gap: spacing.md,
   },
   errorBanner: {
     marginHorizontal: spacing.screen,
