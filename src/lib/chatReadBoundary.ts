@@ -58,3 +58,80 @@ export function canAcknowledgeRead(input: {
 }): boolean {
   return input.appActive && input.focused;
 }
+
+export interface ConversationReadSnapshot {
+  id: string;
+  lastReadSequence: number | null;
+  hasUnread: boolean;
+}
+
+/**
+ * A refresh captured before a read acknowledgement must not move the local
+ * marker backward. Other conversation fields still update.
+ */
+export function applyConversationSnapshot<T extends ConversationReadSnapshot>(
+  current: T | null,
+  incoming: T,
+): T {
+  if (
+    current &&
+    current.id === incoming.id &&
+    current.lastReadSequence != null &&
+    (incoming.lastReadSequence == null ||
+      incoming.lastReadSequence < current.lastReadSequence)
+  ) {
+    return {
+      ...incoming,
+      lastReadSequence: current.lastReadSequence,
+      hasUnread: current.hasUnread,
+    };
+  }
+  return incoming;
+}
+
+export interface UnreadDividerMessage {
+  id: string;
+  sequence?: number | null;
+  kind: string;
+  senderId: string | null;
+}
+
+/**
+ * The first unread incoming message, once that prefix is loaded.
+ * An older unloaded page may contain the real start, so the latest page
+ * must not invent a divider there.
+ */
+export function unreadDividerMessageId(input: {
+  messages: UnreadDividerMessage[];
+  viewerId: string;
+  lastReadSequence: number | null;
+  hasOlder: boolean;
+}): string | null {
+  const sequenced = input.messages.filter(
+    (message): message is UnreadDividerMessage & { sequence: number } =>
+      typeof message.sequence === 'number' &&
+      Number.isInteger(message.sequence) &&
+      message.sequence > 0,
+  );
+  if (sequenced.length === 0) return null;
+  const minLoaded = sequenced.reduce(
+    (min, message) => Math.min(min, message.sequence),
+    sequenced[0].sequence,
+  );
+  const unreadMightBeUnloaded =
+    input.hasOlder &&
+    (input.lastReadSequence == null ||
+      input.lastReadSequence < minLoaded - 1);
+  if (unreadMightBeUnloaded) return null;
+
+  const chronological = [...sequenced].sort((a, b) => a.sequence - b.sequence);
+  const first = chronological.find(
+    (message) =>
+      message.kind === 'user' &&
+      message.senderId != null &&
+      message.senderId !== input.viewerId &&
+      (input.lastReadSequence == null ||
+        message.sequence > input.lastReadSequence),
+  );
+  return first?.id ?? null;
+}

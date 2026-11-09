@@ -184,7 +184,7 @@ assert.match(inbox, /usePolling\(/);
 assert.doesNotMatch(inbox, /useEffect\(/);
 assert.match(chat, /immediate: false/);
 assert.match(chat, /CHAT_POLL_MS/);
-assert.match(chat, /mergeChatMessages\(prev, chronological\)/);
+assert.match(chat, /mergeChatMessages\(previous, chronological\)/);
 assert.doesNotMatch(chat, /useEffect\(\s*\(\)\s*=>\s*\{\s*void refreshLatest/);
 assert.doesNotMatch(media, /useEffect\(/);
 assert.match(media, /useFocusEffect\(/);

@@ -43,7 +43,9 @@ import {
 } from '../../config/messaging';
 import { usePolling } from '../../hooks/usePolling';
 import {
+  applyConversationSnapshot,
   canAcknowledgeRead,
+  unreadDividerMessageId,
   visibleReadBoundaryId,
 } from '../../lib/chatReadBoundary';
 import { mergeChatMessages } from '../../lib/mergeChatMessages';
@@ -286,6 +288,9 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
   const ackGenRef = useRef(0);
   const ackedBoundaryRef = useRef<string | null>(null);
   const inFlightBoundaryRef = useRef<string | null>(null);
+  const openedReadSequenceRef = useRef<number | null | undefined>(undefined);
+  const messagesRef = useRef<ApiMessage[]>([]);
+  const conversationRef = useRef<ApiConversation | null>(null);
   const acknowledgeRef = useRef<() => void>(() => undefined);
   const pendingScrollTargetRef = useRef<'end' | 'divider' | null>(null);
   const loadingOlderRef = useRef(false);
@@ -295,6 +300,8 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
   if (identityChanged) {
     sendingRef.current = false;
     clientMessageIdRef.current = null;
+    conversationRef.current = null;
+    messagesRef.current = [];
     setConversation(null);
     setMessages([]);
     setText('');
@@ -310,6 +317,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     visibleIdsRef.current = new Set();
     ackedBoundaryRef.current = null;
     inFlightBoundaryRef.current = null;
+    openedReadSequenceRef.current = undefined;
   }
 
   useEffect(() => {
@@ -339,42 +347,42 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
           messageService.getMessages(conversationId, { limit: 50 }),
         ]);
         if (isStale(started.userId, started.epoch)) return;
-        setConversation(conv);
+        const applied = applyConversationSnapshot(conversationRef.current, conv);
+        conversationRef.current = applied;
+        setConversation(applied);
         setLoadFailed(false);
         const chronological = [...page.items].reverse();
-        setMessages((prev) => {
-          const prevNewest = prev[prev.length - 1]?.id;
-          const merged = mergeChatMessages(prev, chronological);
-          const nextNewest = merged[merged.length - 1]?.id;
-          if (
-            !opts.initial &&
-            prevNewest &&
-            nextNewest &&
-            prevNewest !== nextNewest
-          ) {
-            if (nearBottomRef.current) {
-              queueMicrotask(() => scrollToLatest(true));
-            } else {
-              queueMicrotask(() => setHasNewBelow(true));
-            }
+        const previous = messagesRef.current;
+        const merged = mergeChatMessages(previous, chronological);
+        messagesRef.current = merged;
+        setMessages(merged);
+        const prevNewest = previous[previous.length - 1]?.id;
+        const nextNewest = merged[merged.length - 1]?.id;
+        if (
+          !opts.initial &&
+          prevNewest &&
+          nextNewest &&
+          prevNewest !== nextNewest
+        ) {
+          if (nearBottomRef.current) {
+            queueMicrotask(() => scrollToLatest(true));
+          } else {
+            queueMicrotask(() => setHasNewBelow(true));
           }
-          return merged;
-        });
+        }
         if (opts.initial) {
           setOlderCursor(page.nextCursor);
           setHasNewBelow(false);
-
-          const lastReadSequence = conv.lastReadSequence;
-          const firstUnread = chronological.find(
-            (m) =>
-              m.kind === 'user' &&
-              m.senderId &&
-              m.senderId !== started.userId &&
-              (lastReadSequence == null || m.sequence > lastReadSequence),
-          );
-          setUnreadDividerBeforeId(firstUnread?.id ?? null);
-          pendingScrollTargetRef.current = firstUnread ? 'divider' : 'end';
-          nearBottomRef.current = !firstUnread;
+          openedReadSequenceRef.current = applied.lastReadSequence;
+          const dividerId = unreadDividerMessageId({
+            messages: chronological,
+            viewerId: started.userId,
+            lastReadSequence: applied.lastReadSequence,
+            hasOlder: page.nextCursor != null,
+          });
+          setUnreadDividerBeforeId(dividerId);
+          pendingScrollTargetRef.current = dividerId ? 'divider' : 'end';
+          nearBottomRef.current = dividerId == null;
         }
         setMissing(false);
       } catch (e) {
@@ -407,10 +415,25 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       });
       if (isStale(started.userId, started.epoch)) return;
       const chronological = [...page.items].reverse();
-      setMessages((prev) =>
-        mergeChatMessages(chronological, prev, Date.now(), false),
+      const merged = mergeChatMessages(
+        chronological,
+        messagesRef.current,
+        Date.now(),
+        false,
       );
+      messagesRef.current = merged;
+      setMessages(merged);
       setOlderCursor(page.nextCursor);
+      if (openedReadSequenceRef.current !== undefined && started.userId) {
+        setUnreadDividerBeforeId(
+          unreadDividerMessageId({
+            messages: merged,
+            viewerId: started.userId,
+            lastReadSequence: openedReadSequenceRef.current,
+            hasOlder: page.nextCursor != null,
+          }),
+        );
+      }
     } catch (e) {
       console.warn('[chat] load older failed', e);
     } finally {
@@ -431,7 +454,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     const boundaryId = visibleReadBoundaryId({
       messages,
       visibleIds: visibleIdsRef.current,
-      lastReadSequence: conversation?.lastReadSequence ?? null,
+      lastReadSequence: conversationRef.current?.lastReadSequence ?? null,
       hasOlder: olderCursor != null,
     });
     if (
@@ -454,16 +477,9 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       if (generation !== ackGenRef.current) return;
       if (isStale(started.userId, started.epoch)) return;
       ackedBoundaryRef.current = boundaryId;
-      setConversation((current) => {
-        if (
-          current?.lastReadSequence != null &&
-          conv.lastReadSequence != null &&
-          conv.lastReadSequence < current.lastReadSequence
-        ) {
-          return current;
-        }
-        return conv;
-      });
+      const applied = applyConversationSnapshot(conversationRef.current, conv);
+      conversationRef.current = applied;
+      setConversation(applied);
       void refreshUnread();
     } catch {
       // The boundary stays unacknowledged so a later visible pass can retry.
@@ -474,7 +490,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       const next = visibleReadBoundaryId({
         messages,
         visibleIds: visibleIdsRef.current,
-        lastReadSequence: conversation?.lastReadSequence ?? null,
+        lastReadSequence: conversationRef.current?.lastReadSequence ?? null,
         hasOlder: olderCursor != null,
       });
       if (
@@ -520,12 +536,14 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       focusedRef.current = true;
       setFocused(true);
       setLoading(true);
+      messagesRef.current = [];
       setMessages([]);
       setOlderCursor(null);
       pendingScrollTargetRef.current = 'end';
       nearBottomRef.current = false;
       visibleIdsRef.current = new Set();
       ackedBoundaryRef.current = null;
+      openedReadSequenceRef.current = undefined;
       setHasNewBelow(false);
       void refreshLatest({ initial: true });
       return () => {
@@ -534,6 +552,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         visibleIdsRef.current = new Set();
         ackedBoundaryRef.current = null;
         inFlightBoundaryRef.current = null;
+        openedReadSequenceRef.current = undefined;
         setFocused(false);
         setUnreadDividerBeforeId(null);
       };
@@ -646,7 +665,12 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       if (viewerArchived) {
         await messageService.unarchive(conversationId);
         const refreshed = await messageService.getConversation(conversationId);
-        setConversation(refreshed);
+        const applied = applyConversationSnapshot(
+          conversationRef.current,
+          refreshed,
+        );
+        conversationRef.current = applied;
+        setConversation(applied);
         void refreshUnread();
       } else {
         await messageService.archive(conversationId);
@@ -761,7 +785,9 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         clientMessageId,
       });
       if (!live()) return;
-      setMessages((prev) => mergeChatMessages(prev, [created]));
+      const withSent = mergeChatMessages(messagesRef.current, [created]);
+      messagesRef.current = withSent;
+      setMessages(withSent);
       setText('');
       setPendingAttachments([]);
       clientMessageIdRef.current = null;
@@ -771,7 +797,12 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       if (!live()) return;
       const refreshed = await messageService.getConversation(conversationId);
       if (!live()) return;
-      setConversation(refreshed);
+      const appliedConversation = applyConversationSnapshot(
+        conversationRef.current,
+        refreshed,
+      );
+      conversationRef.current = appliedConversation;
+      setConversation(appliedConversation);
       void refreshUnread();
     } catch (e) {
       if (!live()) return;
