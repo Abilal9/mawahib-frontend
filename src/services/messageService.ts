@@ -33,9 +33,7 @@ function peerToUser(peer: PeerSummary | null | undefined): User {
 }
 
 export function isConversationUnread(c: ApiConversation): boolean {
-  if (!c.lastMessageAt) return false;
-  if (!c.lastReadAt) return true;
-  return new Date(c.lastMessageAt).getTime() > new Date(c.lastReadAt).getTime();
+  return c.hasUnread === true;
 }
 
 /** Inbox subtitle. A real last message wins over the job title. */
@@ -77,8 +75,11 @@ export const messageService = {
     return messagingApi.sendMessage(conversationId, input);
   },
 
-  markRead(conversationId: string): Promise<ApiConversation> {
-    return messagingApi.markRead(conversationId);
+  markRead(
+    conversationId: string,
+    throughMessageId: string,
+  ): Promise<ApiConversation> {
+    return messagingApi.markRead(conversationId, throughMessageId);
   },
 
   archive(conversationId: string): Promise<ApiConversation> {

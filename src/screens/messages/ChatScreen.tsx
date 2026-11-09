@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  AppState,
   Linking,
   Modal,
   Pressable,
@@ -41,6 +42,10 @@ import {
   MESSAGE_IMAGE_MIME_TYPES,
 } from '../../config/messaging';
 import { usePolling } from '../../hooks/usePolling';
+import {
+  canAcknowledgeRead,
+  visibleReadBoundaryId,
+} from '../../lib/chatReadBoundary';
 import { mergeChatMessages } from '../../lib/mergeChatMessages';
 import { createClientId } from '../../lib/clientId';
 import { ApiError } from '../../lib/apiClient';
@@ -256,6 +261,9 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     null,
   );
   const [focused, setFocused] = useState(false);
+  const [appActive, setAppActive] = useState(
+    AppState.currentState === 'active',
+  );
   const [missing, setMissing] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -271,7 +279,14 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const listRef = useRef<FlatList<ChatRow>>(null);
-  const nearBottomRef = useRef(true);
+  const nearBottomRef = useRef(false);
+  const appActiveRef = useRef(AppState.currentState === 'active');
+  const focusedRef = useRef(false);
+  const visibleIdsRef = useRef(new Set<string>());
+  const ackGenRef = useRef(0);
+  const ackedBoundaryRef = useRef<string | null>(null);
+  const inFlightBoundaryRef = useRef<string | null>(null);
+  const acknowledgeRef = useRef<() => void>(() => undefined);
   const pendingScrollTargetRef = useRef<'end' | 'divider' | null>(null);
   const loadingOlderRef = useRef(false);
   const sendingRef = useRef(false);
@@ -291,6 +306,10 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     setOlderCursor(null);
     setHasNewBelow(false);
     setUnreadDividerBeforeId(null);
+    ackGenRef.current += 1;
+    visibleIdsRef.current = new Set();
+    ackedBoundaryRef.current = null;
+    inFlightBoundaryRef.current = null;
   }
 
   useEffect(() => {
@@ -343,23 +362,21 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         });
         if (opts.initial) {
           setOlderCursor(page.nextCursor);
-          nearBottomRef.current = true;
           setHasNewBelow(false);
 
-          const lastReadAt = conv.lastReadAt;
+          const lastReadSequence = conv.lastReadSequence;
           const firstUnread = chronological.find(
             (m) =>
               m.kind === 'user' &&
               m.senderId &&
               m.senderId !== started.userId &&
-              (!lastReadAt || new Date(m.createdAt) > new Date(lastReadAt)),
+              (lastReadSequence == null || m.sequence > lastReadSequence),
           );
           setUnreadDividerBeforeId(firstUnread?.id ?? null);
           pendingScrollTargetRef.current = firstUnread ? 'divider' : 'end';
+          nearBottomRef.current = !firstUnread;
         }
         setMissing(false);
-        await messageService.markRead(conversationId).catch(() => undefined);
-        if (!isStale(started.userId, started.epoch)) void refreshUnread();
       } catch (e) {
         if (isStale(started.userId, started.epoch)) return;
         if (e instanceof ApiError && (e.status === 404 || e.status === 403)) {
@@ -373,7 +390,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         if (!isStale(started.userId, started.epoch)) setLoading(false);
       }
     },
-    [conversationId, isStale, refreshUnread, scrollToLatest, snapshot],
+    [conversationId, isStale, scrollToLatest, snapshot],
   );
 
   const loadOlder = useCallback(async () => {
@@ -402,27 +419,147 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     }
   }, [conversationId, isStale, olderCursor, snapshot]);
 
+  const acknowledgeVisible = useCallback(async () => {
+    if (!canAcknowledgeRead({
+      appActive: appActiveRef.current,
+      focused: focusedRef.current,
+    })) {
+      return;
+    }
+    const started = snapshot();
+    if (!started.userId || isStale(started.userId, started.epoch)) return;
+    const boundaryId = visibleReadBoundaryId({
+      messages,
+      visibleIds: visibleIdsRef.current,
+      lastReadSequence: conversation?.lastReadSequence ?? null,
+      hasOlder: olderCursor != null,
+    });
+    if (
+      !boundaryId ||
+      boundaryId === ackedBoundaryRef.current ||
+      boundaryId === inFlightBoundaryRef.current
+    ) {
+      return;
+    }
+    const generation = ackGenRef.current;
+    inFlightBoundaryRef.current = boundaryId;
+    try {
+      if (!canAcknowledgeRead({
+        appActive: appActiveRef.current,
+        focused: focusedRef.current,
+      })) {
+        return;
+      }
+      const conv = await messageService.markRead(conversationId, boundaryId);
+      if (generation !== ackGenRef.current) return;
+      if (isStale(started.userId, started.epoch)) return;
+      ackedBoundaryRef.current = boundaryId;
+      setConversation((current) => {
+        if (
+          current?.lastReadSequence != null &&
+          conv.lastReadSequence != null &&
+          conv.lastReadSequence < current.lastReadSequence
+        ) {
+          return current;
+        }
+        return conv;
+      });
+      void refreshUnread();
+    } catch {
+      // The boundary stays unacknowledged so a later visible pass can retry.
+    } finally {
+      if (inFlightBoundaryRef.current === boundaryId) {
+        inFlightBoundaryRef.current = null;
+      }
+      const next = visibleReadBoundaryId({
+        messages,
+        visibleIds: visibleIdsRef.current,
+        lastReadSequence: conversation?.lastReadSequence ?? null,
+        hasOlder: olderCursor != null,
+      });
+      if (
+        next &&
+        next !== boundaryId &&
+        next !== ackedBoundaryRef.current &&
+        canAcknowledgeRead({
+          appActive: appActiveRef.current,
+          focused: focusedRef.current,
+        })
+      ) {
+        void acknowledgeVisible();
+      }
+    }
+  }, [
+    conversation?.lastReadSequence,
+    conversationId,
+    isStale,
+    messages,
+    olderCursor,
+    refreshUnread,
+    snapshot,
+  ]);
+
+  acknowledgeRef.current = () => {
+    void acknowledgeVisible();
+  };
+
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item: ChatRow }> }) => {
+      const ids = new Set<string>();
+      for (const token of viewableItems) {
+        if (token.item.kind === 'message') ids.add(token.item.message.id);
+      }
+      visibleIdsRef.current = ids;
+      acknowledgeRef.current();
+    },
+  ).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+
   useFocusEffect(
     useCallback(() => {
+      focusedRef.current = true;
       setFocused(true);
       setLoading(true);
       setMessages([]);
       setOlderCursor(null);
       pendingScrollTargetRef.current = 'end';
-      nearBottomRef.current = true;
+      nearBottomRef.current = false;
+      visibleIdsRef.current = new Set();
+      ackedBoundaryRef.current = null;
       setHasNewBelow(false);
       void refreshLatest({ initial: true });
       return () => {
+        focusedRef.current = false;
+        ackGenRef.current += 1;
+        visibleIdsRef.current = new Set();
+        ackedBoundaryRef.current = null;
+        inFlightBoundaryRef.current = null;
         setFocused(false);
         setUnreadDividerBeforeId(null);
       };
     }, [refreshLatest, userId]),
   );
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      const active = state === 'active';
+      appActiveRef.current = active;
+      setAppActive(active);
+      if (active && focusedRef.current) {
+        void refreshLatest({ initial: false });
+      }
+    });
+    return () => subscription.remove();
+  }, [refreshLatest]);
+
+  useEffect(() => {
+    void acknowledgeVisible();
+  }, [acknowledgeVisible, appActive, focused]);
+
   usePolling(
     () => void refreshLatest({ initial: false }),
     CHAT_POLL_MS,
-    focused && !missing,
+    focused && !missing && appActive,
     { immediate: false },
   );
 
@@ -631,7 +768,6 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       nearBottomRef.current = true;
       setHasNewBelow(false);
       scrollToLatest(true);
-      await messageService.markRead(conversationId).catch(() => undefined);
       if (!live()) return;
       const refreshed = await messageService.getConversation(conversationId);
       if (!live()) return;
@@ -932,6 +1068,8 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
               showsVerticalScrollIndicator={false}
               onScroll={onListScroll}
               scrollEventThrottle={16}
+              onViewableItemsChanged={onViewableItemsChanged}
+              viewabilityConfig={viewabilityConfig}
               maintainVisibleContentPosition={{
                 minIndexForVisible: 0,
               }}
@@ -954,14 +1092,16 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
                       animated: false,
                       viewPosition: 0.2,
                     });
+                    nearBottomRef.current = false;
                   } else {
                     listRef.current?.scrollToEnd({ animated: false });
+                    nearBottomRef.current = true;
                   }
                 } else {
                   listRef.current?.scrollToEnd({ animated: false });
+                  nearBottomRef.current = true;
                 }
                 pendingScrollTargetRef.current = null;
-                nearBottomRef.current = true;
               }}
               ListHeaderComponent={
                 loadingOlder ? (

@@ -48,6 +48,8 @@ export interface ApiConversation {
   peer: PeerSummary | null;
   workContext: WorkContext | null;
   lastReadAt: string | null;
+  lastReadSequence: number | null;
+  hasUnread: boolean;
   writable: boolean;
   viewerArchivedAt?: string | null;
   viewerDeletedAt?: string | null;
@@ -73,6 +75,7 @@ export interface ApiMessage {
   clientMessageId: string | null;
   systemPayload: unknown;
   createdAt: string;
+  sequence: number;
   attachments: MessageAttachment[];
   sender: PeerSummary | null;
   receiptStatus?: MessageReceiptStatus | null;
@@ -164,10 +167,16 @@ export const messagingApi = {
     });
   },
 
-  markRead(conversationId: string): Promise<ApiConversation> {
+  markRead(
+    conversationId: string,
+    throughMessageId: string,
+  ): Promise<ApiConversation> {
     return apiRequest<ApiConversation>(
       `/conversations/${conversationId}/read`,
-      { method: 'POST' },
+      {
+        method: 'POST',
+        body: JSON.stringify({ throughMessageId }),
+      },
     );
   },
 

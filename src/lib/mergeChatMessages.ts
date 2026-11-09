@@ -8,6 +8,7 @@ export type MergeableAttachment = {
 export type MergeableMessage = {
   id: string;
   createdAt: string;
+  sequence?: number;
   attachments?: MergeableAttachment[] | null;
 };
 
@@ -91,6 +92,13 @@ export function mergeChatMessages<T extends MergeableMessage>(
     );
   }
   return Array.from(byId.values()).sort((a, b) => {
+    if (
+      Number.isInteger(a.sequence) &&
+      Number.isInteger(b.sequence) &&
+      a.sequence !== b.sequence
+    ) {
+      return a.sequence! - b.sequence!;
+    }
     const delta =
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     if (delta !== 0) return delta;
