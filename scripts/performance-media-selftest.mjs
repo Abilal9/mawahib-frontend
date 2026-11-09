@@ -169,6 +169,21 @@ const rotated = mergeChatMessages(
 );
 assert.equal(rotated[0].attachments[0].url, second);
 
+const sent = {
+  id: 'm1',
+  createdAt: '2026-08-17T12:00:00.000Z',
+  sequence: 1,
+  receiptStatus: 'sent',
+};
+const alreadyRead = { ...sent, receiptStatus: 'read' };
+assert.equal(mergeChatMessages([sent], [alreadyRead])[0].receiptStatus, 'read');
+assert.equal(mergeChatMessages([alreadyRead], [sent])[0].receiptStatus, 'read');
+assert.equal(
+  mergeChatMessages([alreadyRead], [{ ...sent, receiptStatus: 'delivered' }])[0]
+    .receiptStatus,
+  'read',
+);
+
 const inbox = read('src/screens/messages/MessagesInboxScreen.tsx');
 const chat = read('src/screens/messages/ChatScreen.tsx');
 const media = read('src/screens/messages/ConversationMediaScreen.tsx');
@@ -185,6 +200,8 @@ assert.doesNotMatch(inbox, /useEffect\(/);
 assert.match(chat, /immediate: false/);
 assert.match(chat, /CHAT_POLL_MS/);
 assert.match(chat, /mergeChatMessages\(previous, chronological\)/);
+assert.match(chat, /refreshGenRef/);
+assert.match(chat, /extraData=/);
 assert.doesNotMatch(chat, /useEffect\(\s*\(\)\s*=>\s*\{\s*void refreshLatest/);
 assert.doesNotMatch(media, /useEffect\(/);
 assert.match(media, /useFocusEffect\(/);

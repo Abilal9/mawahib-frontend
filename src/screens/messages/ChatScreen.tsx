@@ -45,6 +45,7 @@ import { usePolling } from '../../hooks/usePolling';
 import {
   applyConversationSnapshot,
   canAcknowledgeRead,
+  isCurrentChatRefresh,
   unreadDividerMessageId,
   visibleReadBoundaryId,
 } from '../../lib/chatReadBoundary';
@@ -288,6 +289,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
   const ackGenRef = useRef(0);
   const ackedBoundaryRef = useRef<string | null>(null);
   const inFlightBoundaryRef = useRef<string | null>(null);
+  const refreshGenRef = useRef(0);
   const openedReadSequenceRef = useRef<number | null | undefined>(undefined);
   const messagesRef = useRef<ApiMessage[]>([]);
   const conversationRef = useRef<ApiConversation | null>(null);
@@ -318,6 +320,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
     ackedBoundaryRef.current = null;
     inFlightBoundaryRef.current = null;
     openedReadSequenceRef.current = undefined;
+    refreshGenRef.current += 1;
   }
 
   useEffect(() => {
@@ -339,14 +342,23 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
 
   const refreshLatest = useCallback(
     async (opts: { initial?: boolean } = {}) => {
+      const generation = ++refreshGenRef.current;
       const started = snapshot();
       if (!started.userId || isStale(started.userId, started.epoch)) return;
+      const stillCurrent = () =>
+        isCurrentChatRefresh(generation, refreshGenRef.current) &&
+        !isStale(started.userId, started.epoch);
       try {
-        const [conv, page] = await Promise.all([
-          messageService.getConversation(conversationId),
-          messageService.getMessages(conversationId, { limit: 50 }),
-        ]);
-        if (isStale(started.userId, started.epoch)) return;
+        if (!stillCurrent()) return;
+        const pagePromise = messageService.getMessages(conversationId, {
+          limit: 50,
+        });
+        const convPromise =
+          opts.initial || !conversationRef.current
+            ? messageService.getConversation(conversationId)
+            : Promise.resolve(conversationRef.current);
+        const [page, conv] = await Promise.all([pagePromise, convPromise]);
+        if (!stillCurrent() || !conv) return;
         const applied = applyConversationSnapshot(conversationRef.current, conv);
         conversationRef.current = applied;
         setConversation(applied);
@@ -354,6 +366,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         const chronological = [...page.items].reverse();
         const previous = messagesRef.current;
         const merged = mergeChatMessages(previous, chronological);
+        if (!stillCurrent()) return;
         messagesRef.current = merged;
         setMessages(merged);
         const prevNewest = previous[previous.length - 1]?.id;
@@ -386,7 +399,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
         }
         setMissing(false);
       } catch (e) {
-        if (isStale(started.userId, started.epoch)) return;
+        if (!stillCurrent()) return;
         if (e instanceof ApiError && (e.status === 404 || e.status === 403)) {
           setMissing(true);
           setLoadFailed(false);
@@ -395,7 +408,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
           setLoadFailed(true);
         }
       } finally {
-        if (!isStale(started.userId, started.epoch)) setLoading(false);
+        if (stillCurrent()) setLoading(false);
       }
     },
     [conversationId, isStale, scrollToLatest, snapshot],
@@ -548,6 +561,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       void refreshLatest({ initial: true });
       return () => {
         focusedRef.current = false;
+        refreshGenRef.current += 1;
         ackGenRef.current += 1;
         visibleIdsRef.current = new Set();
         ackedBoundaryRef.current = null;
@@ -1094,6 +1108,13 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
             <FlatList
               ref={listRef}
               data={chatRows}
+              extraData={chatRows
+                .map((row) =>
+                  row.kind === 'message'
+                    ? `${row.id}:${row.message.receiptStatus ?? ''}`
+                    : row.id,
+                )
+                .join('|')}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.messageList}
               showsVerticalScrollIndicator={false}

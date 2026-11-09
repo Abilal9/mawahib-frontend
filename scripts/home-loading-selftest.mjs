@@ -21,6 +21,7 @@ import {
   resolveHomePaginationIndicator,
   resolveHomeSectionAppearance,
   sectionHasVisibleError,
+  shouldApplyHomeSectionResult,
 } from '../src/lib/homeLoadingPresentation.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -329,5 +330,9 @@ assert.match(signedInHome, /RefreshControl/);
 assert.match(signedInHome, /showPagination \? <HomeSplashLoader compact/);
 assert.match(signedInHome, /catalogLoading/);
 assert.match(signedInHome, /setCatalogError/);
+assert.equal(shouldApplyHomeSectionResult(undefined), true);
+assert.equal(shouldApplyHomeSectionResult('StaleIdentityError'), false);
+assert.match(signedInHome, /shouldApplyHomeSectionResult/);
+assert.equal(signedInHome.includes('REFRESH_DELAY_MS'), false);
 
 console.log('home-loading-selftest ok');

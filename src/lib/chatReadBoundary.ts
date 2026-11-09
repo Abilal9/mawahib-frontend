@@ -51,6 +51,14 @@ export function visibleReadBoundaryId(input: {
   return boundary?.id ?? null;
 }
 
+/** True only for the newest chat refresh. An older response must not apply. */
+export function isCurrentChatRefresh(
+  requestGeneration: number,
+  currentGeneration: number,
+): boolean {
+  return requestGeneration === currentGeneration;
+}
+
 /** Read state advances only while this conversation is on screen. */
 export function canAcknowledgeRead(input: {
   appActive: boolean;

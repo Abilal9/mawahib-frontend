@@ -4,6 +4,7 @@ import {
   canAcknowledgeRead,
   unreadDividerMessageId,
   visibleReadBoundaryId,
+  isCurrentChatRefresh,
 } from '../src/lib/chatReadBoundary.ts';
 
 const messages = [
@@ -101,6 +102,8 @@ assert.equal(
 );
 
 assert.equal(canAcknowledgeRead({ appActive: true, focused: true }), true);
+assert.equal(isCurrentChatRefresh(3, 3), true);
+assert.equal(isCurrentChatRefresh(2, 3), false);
 assert.equal(canAcknowledgeRead({ appActive: false, focused: true }), false);
 assert.equal(canAcknowledgeRead({ appActive: true, focused: false }), false);
 

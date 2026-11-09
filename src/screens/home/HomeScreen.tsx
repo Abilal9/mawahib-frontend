@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import {
   resolveHomePageEmpty,
   resolveHomeSectionAppearance,
   sectionHasVisibleError,
+  shouldApplyHomeSectionResult,
 } from '../../lib/homeLoadingPresentation';
 import { feedInitialPending } from '../../lib/feedLifecycle';
 import { colors, spacing, radius, typography } from '../../theme';
@@ -46,8 +47,6 @@ import { TabScreenProps } from '../../navigation/types';
 import { Post, Job, Service, Talent } from '../../data/types';
 import { toImageSource } from '../../utils/image';
 import { displayProfileTitle } from '../../constants/profile';
-
-const REFRESH_DELAY_MS = 450;
 
 function imageSource(src: string | number) {
   return toImageSource(src);
@@ -382,6 +381,8 @@ function TalentMatchCard({
 export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
   const { open: openSidebar } = useSidebar();
   const { user: me } = useMyProfile();
+  const homeOwnerIdRef = useRef(me.id);
+  homeOwnerIdRef.current = me.id;
   const {
     posts: feedPosts,
     feedPhase,
@@ -406,81 +407,122 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [likesPostId, setLikesPostId] = useState<string | null>(null);
+  const [sectionsOwnerId, setSectionsOwnerId] = useState(me.id);
+  if (sectionsOwnerId !== me.id) {
+    setSectionsOwnerId(me.id);
+    setJobList([]);
+    setJobsError(null);
+    setJobsLoading(true);
+    setServiceList([]);
+    setTalentList([]);
+    setCatalogError(null);
+    setCatalogLoading(true);
+    setRefreshing(false);
+  }
 
   useEffect(() => {
+    const ownerId = me.id;
     void (async () => {
-      const jobsResult = await jobService.refresh().then(
-        (jobs) => ({ ok: true as const, jobs }),
-        (e) => ({
-          ok: false as const,
-          message: e instanceof Error ? e.message : 'Failed to load jobs',
-        }),
-      );
-      const catalogResult = await catalogService.refresh().then(
-        (catalog) => ({ ok: true as const, catalog }),
-        (e) => ({
-          ok: false as const,
-          message:
-            e instanceof Error ? e.message : 'Failed to load explore catalog',
-        }),
-      );
+      const [jobsResult, catalogResult] = await Promise.all([
+        jobService.refresh().then(
+          (jobs) => ({ ok: true as const, jobs }),
+          (e: unknown) => {
+            if (!shouldApplyHomeSectionResult(e instanceof Error ? e.name : undefined)) {
+              return { ok: 'stale' as const };
+            }
+            return {
+              ok: false as const,
+              message: e instanceof Error ? e.message : 'Failed to load jobs',
+            };
+          },
+        ),
+        catalogService.refresh().then(
+          (catalog) => ({ ok: true as const, catalog }),
+          (e: unknown) => {
+            if (!shouldApplyHomeSectionResult(e instanceof Error ? e.name : undefined)) {
+              return { ok: 'stale' as const };
+            }
+            return {
+              ok: false as const,
+              message:
+                e instanceof Error ? e.message : 'Failed to load explore catalog',
+            };
+          },
+        ),
+      ]);
 
-      if (jobsResult.ok) {
+      if (homeOwnerIdRef.current !== ownerId) return;
+
+      if (jobsResult.ok === true) {
         setJobList(jobsResult.jobs);
         setJobsError(null);
         setJobsLoading(false);
-      } else {
+      } else if (jobsResult.ok === false) {
         setJobsError(jobsResult.message);
         setJobList([]);
         setJobsLoading(false);
       }
 
-      if (catalogResult.ok) {
+      if (catalogResult.ok === true) {
         setServiceList(catalogResult.catalog.services);
         setTalentList(catalogResult.catalog.talents);
         setCatalogError(null);
-      } else {
+        setCatalogLoading(false);
+      } else if (catalogResult.ok === false) {
         setCatalogError(catalogResult.message);
+        setCatalogLoading(false);
       }
-      setCatalogLoading(false);
     })();
-  }, []);
+  }, [me.id]);
 
   const onRefresh = async () => {
+    const ownerId = me.id;
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, REFRESH_DELAY_MS));
     await Promise.all([
       refreshFeed(),
       refreshConnections().catch(() => undefined),
       (async () => {
-        const jobsResult = await jobService.refresh().then(
-          (jobs) => ({ ok: true as const, jobs }),
-          (e) => ({
-            ok: false as const,
-            message: e instanceof Error ? e.message : 'Failed to load jobs',
-          }),
-        );
-        const catalogResult = await catalogService.refresh().then(
-          (catalog) => ({ ok: true as const, catalog }),
-          () => ({ ok: false as const }),
-        );
-        if (jobsResult.ok) {
+        const [jobsResult, catalogResult] = await Promise.all([
+          jobService.refresh().then(
+            (jobs) => ({ ok: true as const, jobs }),
+            (e: unknown) => {
+              if (!shouldApplyHomeSectionResult(e instanceof Error ? e.name : undefined)) {
+                return { ok: 'stale' as const };
+              }
+              return {
+                ok: false as const,
+                message: e instanceof Error ? e.message : 'Failed to load jobs',
+              };
+            },
+          ),
+          catalogService.refresh().then(
+            (catalog) => ({ ok: true as const, catalog }),
+            (e: unknown) => {
+              if (!shouldApplyHomeSectionResult(e instanceof Error ? e.name : undefined)) {
+                return { ok: 'stale' as const };
+              }
+              return { ok: false as const };
+            },
+          ),
+        ]);
+        if (homeOwnerIdRef.current !== ownerId) return;
+        if (jobsResult.ok === true) {
           setJobList(jobsResult.jobs);
           setJobsError(null);
-        } else {
+        } else if (jobsResult.ok === false) {
           setJobsError(jobsResult.message);
         }
-        if (catalogResult.ok) {
+        if (catalogResult.ok === true) {
           setServiceList(catalogResult.catalog.services);
           setTalentList(catalogResult.catalog.talents);
           setCatalogError(null);
-        } else {
+        } else if (catalogResult.ok === false) {
           setCatalogError('Failed to load explore catalog');
         }
-        setCatalogLoading(false);
+        if (catalogResult.ok !== 'stale') setCatalogLoading(false);
       })(),
     ]);
-    setRefreshing(false);
+    if (homeOwnerIdRef.current === ownerId) setRefreshing(false);
   };
 
   const retryCatalog = () => {

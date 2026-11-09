@@ -10,7 +10,25 @@ export type MergeableMessage = {
   createdAt: string;
   sequence?: number;
   attachments?: MergeableAttachment[] | null;
+  receiptStatus?: 'sent' | 'delivered' | 'read' | null;
 };
+
+const RECEIPT_RANK: Record<'sent' | 'delivered' | 'read', number> = {
+  sent: 1,
+  delivered: 2,
+  read: 3,
+};
+
+/** A late poll must not replace a read tick with an older sent or delivered tick. */
+export function preferReceiptStatus<T extends MergeableMessage['receiptStatus']>(
+  previous: T,
+  incoming: T,
+): T {
+  const previousRank = previous ? RECEIPT_RANK[previous] ?? 0 : 0;
+  const incomingRank = incoming ? RECEIPT_RANK[incoming] ?? 0 : 0;
+  if (previousRank > incomingRank) return previous;
+  return incomingRank > 0 ? incoming : previous;
+}
 
 function decodeBase64Url(value: string): string {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -50,7 +68,10 @@ function mergeMessage<T extends MergeableMessage>(
   incoming: T,
   now: number,
 ): T {
-  const merged: T = { ...previous, ...incoming };
+  const merged: T = { ...previous, ...incoming, receiptStatus: preferReceiptStatus(
+    previous.receiptStatus,
+    incoming.receiptStatus,
+  ) };
   if (!previous.attachments || !incoming.attachments) return merged;
   const priorByAsset = new Map(
     previous.attachments.map((attachment) => [
@@ -88,7 +109,14 @@ export function mergeChatMessages<T extends MergeableMessage>(
       message.id,
       preserveExistingUrls
         ? mergeMessage(previous, message, now)
-        : { ...previous, ...message },
+        : {
+            ...previous,
+            ...message,
+            receiptStatus: preferReceiptStatus(
+              previous.receiptStatus,
+              message.receiptStatus,
+            ),
+          },
     );
   }
   return Array.from(byId.values()).sort((a, b) => {

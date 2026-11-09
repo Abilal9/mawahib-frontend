@@ -69,3 +69,8 @@ export function sectionHasVisibleError(input: {
 }): boolean {
   return Boolean(input.error) && input.itemCount === 0;
 }
+
+/** A request that started for a previous account must not change the current Home sections. */
+export function shouldApplyHomeSectionResult(errorName: string | undefined): boolean {
+  return errorName !== 'StaleIdentityError';
+}
