@@ -137,7 +137,7 @@ function isPdfMime(mimeType: string | null | undefined): boolean {
 
 function ReceiptTicks({ status }: { status: MessageReceiptStatus }) {
   const color =
-    status === 'read' ? colors.white : 'rgba(255, 255, 255, 0.75)';
+    status === 'read' ? colors.primaryLight : 'rgba(255, 255, 255, 0.75)';
   const name = status === 'sent' ? 'checkmark' : 'checkmark-done';
   return (
     <View style={styles.receiptRow}>
