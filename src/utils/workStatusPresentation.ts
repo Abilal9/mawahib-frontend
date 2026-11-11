@@ -81,3 +81,37 @@ export function workStatusPresentation(input: {
     showDecline: input.engagementStatus === 'delivered',
   };
 }
+
+/** Delivered keeps the ordinary confirmation. Disputed explains that acceptance ends the dispute. */
+export function deliveryAcceptanceCopy(engagementStatus: string | null): {
+  button: string;
+  title: string;
+  message: string;
+  confirmLabel: string;
+} {
+  if (engagementStatus === 'disputed') {
+    return {
+      button: 'Accept delivery',
+      title: 'Accept this delivery?',
+      message:
+        'This accepts the delivered work, completes the engagement, and ends the dispute. It does not close the staff handling case.',
+      confirmLabel: 'Accept delivery',
+    };
+  }
+  return {
+    button: 'Confirm Delivery',
+    title: 'Confirm Delivery?',
+    message: 'Are you sure the work has been delivered as agreed?',
+    confirmLabel: 'Confirm Delivery',
+  };
+}
+
+export function providerDeliveryWaiting(engagementStatus: string | null): string | null {
+  if (engagementStatus === 'delivered') {
+    return 'Waiting for the client to Confirm Delivery or Decline.';
+  }
+  if (engagementStatus === 'disputed') {
+    return 'Waiting for the client to accept the delivery and end the dispute.';
+  }
+  return null;
+}

@@ -74,7 +74,7 @@ import {
   type NegotiationAction,
   type OverflowMenuAction,
 } from '../../utils/workRequestNegotiation';
-import { workStatusPresentation } from '../../utils/workStatusPresentation';
+import { deliveryAcceptanceCopy, providerDeliveryWaiting, workStatusPresentation } from '../../utils/workStatusPresentation';
 import { ScreenProps } from '../../navigation/types';
 import {
   ApiWorkRequest,
@@ -727,12 +727,9 @@ export default function WorkRequestDetailScreen({
       request.workEngagementStatus === 'delivered' ||
       request.workEngagementStatus === 'disputed' ||
       request.workEngagementStatus === 'completed');
-  const deliveryWaitingMessage =
-    isProvider && request.workEngagementStatus === 'delivered'
-      ? 'Waiting for the client to Confirm Delivery or Decline.'
-      : isProvider && request.workEngagementStatus === 'disputed'
-        ? 'Waiting for the client to confirm delivery.'
-        : null;
+  const deliveryWaitingMessage = isProvider
+    ? providerDeliveryWaiting(request.workEngagementStatus)
+    : null;
   /** Pay Now: the client, while the engagement waits for money. */
   const canPay =
     isPendingPayment && isClient && !!request.workEngagementId;
@@ -1141,11 +1138,12 @@ export default function WorkRequestDetailScreen({
   const primaryNegotiation = turn.actions[0] ?? null;
   const secondaryNegotiation = turn.actions.slice(1);
 
-  const openConfirmDelivery = () =>
+  const openConfirmDelivery = () => {
+    const copy = deliveryAcceptanceCopy(request.workEngagementStatus);
     setConfirm({
-      title: 'Confirm Delivery?',
-      message: 'Are you sure the work has been delivered as agreed?',
-      confirmLabel: 'Confirm Delivery',
+      title: copy.title,
+      message: copy.message,
+      confirmLabel: copy.confirmLabel,
       successKey: 'jobCompleted',
       landingOverride: {
         tab: jobsTab,
@@ -1153,6 +1151,7 @@ export default function WorkRequestDetailScreen({
       },
       run: () => markCompleted(request.workEngagementId!),
     });
+  };
 
   /** The one call to action; everything else lives in the secondary row. */
   const primaryAction: {
@@ -1184,7 +1183,7 @@ export default function WorkRequestDetailScreen({
         }
       : canConfirmDelivery
         ? {
-            title: 'Confirm Delivery',
+            title: deliveryAcceptanceCopy(request.workEngagementStatus).button,
             onPress: openConfirmDelivery,
           }
         : null;

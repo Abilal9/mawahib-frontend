@@ -57,4 +57,17 @@ const menu = negotiation.getWorkRequestOverflowMenu({
 assert.equal(menu.items.includes('cancel_request'), false);
 assert.equal(menu.items.includes('report'), true);
 
+const disputedAcceptance = status.deliveryAcceptanceCopy('disputed');
+assert.equal(disputedAcceptance.button, 'Accept delivery');
+assert.match(disputedAcceptance.message, /ends the dispute/);
+assert.match(disputedAcceptance.message, /does not close the staff handling case/);
+assert.doesNotMatch(disputedAcceptance.message, /refund|payout/i);
+const deliveredAcceptance = status.deliveryAcceptanceCopy('delivered');
+assert.equal(deliveredAcceptance.button, 'Confirm Delivery');
+assert.equal(deliveredAcceptance.message, 'Are you sure the work has been delivered as agreed?');
+assert.equal(
+  status.providerDeliveryWaiting('disputed'),
+  'Waiting for the client to accept the delivery and end the dispute.',
+);
+
 console.log('dispute-status-selftest: OK');
