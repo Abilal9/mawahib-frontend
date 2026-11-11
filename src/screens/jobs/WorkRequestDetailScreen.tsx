@@ -1665,6 +1665,7 @@ export default function WorkRequestDetailScreen({
               canSubmit={request.reviewState?.canSubmit}
               windowClosesAt={request.reviewState?.windowClosesAt}
               published={request.reviewState?.published}
+              staffHidden={request.reviewState?.myReview?.staffHidden}
               onSelectRating={(rating) =>
                 openEngagementReview(navigation, {
                   jobId: request.id,

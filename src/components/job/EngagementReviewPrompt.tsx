@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../../theme';
 import { reviewByLabel } from '../../utils/reviewSummary';
+import { HIDDEN_BY_MAWAHIB } from '../../lib/hiddenContent';
 
 interface Props {
   /** Other party's display name. */
@@ -12,6 +13,7 @@ interface Props {
   canSubmit?: boolean;
   windowClosesAt?: string | null;
   published?: boolean;
+  staffHidden?: boolean;
   onSelectRating: (rating: number) => void;
   /** Smaller stars for list cards. */
   compact?: boolean;
@@ -28,6 +30,7 @@ export default function EngagementReviewPrompt({
   canSubmit,
   windowClosesAt,
   published,
+  staffHidden,
   onSelectRating,
   compact,
 }: Props) {
@@ -58,7 +61,9 @@ export default function EngagementReviewPrompt({
             />
           ))}
         </View>
-        {published ? null : (
+        {staffHidden ? (
+          <Text style={styles.label}>{HIDDEN_BY_MAWAHIB}</Text>
+        ) : published ? null : (
           <Text style={styles.label}>
             Your review will stay private until the other person submits theirs
             or the 14-day review period ends.

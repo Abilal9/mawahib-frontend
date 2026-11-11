@@ -353,7 +353,11 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
           });
           break;
         }
-        navigation.navigate('MainTabs', { screen: 'HomeTab' });
+        if (typeof params.workRequestId === 'string') {
+          navigation.navigate('WorkRequestDetail', { requestId: params.workRequestId });
+          break;
+        }
+        navigation.navigate('MainTabs', { screen: 'JobsTab' });
         break;
       }
       case 'like':

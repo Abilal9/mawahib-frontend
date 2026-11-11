@@ -233,6 +233,7 @@ export interface ApiReviewStateReview {
   rating: number;
   body: string;
   createdAt: string;
+  staffHidden?: boolean;
   media?: Array<{ id: string; mediaAssetId?: string; mimeType: string }>;
 }
 
