@@ -74,6 +74,7 @@ import {
   type NegotiationAction,
   type OverflowMenuAction,
 } from '../../utils/workRequestNegotiation';
+import { workStatusPresentation } from '../../utils/workStatusPresentation';
 import { ScreenProps } from '../../navigation/types';
 import {
   ApiWorkRequest,
@@ -103,27 +104,6 @@ import {
   marketplaceApi,
 } from '../../services/marketplaceApi';
 import { messageService } from '../../services/messageService';
-
-const STATUS_TONE: Record<
-  ApiWorkRequest['status'],
-  { bg: string; text: string }
-> = {
-  pending: { bg: '#FCE7F3', text: '#BE185D' },
-  changes_requested: { bg: '#FEF9C3', text: '#8A6A16' },
-  changes_declined: { bg: '#FFEDD5', text: '#C2410C' },
-  pending_payment: { bg: '#E0ECFF', text: '#2E6AC5' },
-  rejected: { bg: '#FEE2E2', text: '#B91C1C' },
-  withdrawn: { bg: '#EEF2F6', text: '#627D98' },
-};
-
-const STATUS_LABEL: Record<ApiWorkRequest['status'], string> = {
-  pending: 'Pending',
-  changes_requested: 'Changes Requested',
-  changes_declined: 'Changes Declined',
-  pending_payment: 'Pending Payment',
-  rejected: 'Rejected',
-  withdrawn: 'Cancelled',
-};
 
 const EVENT_LABEL: Record<WorkRequestEvent['type'], string> = {
   created: 'Request Sent',
@@ -166,6 +146,12 @@ type EngagementEvent = ApiEngagement['events'][number];
 function engagementEventLabel(event: EngagementEvent): string {
   if (event.fromStatus === 'delivered' && event.toStatus === 'in_progress') {
     return 'Changes requested';
+  }
+  if (event.fromStatus === 'disputed' && event.toStatus === 'delivered') {
+    return 'Returned for client review';
+  }
+  if (event.fromStatus === 'disputed' && event.toStatus === 'in_progress') {
+    return 'Further work agreed';
   }
   switch (event.toStatus) {
     case 'pending_payment':
@@ -721,22 +707,19 @@ export default function WorkRequestDetailScreen({
   const isRecipient = request.recipientUserId === viewerId;
   const isClient = request.clientUserId === viewerId;
   const isProvider = request.providerUserId === viewerId;
-  const tone = STATUS_TONE[request.status];
+  const presentation = workStatusPresentation({
+    requestStatus: request.status,
+    engagementStatus: request.workEngagementStatus,
+    applicationStatus: request.jobApplicationStatus,
+  });
+  const tone = presentation.tone;
 
   const turn = getNegotiationTurn(request, viewerId, { applicantSelected });
   const overflow = getWorkRequestOverflowMenu(request, viewerId);
-  const isPendingPayment =
-    request.status === 'pending_payment' &&
-    (request.workEngagementStatus === 'pending_payment' ||
-      request.workEngagementStatus === null);
-  const canDeliver =
-    isProvider && request.workEngagementStatus === 'in_progress';
-  const canConfirmDelivery =
-    isClient &&
-    (request.workEngagementStatus === 'delivered' ||
-      request.workEngagementStatus === 'disputed');
-  const canDeclineDelivery =
-    isClient && request.workEngagementStatus === 'delivered';
+  const isPendingPayment = presentation.showPay;
+  const canDeliver = isProvider && presentation.showDeliver;
+  const canConfirmDelivery = isClient && presentation.showConfirm;
+  const canDeclineDelivery = isClient && presentation.showDecline;
   const isCompletedEngagement = request.workEngagementStatus === 'completed';
   const canMessageWork =
     !!request.workEngagementId &&
@@ -1320,7 +1303,7 @@ export default function WorkRequestDetailScreen({
         </Text>
         <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
           <Text style={[styles.statusPillText, { color: tone.text }]}>
-            {STATUS_LABEL[request.status]}
+            {presentation.primaryLabel}
           </Text>
         </View>
         {overflow.visible ? (
@@ -1356,6 +1339,13 @@ export default function WorkRequestDetailScreen({
             {isSender ? 'You sent this' : 'Sent to you'}
           </Text>
         </View>
+        {presentation.requestLabel || presentation.applicationLabel ? (
+          <Text style={styles.directionText}>
+            {presentation.requestLabel ? `Request: ${presentation.requestLabel}` : ''}
+            {presentation.requestLabel && presentation.applicationLabel ? ' · ' : ''}
+            {presentation.applicationLabel ? `Application: ${presentation.applicationLabel}` : ''}
+          </Text>
+        ) : null}
 
         <View style={styles.partiesCard}>
           <PartyRow

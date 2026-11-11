@@ -174,6 +174,7 @@ export function getWorkRequestOverflowMenu(
   const engagementStarted =
     request.workEngagementStatus === 'in_progress' ||
     request.workEngagementStatus === 'delivered' ||
+    request.workEngagementStatus === 'disputed' ||
     request.workEngagementStatus === 'completed';
 
   const openNegotiation =
