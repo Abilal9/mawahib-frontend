@@ -37,6 +37,7 @@ import ContentReportSheet from '../../components/report/ContentReportSheet';
 import BookmarkButton from '../../components/ui/BookmarkButton';
 import { useMarketplaceSuccess } from '../../hooks/useMarketplaceSuccess';
 import { ScreenProps } from '../../navigation/types';
+import { HIDDEN_BY_MAWAHIB } from '../../lib/hiddenContent';
 import { JobListing } from '../../data/types';
 import { visibleJobSkillLabels } from '../../domain/offeringTaxonomy';
 import { ApiError } from '../../lib/apiClient';
@@ -416,7 +417,8 @@ export default function JobListingDetailScreen({
         ) : null}
         {apiListing &&
         apiListing.status !== 'draft' &&
-        apiListing.status !== 'archived' ? (
+        apiListing.status !== 'archived' &&
+        !apiListing.staffHidden ? (
           <BookmarkButton
             kind="job"
             saved={saved.isSaved('job', listingId, Boolean(apiListing.isSaved))}
@@ -580,6 +582,9 @@ export default function JobListingDetailScreen({
         ) : null}
         {isOwner ? (
           <>
+            {apiListing?.staffHidden ? (
+              <Text style={styles.applyHint}>{HIDDEN_BY_MAWAHIB}</Text>
+            ) : null}
             <Text style={styles.applyHint}>
               You posted this listing · {apiListing?.status.replace(/_/g, ' ')}
             </Text>

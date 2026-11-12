@@ -105,6 +105,7 @@ import { openUserProfile } from '../../utils/openUserProfile';
 import { ScreenProps } from '../../navigation/types';
 import { useVisitorProfessionalProfile } from '../../hooks/useVisitorProfessionalProfile';
 import { useVisitorUser } from '../../hooks/useVisitorUser';
+import { HIDDEN_BY_MAWAHIB } from '../../lib/hiddenContent';
 
 /**
  * Service detail with three data paths:
@@ -212,7 +213,8 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
             <View style={styles.titleRow}>
               <Text style={styles.title}>{profileOffering.title}</Text>
               {profileOffering.status !== 'draft' &&
-              profileOffering.status !== 'archived' ? (
+              profileOffering.status !== 'archived' &&
+              !profileOffering.staffHidden ? (
                 <BookmarkButton
                   kind="service"
                   saved={saved.isSaved(
@@ -258,6 +260,9 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
                 </View>
               ) : null}
             </View>
+            {!isVisitorView && profileOffering.staffHidden ? (
+              <Text style={styles.description}>{HIDDEN_BY_MAWAHIB}</Text>
+            ) : null}
             <Text style={styles.description}>{profileOffering.description}</Text>
             {(profileOffering.reviewCount ?? 0) > 0 ? (
               <Text style={styles.description}>

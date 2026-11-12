@@ -72,6 +72,7 @@ export interface ApiJobListing {
   customCategory?: string | null;
   taxonomySkills?: { id: string; name: string }[];
   status: ApiJobListingStatus;
+  staffHidden?: boolean;
   postedAt: string | null;
   createdAt: string;
   updatedAt: string;

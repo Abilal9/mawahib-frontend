@@ -131,6 +131,7 @@ export interface ServiceOffering {
   customCategory?: string | null;
   taxonomySkills?: Array<{ id: string; name: string }>;
   status?: 'draft' | 'published' | 'archived';
+  staffHidden?: boolean;
   isSaved?: boolean;
 }
 

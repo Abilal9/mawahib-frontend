@@ -357,6 +357,14 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
           navigation.navigate('WorkRequestDetail', { requestId: params.workRequestId });
           break;
         }
+        if (typeof params.listingId === 'string') {
+          navigation.navigate('JobListingDetail', { listingId: params.listingId });
+          break;
+        }
+        if (typeof params.serviceId === 'string') {
+          navigation.navigate('ServiceDetail', { serviceId: params.serviceId });
+          break;
+        }
         navigation.navigate('MainTabs', { screen: 'JobsTab' });
         break;
       }

@@ -34,6 +34,7 @@ export interface ApiServiceOffering {
   customCategory?: string | null;
   taxonomySkills?: Array<{ id: string; name: string }>;
   status?: 'draft' | 'published' | 'archived';
+  staffHidden?: boolean;
   isSaved?: boolean;
 }
 
@@ -85,6 +86,7 @@ export function mapServiceOffering(api: ApiServiceOffering): ServiceOffering {
     customCategory: api.customCategory ?? null,
     taxonomySkills: api.taxonomySkills ?? [],
     status: api.status,
+    staffHidden: api.staffHidden === true,
     isSaved: api.isSaved,
   };
 }
