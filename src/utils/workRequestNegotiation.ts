@@ -182,11 +182,11 @@ export function getWorkRequestOverflowMenu(
     request.status === 'changes_requested' ||
     request.status === 'changes_declined';
 
-  /** Cancel is allowed through Pending Payment; not after work starts. */
+  /** Open negotiations stay sender-only. Accepted unpaid work can be cancelled by either party. */
   const canCancelRequest =
-    isSender &&
     !engagementStarted &&
-    (openNegotiation || request.status === 'pending_payment');
+    ((isSender && openNegotiation) ||
+      ((isSender || isRecipient) && request.status === 'pending_payment'));
 
   const items: OverflowMenuAction[] = [];
 

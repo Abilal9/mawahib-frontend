@@ -1041,22 +1041,25 @@ export default function WorkRequestDetailScreen({
           run: () => cancelChanges(request.id),
         });
         return;
-      case 'cancel_request':
+      case 'cancel_request': {
+        const unpaid = request.status === 'pending_payment';
         setConfirm({
-          title: 'Cancel Request?',
-          message:
-            'This will permanently cancel this request and move it to History.',
-          confirmLabel: 'Cancel Request',
+          title: unpaid ? 'Cancel accepted work?' : 'Cancel Request?',
+          message: unpaid
+            ? 'This ends the accepted work before any payment is taken. The request is cancelled. This is not a refund.'
+            : 'This will permanently cancel this request and move it to History.',
+          confirmLabel: unpaid ? 'Cancel work' : 'Cancel Request',
           cancelLabel: 'Keep Request',
           danger: true,
           successKey: 'requestCancelled',
           landingOverride: {
-            tab: 'sent',
+            tab: jobsTab,
             section: 'completed',
           },
           run: () => withdrawRequest(request.id),
         });
         return;
+      }
       case 'report':
         setReportReason(null);
         setReportText('');
