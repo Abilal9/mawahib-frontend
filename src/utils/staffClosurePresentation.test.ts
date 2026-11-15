@@ -1,6 +1,6 @@
 import { isSuccessfulCompletion } from '../data/types/userJobs.ts';
 import { getWorkRequestOverflowMenu } from './workRequestNegotiation.ts';
-import { canRequestMawahibReview, retainsClosedWorkRecords, workStatusPresentation } from './workStatusPresentation.ts';
+import { canRequestMawahibReview, disputeNoticeTitle, retainsClosedWorkRecords, workStatusPresentation } from './workStatusPresentation.ts';
 
 function check(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -65,6 +65,18 @@ check(
 check(
   !canRequestMawahibReview({ engagementStatus: 'delivered', isClient: true }),
   'delivery review is the existing dispute, not an escalation',
+);
+check(
+  disputeNoticeTitle({ fromStatus: 'delivered', toStatus: 'disputed', actorId: 'client' }, 'client') === 'Delivery declined',
+  'a client delivery dispute stays a delivery decline',
+);
+check(
+  disputeNoticeTitle({ fromStatus: 'in_progress', toStatus: 'disputed', actorId: 'client' }, 'client') === 'Asked Mawahib to review',
+  'an older in-progress escalation is not labeled as a delivery decline',
+);
+check(
+  disputeNoticeTitle({ fromStatus: 'delivered', toStatus: 'disputed', actorId: 'provider' }, 'client') === 'Asked Mawahib to review',
+  'a provider delivery escalation is not labeled as the client declining it',
 );
 
 console.log('staff closure presentation checks passed');

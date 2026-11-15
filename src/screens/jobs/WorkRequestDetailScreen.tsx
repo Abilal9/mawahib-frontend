@@ -74,7 +74,7 @@ import {
   type NegotiationAction,
   type OverflowMenuAction,
 } from '../../utils/workRequestNegotiation';
-import { deliveryAcceptanceCopy, providerDeliveryWaiting, retainsClosedWorkRecords, workStatusPresentation } from '../../utils/workStatusPresentation';
+import { deliveryAcceptanceCopy, disputeNoticeTitle, providerDeliveryWaiting, retainsClosedWorkRecords, workStatusPresentation } from '../../utils/workStatusPresentation';
 import { ScreenProps } from '../../navigation/types';
 import {
   ApiWorkRequest,
@@ -1529,7 +1529,10 @@ export default function WorkRequestDetailScreen({
             <Ionicons name="alert-circle-outline" size={18} color="#C2410C" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.noticeText, styles.declineNoticeText]}>
-                Delivery declined
+                {disputeNoticeTitle(
+                  [...engagementEvents].reverse().find((event) => event.toStatus === 'disputed') ?? null,
+                  request.clientUserId,
+                )}
               </Text>
               {disputeNote ? (
                 <Text style={[styles.noticeText, styles.declineNoticeText]}>

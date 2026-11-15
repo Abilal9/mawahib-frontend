@@ -109,6 +109,23 @@ export function canRequestMawahibReview(_input: {
   return false;
 }
 
+/** Delivery declined only when the client disputed a delivery. Older escalation events keep their own label. */
+export function disputeNoticeTitle(
+  event: { fromStatus: string | null; toStatus: string; actorId: string | null } | null,
+  clientUserId: string,
+): string {
+  if (
+    event &&
+    event.toStatus === 'disputed' &&
+    event.fromStatus === 'delivered' &&
+    event.actorId === clientUserId
+  ) {
+    return 'Delivery declined';
+  }
+  if (event && event.toStatus === 'disputed') return 'Asked Mawahib to review';
+  return 'Disputed';
+}
+
 /** Existing invoice and work-chat records stay reachable. This does not create a chat. */
 export function retainsClosedWorkRecords(input: {
   engagementStatus: string | null;
