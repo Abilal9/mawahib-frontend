@@ -101,6 +101,14 @@ export function workStatusPresentation(input: {
   };
 }
 
+/** Participants cannot ask Mawahib to review stuck work. The client still disputes a delivery separately. */
+export function canRequestMawahibReview(_input: {
+  engagementStatus: string | null;
+  isClient: boolean;
+}): boolean {
+  return false;
+}
+
 /** Existing invoice and work-chat records stay reachable. This does not create a chat. */
 export function retainsClosedWorkRecords(input: {
   engagementStatus: string | null;

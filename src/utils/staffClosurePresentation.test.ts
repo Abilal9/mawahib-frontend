@@ -1,6 +1,6 @@
 import { isSuccessfulCompletion } from '../data/types/userJobs.ts';
 import { getWorkRequestOverflowMenu } from './workRequestNegotiation.ts';
-import { retainsClosedWorkRecords, workStatusPresentation } from './workStatusPresentation.ts';
+import { canRequestMawahibReview, retainsClosedWorkRecords, workStatusPresentation } from './workStatusPresentation.ts';
 
 function check(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -43,5 +43,28 @@ check(!ordinary.showPay, 'ordinary cancellation is not payable');
 
 check(isSuccessfulCompletion('completed'), 'acceptance counts as completion');
 check(!isSuccessfulCompletion('cancelled'), 'staff closure is not successful completion');
+
+const delivered = workStatusPresentation({
+  requestStatus: 'pending_payment',
+  engagementStatus: 'delivered',
+});
+check(delivered.showDecline, 'the client can still dispute a delivery');
+check(delivered.showConfirm, 'the client can still accept a delivery');
+check(
+  !canRequestMawahibReview({ engagementStatus: 'in_progress', isClient: true }),
+  'the client cannot escalate in-progress work',
+);
+check(
+  !canRequestMawahibReview({ engagementStatus: 'in_progress', isClient: false }),
+  'the provider cannot escalate in-progress work',
+);
+check(
+  !canRequestMawahibReview({ engagementStatus: 'delivered', isClient: false }),
+  'the provider cannot escalate a delivery',
+);
+check(
+  !canRequestMawahibReview({ engagementStatus: 'delivered', isClient: true }),
+  'delivery review is the existing dispute, not an escalation',
+);
 
 console.log('staff closure presentation checks passed');

@@ -498,9 +498,7 @@ export default function WorkRequestDetailScreen({
   const [reportSuccessOpen, setReportSuccessOpen] = useState(false);
   const [reportSuccessTitle, setReportSuccessTitle] = useState('Report sent');
   /** Client delivery note sheet: dispute (→ disputed) or request changes (→ in_progress). */
-  const [deliveryNoteMode, setDeliveryNoteMode] = useState<
-    'changes' | 'dispute' | 'escalate' | null
-  >(null);
+  const [deliveryNoteMode, setDeliveryNoteMode] = useState<'changes' | 'dispute' | null>(null);
   const [declineText, setDeclineText] = useState('');
   /** Latest engagement_events.note for delivered → disputed (Marketplace SoT). */
   const [disputeNote, setDisputeNote] = useState<string | null>(null);
@@ -734,9 +732,6 @@ export default function WorkRequestDetailScreen({
   const canDeliver = isProvider && presentation.showDeliver;
   const canConfirmDelivery = isClient && presentation.showConfirm;
   const canDeclineDelivery = isClient && presentation.showDecline;
-  const canEscalateWork =
-    request.workEngagementStatus === 'in_progress' ||
-    (!isClient && request.workEngagementStatus === 'delivered');
   const isCompletedEngagement = request.workEngagementStatus === 'completed';
   const canMessageWork =
     !!request.workEngagementId &&
@@ -1213,7 +1208,7 @@ export default function WorkRequestDetailScreen({
         : null;
 
   const hasSecondaryActions =
-    secondaryNegotiation.length > 0 || canDeclineDelivery || canEscalateWork;
+    secondaryNegotiation.length > 0 || canDeclineDelivery;
   const waitingMessage =
     turn.waitingMessage ?? paymentWaitingMessage ?? deliveryWaitingMessage;
   const hasFooterActions =
@@ -1772,19 +1767,6 @@ export default function WorkRequestDetailScreen({
                   />
                 </>
               ) : null}
-              {canEscalateWork ? (
-                <Button
-                  title="Ask Mawahib to review"
-                  variant="secondary"
-                  style={styles.halfBtn}
-                  textStyle={styles.requestChangesText}
-                  disabled={busy}
-                  onPress={() => {
-                    setDeclineText('');
-                    setDeliveryNoteMode('escalate');
-                  }}
-                />
-              ) : null}
             </View>
           ) : null}
 
@@ -2195,18 +2177,12 @@ export default function WorkRequestDetailScreen({
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.modalTitle}>
-              {deliveryNoteMode === 'changes'
-                ? 'Request changes'
-                : deliveryNoteMode === 'escalate'
-                  ? 'Ask Mawahib to review this work?'
-                  : 'Dispute Delivery'}
+              {deliveryNoteMode === 'changes' ? 'Request changes' : 'Dispute Delivery'}
             </Text>
             <Text style={styles.reportDescription}>
               {deliveryNoteMode === 'changes'
                 ? 'Tell the provider what to change. The job goes back to In Progress and they can deliver again.'
-                : deliveryNoteMode === 'escalate'
-                  ? 'This marks the work as disputed and opens a staff case. It does not cancel the work or change any payment.'
-                  : 'Explain what is wrong with the delivery so the provider can address it.'}
+                : 'Explain what is wrong with the delivery so the provider can address it.'}
             </Text>
             <TextInput
               placeholder={
