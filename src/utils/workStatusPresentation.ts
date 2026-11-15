@@ -21,6 +21,7 @@ const ENGAGEMENT_LABEL: Record<string, string> = {
   delivered: 'Delivered',
   disputed: 'Disputed',
   completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
 const TONE: Record<string, { bg: string; text: string }> = {
@@ -35,6 +36,7 @@ const TONE: Record<string, { bg: string; text: string }> = {
   'Changes Declined': { bg: '#FFEDD5', text: '#C2410C' },
   Rejected: { bg: '#FEE2E2', text: '#B91C1C' },
   Cancelled: { bg: '#EEF2F6', text: '#627D98' },
+  'Closed by Mawahib': { bg: '#EEF2F6', text: '#627D98' },
 };
 
 export type WorkStatusPresentation = {
@@ -57,13 +59,32 @@ export function workStatusPresentation(input: {
   requestStatus: string;
   engagementStatus: string | null;
   applicationStatus?: string | null;
+  closedByMawahib?: boolean;
 }): WorkStatusPresentation {
+  const applicationLabel = input.applicationStatus
+    ? APPLICATION_LABEL[input.applicationStatus] ?? null
+    : null;
+  if (input.closedByMawahib) {
+    return {
+      primaryLabel: 'Closed by Mawahib',
+      primaryKind: 'engagement',
+      tone: TONE['Closed by Mawahib'],
+      requestLabel: null,
+      applicationLabel,
+      showPay: false,
+      showDeliver: false,
+      showConfirm: false,
+      showDecline: false,
+    };
+  }
   const engagementLabel = input.engagementStatus
     ? ENGAGEMENT_LABEL[input.engagementStatus] ?? null
     : null;
   const requestLabel = REQUEST_LABEL[input.requestStatus] ?? input.requestStatus;
   const primaryLabel = engagementLabel ?? requestLabel;
+  const terminal = input.engagementStatus === 'cancelled' || input.engagementStatus === 'completed';
   const awaitingPayment =
+    !terminal &&
     input.requestStatus === 'pending_payment' &&
     (input.engagementStatus === 'pending_payment' || input.engagementStatus == null);
   return {
@@ -71,15 +92,27 @@ export function workStatusPresentation(input: {
     primaryKind: engagementLabel ? 'engagement' : 'request',
     tone: TONE[primaryLabel] ?? { bg: '#EEF2F6', text: '#627D98' },
     requestLabel: engagementLabel && requestLabel !== engagementLabel ? requestLabel : null,
-    applicationLabel: input.applicationStatus
-      ? APPLICATION_LABEL[input.applicationStatus] ?? null
-      : null,
+    applicationLabel,
     showPay: awaitingPayment,
     showDeliver: input.engagementStatus === 'in_progress',
     showConfirm:
       input.engagementStatus === 'delivered' || input.engagementStatus === 'disputed',
     showDecline: input.engagementStatus === 'delivered',
   };
+}
+
+/** Existing invoice and work-chat records stay reachable. This does not create a chat. */
+export function retainsClosedWorkRecords(input: {
+  engagementStatus: string | null;
+  closedByMawahib?: boolean;
+}): boolean {
+  if (input.closedByMawahib && input.engagementStatus === 'cancelled') return true;
+  return (
+    input.engagementStatus === 'in_progress' ||
+    input.engagementStatus === 'delivered' ||
+    input.engagementStatus === 'disputed' ||
+    input.engagementStatus === 'completed'
+  );
 }
 
 /** Delivered keeps the ordinary confirmation. Disputed explains that acceptance ends the dispute. */

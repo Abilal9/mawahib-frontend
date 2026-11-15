@@ -81,7 +81,7 @@ export function LoadingBlock({
         {
           width,
           height,
-          borderRadius: round ? height / 2 : radius.sm,
+          borderRadius: round ? height / 2 : radius.button,
         },
         style,
       ]}

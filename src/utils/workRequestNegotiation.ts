@@ -175,7 +175,8 @@ export function getWorkRequestOverflowMenu(
     request.workEngagementStatus === 'in_progress' ||
     request.workEngagementStatus === 'delivered' ||
     request.workEngagementStatus === 'disputed' ||
-    request.workEngagementStatus === 'completed';
+    request.workEngagementStatus === 'completed' ||
+    request.workEngagementStatus === 'cancelled';
 
   const openNegotiation =
     request.status === 'pending' ||

@@ -1,4 +1,4 @@
-import { User } from './index';
+import type { User } from './index';
 
 /**
  * Card-level status for a work request (or a listing the viewer posted).
@@ -16,11 +16,12 @@ export type UserJobStatus =
   | 'delivered'
   | 'disputed'
   | 'completed'
+  | 'cancelled'
   | 'rejected'
   | 'withdrawn'
   | 'posted';
 
-/** Statuses that belong in the History (archive) Jobs section. */
+/** Statuses that belong in the History tab aside from staff-closed work. */
 export const COMPLETED_USER_JOB_STATUSES: UserJobStatus[] = [
   'completed',
   'rejected',
@@ -29,6 +30,14 @@ export const COMPLETED_USER_JOB_STATUSES: UserJobStatus[] = [
 
 export function isCompletedStatus(status: UserJobStatus): boolean {
   return COMPLETED_USER_JOB_STATUSES.includes(status);
+}
+
+/**
+ * Client acceptance only. Staff closure uses status `cancelled` and the History
+ * section, and is not successful completion.
+ */
+export function isSuccessfulCompletion(status: UserJobStatus): boolean {
+  return status === 'completed';
 }
 
 /** Where the row came from — drives the small uppercase badge on cards. */

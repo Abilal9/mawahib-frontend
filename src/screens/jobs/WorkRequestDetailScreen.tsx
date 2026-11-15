@@ -74,7 +74,7 @@ import {
   type NegotiationAction,
   type OverflowMenuAction,
 } from '../../utils/workRequestNegotiation';
-import { deliveryAcceptanceCopy, providerDeliveryWaiting, workStatusPresentation } from '../../utils/workStatusPresentation';
+import { deliveryAcceptanceCopy, providerDeliveryWaiting, retainsClosedWorkRecords, workStatusPresentation } from '../../utils/workStatusPresentation';
 import { ScreenProps } from '../../navigation/types';
 import {
   ApiWorkRequest,
@@ -566,10 +566,10 @@ export default function WorkRequestDetailScreen({
         viewed?.workEngagementStatus ?? fetched.workEngagementStatus;
       const canOpenWorkChat =
         engagementId &&
-        (engagementStatus === 'in_progress' ||
-          engagementStatus === 'delivered' ||
-          engagementStatus === 'disputed' ||
-          engagementStatus === 'completed');
+        retainsClosedWorkRecords({
+          engagementStatus,
+          closedByMawahib: viewed?.closedByMawahib ?? fetched.closedByMawahib,
+        });
       if (canOpenWorkChat) {
         const workChats = await messageService
           .listConversations('work')
@@ -724,6 +724,7 @@ export default function WorkRequestDetailScreen({
     requestStatus: request.status,
     engagementStatus: request.workEngagementStatus,
     applicationStatus: request.jobApplicationStatus,
+    closedByMawahib: request.closedByMawahib,
   });
   const tone = presentation.tone;
 
@@ -739,10 +740,10 @@ export default function WorkRequestDetailScreen({
   const isCompletedEngagement = request.workEngagementStatus === 'completed';
   const canMessageWork =
     !!request.workEngagementId &&
-    (request.workEngagementStatus === 'in_progress' ||
-      request.workEngagementStatus === 'delivered' ||
-      request.workEngagementStatus === 'disputed' ||
-      request.workEngagementStatus === 'completed');
+    retainsClosedWorkRecords({
+      engagementStatus: request.workEngagementStatus,
+      closedByMawahib: request.closedByMawahib,
+    });
   const deliveryWaitingMessage = isProvider
     ? providerDeliveryWaiting(request.workEngagementStatus)
     : null;
@@ -752,7 +753,8 @@ export default function WorkRequestDetailScreen({
   const attachmentsLocked =
     request.workEngagementStatus === 'delivered' ||
     request.workEngagementStatus === 'disputed' ||
-    request.workEngagementStatus === 'completed';
+    request.workEngagementStatus === 'completed' ||
+    request.workEngagementStatus === 'cancelled';
   const requestOpenForAttachmentEdits =
     !attachmentsLocked &&
     (request.status === 'pending' ||
@@ -792,7 +794,10 @@ export default function WorkRequestDetailScreen({
         (event): TimelineEntry => ({
           key: `eng-${event.id}`,
           title: engagementEventLabel(event, request.clientUserId),
-          note: event.note?.trim() || undefined,
+          note:
+            event.fromStatus === 'disputed' && event.toStatus === 'cancelled'
+              ? undefined
+              : event.note?.trim() || undefined,
           createdAt: event.createdAt,
         }),
       ),
@@ -1321,7 +1326,7 @@ export default function WorkRequestDetailScreen({
         </Text>
         <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
           <Text style={[styles.statusPillText, { color: tone.text }]}>
-            {request.closedByMawahib ? 'Closed by Mawahib' : presentation.primaryLabel}
+            {presentation.primaryLabel}
           </Text>
         </View>
         {overflow.visible ? (
@@ -1786,7 +1791,7 @@ export default function WorkRequestDetailScreen({
           {canMessageWork ? (
             <Button
               title={
-                request.workEngagementStatus === 'completed'
+                request.workEngagementStatus === 'completed' || request.closedByMawahib
                   ? 'View work chat'
                   : 'Message'
               }
