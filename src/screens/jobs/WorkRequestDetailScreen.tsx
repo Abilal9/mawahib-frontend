@@ -143,7 +143,20 @@ function formatPickedDate(date: Date) {
 type EngagementEvent = ApiEngagement['events'][number];
 
 /** Real engagement transitions only; delivered → in_progress is a change request. */
-function engagementEventLabel(event: EngagementEvent): string {
+function engagementEventLabel(event: EngagementEvent, clientUserId: string): string {
+  if (event.fromStatus === 'disputed' && event.toStatus === 'cancelled') {
+    return 'Closed by Mawahib';
+  }
+  if (event.toStatus === 'disputed' && event.fromStatus !== 'delivered') {
+    return 'Asked Mawahib to review';
+  }
+  if (
+    event.toStatus === 'disputed' &&
+    event.fromStatus === 'delivered' &&
+    event.actorId !== clientUserId
+  ) {
+    return 'Asked Mawahib to review';
+  }
   if (event.fromStatus === 'delivered' && event.toStatus === 'in_progress') {
     return 'Changes requested';
   }
@@ -486,7 +499,7 @@ export default function WorkRequestDetailScreen({
   const [reportSuccessTitle, setReportSuccessTitle] = useState('Report sent');
   /** Client delivery note sheet: dispute (→ disputed) or request changes (→ in_progress). */
   const [deliveryNoteMode, setDeliveryNoteMode] = useState<
-    'dispute' | 'changes' | null
+    'changes' | 'dispute' | 'escalate' | null
   >(null);
   const [declineText, setDeclineText] = useState('');
   /** Latest engagement_events.note for delivered → disputed (Marketplace SoT). */
@@ -720,6 +733,9 @@ export default function WorkRequestDetailScreen({
   const canDeliver = isProvider && presentation.showDeliver;
   const canConfirmDelivery = isClient && presentation.showConfirm;
   const canDeclineDelivery = isClient && presentation.showDecline;
+  const canEscalateWork =
+    request.workEngagementStatus === 'in_progress' ||
+    (!isClient && request.workEngagementStatus === 'delivered');
   const isCompletedEngagement = request.workEngagementStatus === 'completed';
   const canMessageWork =
     !!request.workEngagementId &&
@@ -775,7 +791,7 @@ export default function WorkRequestDetailScreen({
       .map(
         (event): TimelineEntry => ({
           key: `eng-${event.id}`,
-          title: engagementEventLabel(event),
+          title: engagementEventLabel(event, request.clientUserId),
           note: event.note?.trim() || undefined,
           createdAt: event.createdAt,
         }),
@@ -1192,7 +1208,7 @@ export default function WorkRequestDetailScreen({
         : null;
 
   const hasSecondaryActions =
-    secondaryNegotiation.length > 0 || canDeclineDelivery;
+    secondaryNegotiation.length > 0 || canDeclineDelivery || canEscalateWork;
   const waitingMessage =
     turn.waitingMessage ?? paymentWaitingMessage ?? deliveryWaitingMessage;
   const hasFooterActions =
@@ -1305,7 +1321,7 @@ export default function WorkRequestDetailScreen({
         </Text>
         <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
           <Text style={[styles.statusPillText, { color: tone.text }]}>
-            {presentation.primaryLabel}
+            {request.closedByMawahib ? 'Closed by Mawahib' : presentation.primaryLabel}
           </Text>
         </View>
         {overflow.visible ? (
@@ -1751,6 +1767,19 @@ export default function WorkRequestDetailScreen({
                   />
                 </>
               ) : null}
+              {canEscalateWork ? (
+                <Button
+                  title="Ask Mawahib to review"
+                  variant="secondary"
+                  style={styles.halfBtn}
+                  textStyle={styles.requestChangesText}
+                  disabled={busy}
+                  onPress={() => {
+                    setDeclineText('');
+                    setDeliveryNoteMode('escalate');
+                  }}
+                />
+              ) : null}
             </View>
           ) : null}
 
@@ -2163,12 +2192,16 @@ export default function WorkRequestDetailScreen({
             <Text style={styles.modalTitle}>
               {deliveryNoteMode === 'changes'
                 ? 'Request changes'
-                : 'Dispute Delivery'}
+                : deliveryNoteMode === 'escalate'
+                  ? 'Ask Mawahib to review this work?'
+                  : 'Dispute Delivery'}
             </Text>
             <Text style={styles.reportDescription}>
               {deliveryNoteMode === 'changes'
                 ? 'Tell the provider what to change. The job goes back to In Progress and they can deliver again.'
-                : 'Explain what is wrong with the delivery so the provider can address it.'}
+                : deliveryNoteMode === 'escalate'
+                  ? 'This marks the work as disputed and opens a staff case. It does not cancel the work or change any payment.'
+                  : 'Explain what is wrong with the delivery so the provider can address it.'}
             </Text>
             <TextInput
               placeholder={

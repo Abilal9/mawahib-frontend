@@ -153,6 +153,9 @@ function mapStatus(request: ApiWorkRequest): {
   statusLabel: string;
   section: UserJobSection;
 } {
+  if (request.closedByMawahib) {
+    return { status: 'cancelled', statusLabel: 'Closed by Mawahib', section: 'completed' };
+  }
   const stage = engagementStage(request.workEngagementStatus);
   if (stage === 'in-progress') {
     return { status: 'in-progress', statusLabel: 'In Progress', section: 'in-progress' };

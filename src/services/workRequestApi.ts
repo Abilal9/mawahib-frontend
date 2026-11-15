@@ -148,6 +148,7 @@ export interface ApiWorkRequest {
   serviceTitle: string | null;
   workEngagementId: string | null;
   workEngagementStatus: ApiEngagementStatus | null;
+  closedByMawahib?: boolean;
   workEngagementCompletedAt?: string | null;
   reviewState?: ApiReviewState | null;
   terms: WorkRequestTerms;
