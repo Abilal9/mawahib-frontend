@@ -1,13 +1,17 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../theme';
 import { ApiError } from '../../lib/apiClient';
+import { createClientId } from '../../lib/clientId';
+import { markDeletionProcessing } from '../../lib/deletionProcessing';
+import { useAuth } from '../../context/AuthContext';
 import {
   cancelDeletionRequest,
+  confirmDeletion,
   createDeletionRequest,
   loadDeletionRequest,
   type DeletionBlocker,
@@ -15,6 +19,7 @@ import {
 } from '../../services/deletionApi';
 
 const SUPPORT = 'mailto:support@mawahib.io';
+const CONFIRMATION = 'Delete this account';
 
 function resolutionHint(blocker: DeletionBlocker): string {
   if (blocker.code === 'payment_unresolved') {
@@ -30,11 +35,16 @@ function resolutionHint(blocker: DeletionBlocker): string {
 }
 
 export default function DeleteAccountScreen() {
+  const { signOut } = useAuth();
   const [view, setView] = useState<DeletionRequestView | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const key = useRef(crypto.randomUUID());
+  const [confirmation, setConfirmation] = useState('');
+  const key = useRef(createClientId());
+  const confirmKey = useRef(createClientId());
+  const closureReady = view?.closureEnabled === true;
+  const canConfirm = closureReady && view?.selfOrigin === true && view.eligibility.status === 'eligible';
 
   const load = useCallback(async () => {
     setError(null);
@@ -79,13 +89,29 @@ export default function DeleteAccountScreen() {
     }
   };
 
+  const confirmPermanent = async () => {
+    if (busy || confirmation !== CONFIRMATION) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await confirmDeletion(confirmKey.current, confirmation);
+      markDeletionProcessing();
+      await signOut('logout');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Deletion was not confirmed. Try again.');
+      setBusy(false);
+    }
+  };
+
   return (
     <ScreenContainer>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Delete account</Text>
         <Text style={styles.body}>
-          Request account deletion starts a request. It does not delete the account immediately. Final deletion is not available in this release, and this screen does not promise a completion date or an email.
+          {closureReady
+            ? 'Deleting this account is permanent. It removes your profile, posts, comments, and personal files, and it erases reviews you wrote or received. Shared messages and their images stay for the other person, but those conversations are archived and cannot accept new messages. Invoices, payment history, reports, and dispute records stay under their existing access. Those retained messages, images, invoices, and records can still contain historical personal information.'
+            : 'Request account deletion starts a request. It does not delete the account immediately. Final deletion is not available until the server enables it, and this screen does not promise a completion date or an email.'}
         </Text>
         <Text style={styles.body}>
           While a request is pending, new work is restricted. Existing obligations must be resolved before deletion can proceed. You can cancel your own request before irreversible closure. A future deletion is permanent. Shared chats, invoices, payment history, reports, and dispute records can remain.
@@ -121,6 +147,26 @@ export default function DeleteAccountScreen() {
         ) : (
           <Button title="Cancel deletion request" variant="secondary" onPress={() => { void cancelRequest(); }} disabled={busy || loading} />
         )}
+        {canConfirm ? (
+          <View style={styles.blocker}>
+            <Text style={styles.body}>
+              Type “Delete this account” to confirm. This cannot be undone, and cancelling the request later will not restore the account.
+            </Text>
+            <TextInput
+              accessibilityLabel="Type Delete this account"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={confirmation}
+              onChangeText={setConfirmation}
+              style={styles.input}
+            />
+            <Button
+              title="Delete account permanently"
+              onPress={() => { void confirmPermanent(); }}
+              disabled={busy || confirmation !== CONFIRMATION}
+            />
+          </View>
+        ) : null}
         {error ? <Button title="Try again" variant="secondary" onPress={() => { setLoading(true); void load(); }} disabled={busy} /> : null}
       </ScrollView>
     </ScreenContainer>
@@ -136,5 +182,13 @@ const styles = StyleSheet.create({
   blockerTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
   error: { ...typography.body, color: colors.error },
   link: { ...typography.body, color: colors.primary },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.textSecondary,
+    borderRadius: 8,
+    padding: spacing.sm,
+    color: colors.text,
+    ...typography.body,
+  },
   note: { ...typography.caption, color: colors.textSecondary },
 });

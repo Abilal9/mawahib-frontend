@@ -14,12 +14,15 @@ import {
   accessTokenSubject,
   ApiError,
   isAccountSuspendedError,
+  isAccountUnavailableError,
   isMawahibProfileMissingError,
   isStaleIdentityError,
   registerAuthRequestRuntime,
   subscribeAccountSuspended,
+  subscribeAccountUnavailable,
 } from '../lib/apiClient';
 import { acquireAuthenticatedToken } from '../lib/authenticatedToken';
+import { markDeletionProcessing } from '../lib/deletionProcessing';
 import { AuthFailure } from '../lib/authFailure';
 import { clearMediaImageCache } from '../lib/mediaImageCache';
 import {
@@ -991,6 +994,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [markAccountSuspended]);
 
+  useEffect(() => {
+    return subscribeAccountUnavailable(({ accessToken }) => {
+      if (loadRecoveryState()) return;
+      const current = hydrateSessionRef.current?.access_token;
+      if (!current || !sameLiveSubject(accessToken, current)) return;
+      markDeletionProcessing();
+      void signOut('hydrate401');
+    });
+  }, [signOut]);
+
   const mergeHydrateOverrides = (
     base: HydrateOverrides | undefined,
     next: HydrateOverrides | undefined,
@@ -1143,6 +1156,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               sameLiveSubject(accessToken, liveToken)
             ) {
               markAccountSuspended();
+            }
+            return null;
+          }
+          if (isAccountUnavailableError(err)) {
+            markDeletionProcessing();
+            try {
+              await signOut('hydrate401', { generationAtCall: generationAtStart });
+            } catch {
+              // The processing screen replaces the tree even if sign-out reports a conflict.
             }
             return null;
           }

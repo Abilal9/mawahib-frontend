@@ -14,6 +14,7 @@ export {
   MAWAHIB_PROFILE_MISSING_CODE,
   ApiError,
   isAccountSuspendedError,
+  isAccountUnavailableError,
   isMawahibProfileMissingError,
   accessTokenSubject,
   isStaleIdentityError,
@@ -69,6 +70,24 @@ function notifyAccountSuspended(accessToken: string): void {
   }
 }
 
+type AccountUnavailableListener = (notice: { accessToken: string }) => void;
+const accountUnavailableListeners = new Set<AccountUnavailableListener>();
+
+export function subscribeAccountUnavailable(
+  listener: AccountUnavailableListener,
+): () => void {
+  accountUnavailableListeners.add(listener);
+  return () => {
+    accountUnavailableListeners.delete(listener);
+  };
+}
+
+function notifyAccountUnavailable(accessToken: string): void {
+  for (const listener of accountUnavailableListeners) {
+    listener({ accessToken });
+  }
+}
+
 function requireRuntime(): AuthRequestRuntime {
   if (!authRequestRuntime) {
     throw new ApiError(401, 'Not authenticated');
@@ -108,6 +127,7 @@ export async function apiRequest<T>(
     fetch: globalThis.fetch.bind(globalThis),
     apiBaseUrl: appEnv.apiBaseUrl,
     onAccountSuspended: notifyAccountSuspended,
+    onAccountUnavailable: notifyAccountUnavailable,
   });
 }
 

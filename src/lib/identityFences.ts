@@ -40,6 +40,16 @@ export function isAccountSuspendedError(error: unknown): boolean {
   );
 }
 
+export const ACCOUNT_UNAVAILABLE_CODE = 'ACCOUNT_UNAVAILABLE';
+
+export function isAccountUnavailableError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 401 &&
+    error.code === ACCOUNT_UNAVAILABLE_CODE
+  );
+}
+
 export function isMawahibProfileMissingError(error: unknown): boolean {
   return (
     error instanceof ApiError &&
@@ -219,6 +229,7 @@ export type AuthenticatedRequestDeps = {
   fetch: typeof fetch;
   apiBaseUrl: string;
   onAccountSuspended?: (accessToken: string) => void;
+  onAccountUnavailable?: (accessToken: string) => void;
 };
 
 export type ConsumedResponse = {
@@ -326,6 +337,10 @@ export async function executeAuthenticatedRequest<T>(
 
     if (consumed.status === 401 && allowGetRetry && !retriedGet) {
       const unauthorized = apiErrorFromConsumed(consumed);
+      if (isAccountUnavailableError(unauthorized)) {
+        deps.onAccountUnavailable?.(token);
+        throw unauthorized;
+      }
       if (isMawahibProfileMissingError(unauthorized)) {
         throw unauthorized;
       }
@@ -337,6 +352,9 @@ export async function executeAuthenticatedRequest<T>(
       const error = apiErrorFromConsumed(consumed);
       if (isAccountSuspendedError(error)) {
         deps.onAccountSuspended?.(token);
+      }
+      if (isAccountUnavailableError(error)) {
+        deps.onAccountUnavailable?.(token);
       }
       throw error;
     }

@@ -15,6 +15,11 @@ import {
 } from './types';
 import { useAuth } from '../context/AuthContext';
 import { loadRecoveryState } from '../lib/recoveryState';
+import {
+  isDeletionProcessing,
+  subscribeDeletionProcessing,
+} from '../lib/deletionProcessing';
+import DeletionProcessingScreen from '../screens/auth/DeletionProcessingScreen';
 import { hasConsumedProcessStart } from '../lib/processStart';
 import {
   getProductTreeEpoch,
@@ -98,6 +103,10 @@ export default function RootNavigator() {
     session,
     signedOutReason,
   } = useAuth();
+  const processing = useSyncExternalStore(
+    subscribeDeletionProcessing,
+    isDeletionProcessing,
+  );
   useSyncExternalStore(subscribeProductTree, getProductTreeEpoch);
 
   useEffect(() => {
@@ -139,7 +148,7 @@ export default function RootNavigator() {
   // root. Hold the product stack so expo-image cannot fetch while owner is
   // unestablished.
   const processStarted = hasConsumedProcessStart();
-  if (processStarted && !mediaCacheReady) {
+  if (processStarted && !mediaCacheReady && !processing) {
     return (
       <Stack.Navigator
         key="media-hold"
@@ -149,6 +158,10 @@ export default function RootNavigator() {
         <Stack.Screen name="SignIn" component={MediaHoldScreen} />
       </Stack.Navigator>
     );
+  }
+
+  if (processing) {
+    return <DeletionProcessingScreen />;
   }
 
   // Recovery stays on its own screens. Suspension replaces the tree so
