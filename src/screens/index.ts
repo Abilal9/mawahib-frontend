@@ -77,6 +77,7 @@ export { default as ReviewsScreen } from './profile/ReviewsScreen';
 export { default as DocumentationScreen } from './profile/DocumentationScreen';
 export { default as ChangeLanguageScreen } from './profile/ChangeLanguageScreen';
 export { default as SettingsScreen } from './profile/SettingsScreen';
+export { default as DeleteAccountScreen } from './profile/DeleteAccountScreen';
 export { default as PremiumScreen } from './profile/PremiumScreen';
 
 // Jobs

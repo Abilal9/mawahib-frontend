@@ -129,6 +129,11 @@ export default function SettingsScreen({ navigation }: ScreenProps<'Settings'>) 
     { label: 'Username', value: usernameLabel(apiUser?.username) },
     { label: 'Account type', value: accountTypeLabel(apiUser?.accountType) },
     {
+      label: 'Delete account',
+      icon: 'trash-outline',
+      onPress: () => navigation.navigate('DeleteAccount'),
+    },
+    {
       label: 'Country',
       value: apiUser ? countryLabel(apiUser) : 'Not added',
     },

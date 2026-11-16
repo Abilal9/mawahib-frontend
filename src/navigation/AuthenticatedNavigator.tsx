@@ -35,6 +35,7 @@ import {
   DocumentationScreen,
   ChangeLanguageScreen,
   SettingsScreen,
+  DeleteAccountScreen,
   PremiumScreen,
   PostJobScreen,
   WorkRequestDetailScreen,
@@ -165,6 +166,7 @@ export default function AuthenticatedNavigator({ userId }: { userId: string }) {
       <Stack.Screen name="Documentation" component={DocumentationScreen} />
       <Stack.Screen name="ChangeLanguage" component={ChangeLanguageScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="Premium" component={PremiumScreen} />
       <Stack.Screen name="PostJob" component={PostJobScreen} />
       <Stack.Screen name="JobListingDetail" component={JobListingDetailScreen} />

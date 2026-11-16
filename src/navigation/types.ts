@@ -138,6 +138,7 @@ export type RootStackParamList = {
   Documentation: undefined;
   ChangeLanguage: undefined;
   Settings: undefined;
+  DeleteAccount: undefined;
   Premium: undefined;
   PostJob: { step?: number };
   /** The unified request detail — every inbox row opens here. */

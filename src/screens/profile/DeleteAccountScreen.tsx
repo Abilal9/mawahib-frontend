@@ -1,0 +1,140 @@
+import React, { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
+import ScreenContainer from '../../components/ui/ScreenContainer';
+import Button from '../../components/ui/Button';
+import { colors, spacing, typography } from '../../theme';
+import { ApiError } from '../../lib/apiClient';
+import {
+  cancelDeletionRequest,
+  createDeletionRequest,
+  loadDeletionRequest,
+  type DeletionBlocker,
+  type DeletionRequestView,
+} from '../../services/deletionApi';
+
+const SUPPORT = 'mailto:support@mawahib.io';
+
+function resolutionHint(blocker: DeletionBlocker): string {
+  if (blocker.code === 'payment_unresolved') {
+    return 'Cancel this deletion request, resolve the payment with the existing payment flow, then request deletion again. A payment already in progress still finishes on its own and still blocks deletion.';
+  }
+  if (blocker.engagementStatus === 'pending_payment') {
+    return 'Cancel the accepted work from that request. You can do that while this deletion request is pending.';
+  }
+  if (blocker.code === 'financial_follow_up_outstanding') {
+    return 'Mawahib still has financial follow-up to record. Emailing support does not resolve it.';
+  }
+  return 'Use the existing actions on that work, or contact support if you cannot. Emailing support does not close the work.';
+}
+
+export default function DeleteAccountScreen() {
+  const [view, setView] = useState<DeletionRequestView | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const key = useRef(crypto.randomUUID());
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      setView(await loadDeletionRequest());
+    } catch (err) {
+      setView(null);
+      setError(err instanceof ApiError ? err.message : 'Deletion status is unavailable. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    setLoading(true);
+    void load();
+  }, [load]));
+
+  const requestDeletion = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setView(await createDeletionRequest(key.current));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'The request was not recorded. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelRequest = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setView(await cancelDeletionRequest());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'The cancellation was not recorded. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <ScreenContainer>
+      <StatusBar style="dark" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Delete account</Text>
+        <Text style={styles.body}>
+          Request account deletion starts a request. It does not delete the account immediately. Final deletion is not available in this release, and this screen does not promise a completion date or an email.
+        </Text>
+        <Text style={styles.body}>
+          While a request is pending, new work is restricted. Existing obligations must be resolved before deletion can proceed. You can cancel your own request before irreversible closure. A future deletion is permanent. Shared chats, invoices, payment history, reports, and dispute records can remain.
+        </Text>
+        {loading ? <ActivityIndicator color={colors.primary} /> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {view?.eligibility.status === 'unavailable' ? (
+          <Text style={styles.body}>Deletion status is unavailable. Try again. This is not a list of blockers.</Text>
+        ) : null}
+        {view?.selfOrigin ? <Text style={styles.status}>Deletion requested</Text> : null}
+        {view?.staffOrigin ? (
+          <Text style={styles.body}>
+            Mawahib also has a deletion request on this account. Cancelling your request does not remove that restriction.
+          </Text>
+        ) : null}
+        {view?.eligibility.status === 'blocked' ? view.eligibility.blockers.map((blocker) => (
+          <View key={`${blocker.engagementId}:${blocker.code}:${blocker.paymentId ?? ''}`} style={styles.blocker}>
+            <Text style={styles.blockerTitle}>{blocker.engagementTitle}</Text>
+            <Text style={styles.body}>{blocker.explanation}</Text>
+            <Text style={styles.body}>{resolutionHint(blocker)}</Text>
+          </View>
+        )) : null}
+        <Text
+          style={styles.link}
+          accessibilityRole="link"
+          onPress={() => { void Linking.openURL(SUPPORT); }}
+        >
+          Contact support@mawahib.io
+        </Text>
+        <Text style={styles.note}>Emailing support does not itself resolve an obligation.</Text>
+        {!view?.selfOrigin ? (
+          <Button title="Request account deletion" onPress={() => { void requestDeletion(); }} disabled={busy || loading} />
+        ) : (
+          <Button title="Cancel deletion request" variant="secondary" onPress={() => { void cancelRequest(); }} disabled={busy || loading} />
+        )}
+        {error ? <Button title="Try again" variant="secondary" onPress={() => { setLoading(true); void load(); }} disabled={busy} /> : null}
+      </ScrollView>
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { padding: spacing.lg, gap: spacing.md },
+  title: { ...typography.h2, color: colors.text },
+  status: { ...typography.h3, color: colors.text },
+  body: { ...typography.body, color: colors.textSecondary },
+  blocker: { gap: spacing.xs },
+  blockerTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
+  error: { ...typography.body, color: colors.error },
+  link: { ...typography.body, color: colors.primary },
+  note: { ...typography.caption, color: colors.textSecondary },
+});

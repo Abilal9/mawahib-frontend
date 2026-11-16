@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import Button from '../../components/ui/Button';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, typography } from '../../theme';
+import type { RootStackParamList } from '../../navigation/types';
 
 const SUPPORT_MAILTO = 'mailto:support@mawahib.io';
 
@@ -25,6 +28,7 @@ async function openSupportEmail() {
  */
 export default function AccountSuspendedScreen() {
   const { recheckAccountStatus, signOut, authError } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [checking, setChecking] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -91,6 +95,12 @@ export default function AccountSuspendedScreen() {
             void checkAgain();
           }}
           loading={checking}
+          disabled={checking || loggingOut}
+        />
+        <Button
+          title="Request account deletion"
+          variant="outline"
+          onPress={() => navigation.navigate('DeleteAccount')}
           disabled={checking || loggingOut}
         />
         <Button

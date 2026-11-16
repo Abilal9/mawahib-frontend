@@ -4,6 +4,7 @@ import {
   SplashScreen1,
   SplashScreen2,
   AccountSuspendedScreen,
+  DeleteAccountScreen,
 } from '../screens';
 import SignedOutNavigator from './SignedOutNavigator';
 import AuthenticatedNavigator from './AuthenticatedNavigator';
@@ -159,6 +160,7 @@ export default function RootNavigator() {
           name="AccountSuspended"
           component={AccountSuspendedScreen}
         />
+        <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       </Stack.Navigator>
     );
   }

@@ -204,6 +204,8 @@ export type AuthenticatedRequestInit = RequestInit & {
   accessToken?: string;
   principal?: AuthenticatedRequestPrincipal;
   acceptedStatuses?: number[];
+  /** Ask the auth provider for a newly issued session before this request. */
+  refreshSession?: boolean;
 };
 
 export type AuthenticatedRequestDeps = {
@@ -303,8 +305,8 @@ export async function executeAuthenticatedRequest<T>(
   for (;;) {
     assertLivePrincipal(deps.principal, deps);
     const token = await deps.getAuthenticatedToken(deps.principal, {
-      forceRefresh: retriedGet,
-      preferredToken: retriedGet ? undefined : preferredToken,
+      forceRefresh: Boolean(init.refreshSession) || retriedGet,
+      preferredToken: retriedGet || init.refreshSession ? undefined : preferredToken,
     });
     // Pre-dispatch fence: identity must still match immediately before send.
     assertLivePrincipal(deps.principal, deps);
