@@ -438,10 +438,10 @@ assert.ok(
 );
 
 const deepLink = read('src/components/auth/AuthDeepLinkListener.tsx');
-assert.match(deepLink, /mediaCacheReady/);
+assert.equal(deepLink.includes('mediaCacheReady'), false);
 assert.match(deepLink, /consumeProcessStart\(\)/);
 assert.ok(
-  deepLink.indexOf('apiUserRef.current?.id === user.id') <
+  deepLink.indexOf('apiUserRef.current?.id !== user.id') <
     deepLink.indexOf('consumeProcessStart()'),
 );
 assert.ok(

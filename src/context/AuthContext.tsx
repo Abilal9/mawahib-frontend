@@ -80,11 +80,8 @@ import {
   signOutInflightKey,
 } from '../lib/authSignOutSlot';
 import { hasConsumedProcessStart } from '../lib/processStart';
-import { shouldEnterAuthenticatedProduct } from '../lib/postAuthGate';
 import {
-  enterAuthenticatedProduct,
   enterSignedOutAt,
-  isAuthenticatedProductActive,
   leaveAuthenticatedProduct,
 } from '../lib/productTree';
 import { resetToSignedOut } from '../navigation/navigationRef';
@@ -900,17 +897,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setApiUser(user);
     setAccountType(user.accountType);
     setIsSignedIn(true);
+    const pending = loadPendingSignup();
+    const pendingForOtherUser = Boolean(
+      pending?.userId && pending.userId !== user.id,
+    );
+    const basicsEmail = signUpBasicsRef.current?.email?.trim().toLowerCase();
+    const userEmail = user.email?.trim().toLowerCase();
     if (
-      shouldEnterAuthenticatedProduct({
-        emailVerified: Boolean(user.emailVerified),
-        phoneE164: user.phoneE164,
-        phoneVerified: user.phoneVerified,
-        pendingPhoneE164: signUpBasicsRef.current?.phoneE164,
-      }) &&
-      !isAuthenticatedProductActive()
+      pendingForOtherUser ||
+      (basicsEmail && userEmail && basicsEmail !== userEmail)
     ) {
-      enterAuthenticatedProduct();
+      if (pendingForOtherUser) clearPendingSignup();
+      signUpBasicsRef.current = null;
+      setSignUpBasics(null);
     }
+    // Do not enter the product here. Fresh verification still has to keep
+    // the signed-out onboarding stack mounted. Sign-in and restore enter
+    // through their post-auth destination.
     return true;
   }, [commitSignedOutReason]);
 
@@ -1066,6 +1069,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccountSuspended(false);
         setApiUser(null);
         setIsSignedIn(false);
+        signUpBasicsRef.current = null;
+        setSignUpBasics(null);
+        const pending = loadPendingSignup();
+        if (pending?.userId && pending.userId !== active.user.id) {
+          clearPendingSignup();
+        }
       }
 
       hydrateSessionRef.current = active;
@@ -1245,8 +1254,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       };
 
+      const requestedUserId = active?.user?.id ?? null;
+      const settle = (user: ApiUser | null) => {
+        const liveUserId = hydrateSessionRef.current?.user?.id ?? null;
+        if (requestedUserId && user && user.id !== requestedUserId) return null;
+        if (requestedUserId && liveUserId && liveUserId !== requestedUserId) {
+          return null;
+        }
+        return user;
+      };
       if (hydrateInFlight.current) {
-        return hydrateInFlight.current;
+        return hydrateInFlight.current.then(settle);
       }
       const promise = runCoalesced().finally(() => {
         if (hydrateInFlight.current === promise) {
@@ -1254,7 +1272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       });
       hydrateInFlight.current = promise;
-      return promise;
+      return promise.then(settle);
     },
     [applyApiUser, clearAuthenticatedState, markAccountSuspended, signOut, commitSignedOutReason],
   );

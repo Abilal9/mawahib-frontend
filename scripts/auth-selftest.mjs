@@ -168,11 +168,6 @@ function resolvePostAuthDestination(input) {
     input.signUpBasics?.email ||
     input.pendingEmail ||
     '';
-  const phoneE164 =
-    input.apiUser?.phoneE164 ||
-    input.signUpBasics?.phoneE164 ||
-    input.pendingPhoneE164 ||
-    '';
   const emailVerified = Boolean(
     input.apiUser?.emailVerified ||
       input.session?.user?.email_confirmed_at ||
@@ -182,14 +177,23 @@ function resolvePostAuthDestination(input) {
     if (email) return { name: 'ConfirmCode', params: { email } };
     return { name: 'SignIn' };
   }
-  const phoneVerified = Boolean(input.apiUser?.phoneVerified);
-  if (phoneE164 && !phoneVerified) {
-    return {
-      name: 'VerifyAccount',
-      params: { email: email || input.apiUser?.email || '', phoneE164 },
-    };
-  }
   if (input.flow === 'verify' || input.flow === 'deeplink') {
+    const pendingUserId = input.pendingUserId?.trim() || '';
+    const apiUserId = input.apiUser?.id?.trim() || '';
+    const foreignDraft = pendingUserId && apiUserId && pendingUserId !== apiUserId;
+    const phoneE164ForFlow = foreignDraft
+      ? ''
+      : input.apiUser?.phoneE164 ||
+        input.signUpBasics?.phoneE164 ||
+        input.pendingPhoneE164 ||
+        '';
+    const phoneVerified = Boolean(input.apiUser?.phoneVerified);
+    if (phoneE164ForFlow && !phoneVerified) {
+      return {
+        name: 'VerifyAccount',
+        params: { email: email || input.apiUser?.email || '', phoneE164: phoneE164ForFlow },
+      };
+    }
     return { name: 'TurnOnNotifications' };
   }
   if (input.apiUser) return { name: 'MainTabs' };
@@ -220,7 +224,7 @@ assert.equal(
     },
     session: null,
   }).name,
-  'VerifyAccount',
+  'MainTabs',
 );
 assert.equal(
   resolvePostAuthDestination({

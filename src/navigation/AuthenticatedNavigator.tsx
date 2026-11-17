@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MainTabs from './MainTabs';
 import {
@@ -54,8 +54,10 @@ import { loadRecoveryState } from '../lib/recoveryState';
 import {
   isAuthenticatedProductActive,
   leaveAuthenticatedProduct,
+  peekAuthenticatedEntry,
   takeAuthenticatedEntry,
 } from '../lib/productTree';
+import { authenticatedEntryDecision } from '../lib/authenticatedEntry';
 import { mainTabsGateLeaveAction } from '../lib/signedOutBranchEntry';
 
 const Stack = createNativeStackNavigator<AuthenticatedStackParamList>();
@@ -70,7 +72,9 @@ function MainTabsGate() {
   } = useAuth();
   const navigation =
     useNavigation<NativeStackNavigationProp<AuthenticatedStackParamList>>();
-  const pendingRef = useRef(takeAuthenticatedEntry());
+  const routeNames = useNavigationState((state) => state?.routeNames ?? []);
+  const pendingRef = useRef(peekAuthenticatedEntry());
+  const entryConsumedRef = useRef(false);
 
   const emailOk = Boolean(apiUser?.emailVerified);
 
@@ -88,18 +92,21 @@ function MainTabsGate() {
   }, [authLoading, isSignedIn, apiUser, emailOk, recovery]);
 
   useEffect(() => {
-    const pending = pendingRef.current;
-    if (!pending || pending.length === 0) return;
-    const onlyDefaultHome =
-      pending.length === 1 &&
-      pending[0].name === 'MainTabs' &&
-      pending[0].params == null;
-    if (onlyDefaultHome) return;
-    navigation.reset({
-      index: pending.length - 1,
-      routes: pending as never,
+    if (!pendingRef.current) pendingRef.current = peekAuthenticatedEntry();
+    const decision = authenticatedEntryDecision({
+      pending: pendingRef.current,
+      routeNames,
+      consumed: entryConsumedRef.current,
     });
-  }, [navigation]);
+    if (decision.type === 'wait') return;
+    entryConsumedRef.current = true;
+    takeAuthenticatedEntry();
+    if (decision.type === 'done') return;
+    navigation.reset({
+      index: decision.index,
+      routes: decision.routes as never,
+    });
+  }, [navigation, routeNames]);
 
   if (
     authLoading ||

@@ -82,6 +82,10 @@ export function enterSignedOutAt(next: SignedOutEntry): void {
   emit();
 }
 
+export function peekAuthenticatedEntry(): ProductTreeRoute[] | null {
+  return authenticatedEntry;
+}
+
 export function takeAuthenticatedEntry(): ProductTreeRoute[] | null {
   const next = authenticatedEntry;
   authenticatedEntry = null;

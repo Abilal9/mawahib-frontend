@@ -178,11 +178,17 @@ export function stampPendingSignupFromSession(
     return;
   }
 
-  if (!existing.userId) {
-    const pendingEmail = normalizeSignupEmail(existing.email);
-    if (!pendingEmail || !email || pendingEmail !== email) {
-      return;
-    }
+  const pendingEmail = normalizeSignupEmail(existing.email);
+  if (existing.userId && existing.userId !== userId) {
+    clearPendingSignup();
+    return;
+  }
+  if (pendingEmail && email && pendingEmail !== email) {
+    clearPendingSignup();
+    return;
+  }
+  if (!existing.userId && (!pendingEmail || !email || pendingEmail !== email)) {
+    return;
   }
 
   savePendingSignup({

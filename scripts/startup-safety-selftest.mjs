@@ -11,7 +11,8 @@ import {
   resolveColdStartDestination,
   showsProfileRetry,
 } from '../src/lib/coldStartRoute.ts';
-import { resolvePostAuthDestination, shouldEnterAuthenticatedProduct } from '../src/lib/postAuthGate.ts';
+import { resolvePostAuthDestination, shouldEnterAuthenticatedProduct, phoneForPostAuth } from '../src/lib/postAuthGate.ts';
+import { authenticatedEntryDecision } from '../src/lib/authenticatedEntry.ts';
 import { shouldIgnoreStaleIdentityResult } from '../src/context/identityGuard.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -104,7 +105,7 @@ assert.equal(
     apiUser: phonePendingUser,
     session: hydratedSession,
   }).name,
-  'VerifyAccount',
+  'MainTabs',
 );
 assert.equal(
   resolvePostAuthDestination({
@@ -113,7 +114,24 @@ assert.equal(
     session: hydratedSession,
     pendingPhoneE164: '+966538434738',
   }).name,
+  'MainTabs',
+);
+assert.equal(
+  resolvePostAuthDestination({
+    flow: 'deeplink',
+    apiUser: phonePendingUser,
+    session: hydratedSession,
+  }).name,
   'VerifyAccount',
+);
+assert.equal(
+  phoneForPostAuth({
+    apiUser: { ...phonePendingUser, id: 'new-user', phoneE164: '' },
+    pendingPhoneE164: '+966538434738',
+    pendingUserId: 'deleted-user',
+    pendingEmail: phonePendingUser.email,
+  }),
+  '',
 );
 const phoneVerifiedUser = { ...phonePendingUser, phoneVerified: true };
 assert.equal(
@@ -127,26 +145,58 @@ assert.equal(
 assert.equal(
   shouldEnterAuthenticatedProduct({
     emailVerified: true,
-    phoneE164: '+966538434738',
-    phoneVerified: false,
-  }),
-  false,
-);
-assert.equal(
-  shouldEnterAuthenticatedProduct({
-    emailVerified: true,
-    phoneVerified: false,
-    pendingPhoneE164: '+966538434738',
-  }),
-  false,
-);
-assert.equal(
-  shouldEnterAuthenticatedProduct({
-    emailVerified: true,
-    phoneE164: '+966538434738',
-    phoneVerified: true,
+    flow: 'signin',
   }),
   true,
+);
+assert.equal(
+  shouldEnterAuthenticatedProduct({
+    emailVerified: true,
+    flow: 'restore',
+  }),
+  true,
+);
+assert.equal(
+  shouldEnterAuthenticatedProduct({
+    emailVerified: true,
+    flow: 'verify',
+  }),
+  false,
+);
+assert.equal(
+  shouldEnterAuthenticatedProduct({
+    emailVerified: false,
+    flow: 'signin',
+  }),
+  false,
+);
+const profileEntry = [
+  { name: 'MainTabs' },
+  { name: 'Profile' },
+];
+assert.equal(
+  authenticatedEntryDecision({
+    pending: profileEntry,
+    routeNames: ['SignIn', 'SignUp'],
+    consumed: false,
+  }).type,
+  'wait',
+);
+assert.deepEqual(
+  authenticatedEntryDecision({
+    pending: profileEntry,
+    routeNames: ['MainTabs', 'Profile'],
+    consumed: false,
+  }),
+  { type: 'reset', index: 1, routes: profileEntry },
+);
+assert.equal(
+  authenticatedEntryDecision({
+    pending: [{ name: 'MainTabs' }],
+    routeNames: ['MainTabs', 'Profile'],
+    consumed: false,
+  }).type,
+  'done',
 );
 
 const nestDown = resolveColdStartDestination({
