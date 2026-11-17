@@ -1,7 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../theme';
@@ -21,6 +23,12 @@ import {
 const SUPPORT = 'mailto:support@mawahib.io';
 const CONFIRMATION = 'Delete this account';
 
+type DeleteAccountNavigation = NativeStackNavigationProp<{
+  Settings: undefined;
+  AccountSuspended: undefined;
+  DeleteAccount: undefined;
+}>;
+
 function resolutionHint(blocker: DeletionBlocker): string {
   if (blocker.code === 'payment_unresolved') {
     return 'Cancel this deletion request, resolve the payment with the existing payment flow, then request deletion again. A payment already in progress still finishes on its own and still blocks deletion.';
@@ -36,9 +44,11 @@ function resolutionHint(blocker: DeletionBlocker): string {
 
 export default function DeleteAccountScreen() {
   const { signOut } = useAuth();
+  const navigation = useNavigation<DeleteAccountNavigation>();
   const [view, setView] = useState<DeletionRequestView | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState('');
   const key = useRef(createClientId());
@@ -90,8 +100,9 @@ export default function DeleteAccountScreen() {
   };
 
   const confirmPermanent = async () => {
-    if (busy || confirmation !== CONFIRMATION) return;
+    if (busy || confirming || confirmation !== CONFIRMATION) return;
     setBusy(true);
+    setConfirming(true);
     setError(null);
     try {
       await confirmDeletion(confirmKey.current, confirmation);
@@ -99,15 +110,45 @@ export default function DeleteAccountScreen() {
       await signOut('logout');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Deletion was not confirmed. Try again.');
+      setConfirming(false);
       setBusy(false);
     }
   };
 
+  const goBack = () => {
+    if (confirming) return;
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const names = navigation.getState()?.routeNames ?? [];
+    if (names.includes('AccountSuspended')) {
+      navigation.navigate('AccountSuspended');
+      return;
+    }
+    if (names.includes('Settings')) {
+      navigation.navigate('Settings');
+    }
+  };
+
   return (
-    <ScreenContainer>
+    <ScreenContainer padded={false}>
       <StatusBar style="dark" />
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={goBack}
+          disabled={confirming}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          accessibilityState={{ disabled: confirming }}
+        >
+          <Ionicons name="arrow-back" size={24} color={confirming ? colors.textSecondary : colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Delete account</Text>
+        <View style={styles.backButton} />
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Delete account</Text>
         <Text style={styles.body}>
           {closureReady
             ? 'Deleting this account is permanent. It removes your profile, posts, comments, and personal files, and it erases reviews you wrote or received. Shared messages and their images stay for the other person, but those conversations are archived and cannot accept new messages. Invoices, payment history, reports, and dispute records stay under their existing access. Those retained messages, images, invoices, and records can still contain historical personal information.'
@@ -174,8 +215,16 @@ export default function DeleteAccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.md },
-  title: { ...typography.h2, color: colors.text },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.md,
+  },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { ...typography.h3, color: colors.text },
+  content: { paddingHorizontal: spacing.screen, paddingBottom: spacing.xxxl, gap: spacing.md },
   status: { ...typography.h3, color: colors.text },
   body: { ...typography.body, color: colors.textSecondary },
   blocker: { gap: spacing.xs },
