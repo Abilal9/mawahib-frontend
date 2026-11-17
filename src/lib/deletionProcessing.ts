@@ -11,6 +11,12 @@ export function markDeletionProcessing(): void {
   for (const listener of listeners) listener();
 }
 
+export function clearDeletionProcessing(): void {
+  if (!processing) return;
+  processing = false;
+  for (const listener of listeners) listener();
+}
+
 export function subscribeDeletionProcessing(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
