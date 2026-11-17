@@ -11,7 +11,7 @@ import {
   resolveColdStartDestination,
   showsProfileRetry,
 } from '../src/lib/coldStartRoute.ts';
-import { resolvePostAuthDestination } from '../src/lib/postAuthGate.ts';
+import { resolvePostAuthDestination, shouldEnterAuthenticatedProduct } from '../src/lib/postAuthGate.ts';
 import { shouldIgnoreStaleIdentityResult } from '../src/context/identityGuard.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -83,6 +83,70 @@ assert.equal(
     session: hydratedSession,
   }).name,
   'MainTabs',
+);
+
+const phonePendingUser = {
+  ...hydratedUser,
+  phoneE164: '+966538434738',
+  phoneVerified: false,
+};
+assert.equal(
+  resolvePostAuthDestination({
+    flow: 'verify',
+    apiUser: phonePendingUser,
+    session: hydratedSession,
+  }).name,
+  'VerifyAccount',
+);
+assert.equal(
+  resolvePostAuthDestination({
+    flow: 'restore',
+    apiUser: phonePendingUser,
+    session: hydratedSession,
+  }).name,
+  'VerifyAccount',
+);
+assert.equal(
+  resolvePostAuthDestination({
+    flow: 'signin',
+    apiUser: phonePendingUser,
+    session: hydratedSession,
+    pendingPhoneE164: '+966538434738',
+  }).name,
+  'VerifyAccount',
+);
+const phoneVerifiedUser = { ...phonePendingUser, phoneVerified: true };
+assert.equal(
+  resolvePostAuthDestination({
+    flow: 'verify',
+    apiUser: phoneVerifiedUser,
+    session: hydratedSession,
+  }).name,
+  'TurnOnNotifications',
+);
+assert.equal(
+  shouldEnterAuthenticatedProduct({
+    emailVerified: true,
+    phoneE164: '+966538434738',
+    phoneVerified: false,
+  }),
+  false,
+);
+assert.equal(
+  shouldEnterAuthenticatedProduct({
+    emailVerified: true,
+    phoneVerified: false,
+    pendingPhoneE164: '+966538434738',
+  }),
+  false,
+);
+assert.equal(
+  shouldEnterAuthenticatedProduct({
+    emailVerified: true,
+    phoneE164: '+966538434738',
+    phoneVerified: true,
+  }),
+  true,
 );
 
 const nestDown = resolveColdStartDestination({

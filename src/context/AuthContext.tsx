@@ -80,6 +80,7 @@ import {
   signOutInflightKey,
 } from '../lib/authSignOutSlot';
 import { hasConsumedProcessStart } from '../lib/processStart';
+import { shouldEnterAuthenticatedProduct } from '../lib/postAuthGate';
 import {
   enterAuthenticatedProduct,
   enterSignedOutAt,
@@ -899,7 +900,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setApiUser(user);
     setAccountType(user.accountType);
     setIsSignedIn(true);
-    if (user.emailVerified && !isAuthenticatedProductActive()) {
+    if (
+      shouldEnterAuthenticatedProduct({
+        emailVerified: Boolean(user.emailVerified),
+        phoneE164: user.phoneE164,
+        phoneVerified: user.phoneVerified,
+        pendingPhoneE164: signUpBasicsRef.current?.phoneE164,
+      }) &&
+      !isAuthenticatedProductActive()
+    ) {
       enterAuthenticatedProduct();
     }
     return true;

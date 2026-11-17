@@ -182,14 +182,14 @@ function resolvePostAuthDestination(input) {
     if (email) return { name: 'ConfirmCode', params: { email } };
     return { name: 'SignIn' };
   }
+  const phoneVerified = Boolean(input.apiUser?.phoneVerified);
+  if (phoneE164 && !phoneVerified) {
+    return {
+      name: 'VerifyAccount',
+      params: { email: email || input.apiUser?.email || '', phoneE164 },
+    };
+  }
   if (input.flow === 'verify' || input.flow === 'deeplink') {
-    const phoneVerified = Boolean(input.apiUser?.phoneVerified);
-    if (phoneE164 && !phoneVerified) {
-      return {
-        name: 'VerifyAccount',
-        params: { email: email || input.apiUser?.email || '', phoneE164 },
-      };
-    }
     return { name: 'TurnOnNotifications' };
   }
   if (input.apiUser) return { name: 'MainTabs' };
@@ -199,6 +199,19 @@ function resolvePostAuthDestination(input) {
 assert.equal(
   resolvePostAuthDestination({
     flow: 'verify',
+    apiUser: {
+      email: 't@example.com',
+      emailVerified: true,
+      phoneE164: '+966501234567',
+      phoneVerified: false,
+    },
+    session: null,
+  }).name,
+  'VerifyAccount',
+);
+assert.equal(
+  resolvePostAuthDestination({
+    flow: 'restore',
     apiUser: {
       email: 't@example.com',
       emailVerified: true,

@@ -5,6 +5,31 @@ import type { RootStackParamList } from '../navigation/types';
 
 export type PostAuthFlow = 'verify' | 'signin' | 'restore' | 'deeplink';
 
+/** A collected phone still has to be shown the verification step. */
+export function phoneVerificationPending(input: {
+  phoneE164?: string | null;
+  phoneVerified?: boolean | null;
+}): boolean {
+  return Boolean(input.phoneE164?.trim()) && input.phoneVerified !== true;
+}
+
+/**
+ * Email verification alone must not enter the app while a collected phone
+ * is still unverified. That screen lives on the signed-out navigator.
+ */
+export function shouldEnterAuthenticatedProduct(input: {
+  emailVerified: boolean;
+  phoneE164?: string | null;
+  phoneVerified?: boolean | null;
+  pendingPhoneE164?: string | null;
+}): boolean {
+  if (!input.emailVerified) return false;
+  return !phoneVerificationPending({
+    phoneE164: input.phoneE164 || input.pendingPhoneE164,
+    phoneVerified: input.phoneVerified,
+  });
+}
+
 export type PostAuthDestination = {
   [K in keyof RootStackParamList]: {
     name: K;
@@ -49,15 +74,20 @@ export function resolvePostAuthDestination(input: {
     return { name: 'SignIn' };
   }
 
-  // Fresh verification: optional phone step, then notifications onboarding.
+  if (
+    phoneVerificationPending({
+      phoneE164,
+      phoneVerified: input.apiUser?.phoneVerified,
+    })
+  ) {
+    return {
+      name: 'VerifyAccount',
+      params: { email: email || input.apiUser?.email || '', phoneE164 },
+    };
+  }
+
+  // Fresh verification continues through onboarding. A later sign-in may enter the app.
   if (input.flow === 'verify' || input.flow === 'deeplink') {
-    const phoneVerified = Boolean(input.apiUser?.phoneVerified);
-    if (phoneE164 && !phoneVerified) {
-      return {
-        name: 'VerifyAccount',
-        params: { email: email || input.apiUser?.email || '', phoneE164 },
-      };
-    }
     return { name: 'TurnOnNotifications' };
   }
 

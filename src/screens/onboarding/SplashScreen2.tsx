@@ -80,6 +80,7 @@ export default function SplashScreen2({ navigation }: ScreenProps<'Splash2'>) {
         apiUser,
         session,
         signUpBasics,
+        pendingPhoneE164: pending?.phoneE164,
       });
       applyPostAuthDestination(navigation, restored);
       return;
