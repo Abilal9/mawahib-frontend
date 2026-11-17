@@ -11,6 +11,13 @@ import { colors, spacing, typography } from '../../theme';
 import { ApiError } from '../../lib/apiClient';
 import { createClientId } from '../../lib/clientId';
 import { markDeletionProcessing } from '../../lib/deletionProcessing';
+import {
+  classifyDeletionConfirmError,
+  DELETION_UNCERTAIN_BODY,
+  DELETION_UNCERTAIN_TITLE,
+  DELETION_WAIT_BODY,
+  DELETION_WAIT_TITLE,
+} from '../../lib/deletionConfirmFeedback';
 import { copySupportEmail, openSupportEmail, SUPPORT_EMAIL } from '../../lib/supportEmail';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -84,6 +91,7 @@ export default function DeleteAccountScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [confirmResult, setConfirmResult] = useState<ReturnType<typeof classifyDeletionConfirmError> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState('');
   const key = useRef(createClientId());
@@ -138,13 +146,28 @@ export default function DeleteAccountScreen() {
     if (busy || confirming || confirmation !== CONFIRMATION) return;
     setBusy(true);
     setConfirming(true);
+    setConfirmResult(null);
     setError(null);
     try {
       await confirmDeletion(confirmKey.current, confirmation);
       markDeletionProcessing();
-      await signOut('logout');
+      try {
+        await signOut('logout');
+      } catch {
+        // The processing screen already replaces this page.
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Deletion was not confirmed. Try again.');
+      const classified = classifyDeletionConfirmError(err);
+      if (classified.kind === 'already-closed') {
+        markDeletionProcessing();
+        try {
+          await signOut('logout');
+        } catch {
+          // The processing screen already replaces this page.
+        }
+        return;
+      }
+      setConfirmResult(classified);
       setConfirming(false);
       setBusy(false);
     }
@@ -222,11 +245,18 @@ export default function DeleteAccountScreen() {
         </Text>
         <Text style={styles.note}>Emailing support does not itself resolve an obligation.</Text>
         {!view?.selfOrigin ? (
-          <Button title="Request account deletion" onPress={() => { void requestDeletion(); }} disabled={busy || loading} />
+          <Button title="Request account deletion" onPress={() => { void requestDeletion(); }} disabled={busy || loading || confirming || confirmResult?.kind === 'uncertain'} />
         ) : (
-          <Button title="Cancel deletion request" variant="secondary" onPress={() => { void cancelRequest(); }} disabled={busy || loading} />
+          <Button title="Cancel deletion request" variant="secondary" onPress={() => { void cancelRequest(); }} disabled={busy || loading || confirming || confirmResult?.kind === 'uncertain'} />
         )}
-        {canConfirm ? (
+        {confirming ? (
+          <View accessibilityRole="progressbar" accessibilityLabel={DELETION_WAIT_TITLE} style={styles.blocker}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.status} accessibilityLiveRegion="polite">{DELETION_WAIT_TITLE}</Text>
+            <Text style={styles.body}>{DELETION_WAIT_BODY}</Text>
+          </View>
+        ) : null}
+        {canConfirm && !confirming ? (
           <View style={styles.blocker}>
             <Text style={styles.body}>
               Type “Delete this account” to confirm. This cannot be undone, and cancelling the request later will not restore the account.
@@ -235,6 +265,7 @@ export default function DeleteAccountScreen() {
               accessibilityLabel="Type Delete this account"
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!confirming}
               value={confirmation}
               onChangeText={setConfirmation}
               style={styles.input}
@@ -242,11 +273,41 @@ export default function DeleteAccountScreen() {
             <Button
               title="Delete account permanently"
               onPress={() => { void confirmPermanent(); }}
-              disabled={busy || confirmation !== CONFIRMATION}
+              disabled={busy || confirming || confirmation !== CONFIRMATION}
             />
           </View>
         ) : null}
-        {error ? <Button title="Try again" variant="secondary" onPress={() => { setLoading(true); void load(); }} disabled={busy} /> : null}
+        {confirmResult?.kind === 'uncertain' ? (
+          <View style={styles.blocker}>
+            <Text style={styles.status}>{DELETION_UNCERTAIN_TITLE}</Text>
+            <Text style={styles.body}>{DELETION_UNCERTAIN_BODY}</Text>
+            <Button
+              title="Check again"
+              onPress={() => { void confirmPermanent(); }}
+              disabled={busy || confirming || confirmation !== CONFIRMATION}
+            />
+          </View>
+        ) : null}
+        {confirmResult?.kind === 'failed' ? (
+          <View style={styles.blocker}>
+            <Text style={styles.error}>{confirmResult.message}</Text>
+            <Button
+              title={confirmResult.recovery === 'retry-same-key' ? 'Try again' : 'Refresh status'}
+              variant="secondary"
+              onPress={() => {
+                if (confirmResult.recovery === 'retry-same-key') {
+                  void confirmPermanent();
+                  return;
+                }
+                setConfirmResult(null);
+                setLoading(true);
+                void load();
+              }}
+              disabled={busy || confirming}
+            />
+          </View>
+        ) : null}
+        {error && !confirmResult ? <Button title="Try again" variant="secondary" onPress={() => { setLoading(true); void load(); }} disabled={busy || confirming} /> : null}
       </ScrollView>
     </ScreenContainer>
   );
