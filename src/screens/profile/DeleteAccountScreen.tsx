@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +11,7 @@ import { colors, spacing, typography } from '../../theme';
 import { ApiError } from '../../lib/apiClient';
 import { createClientId } from '../../lib/clientId';
 import { markDeletionProcessing } from '../../lib/deletionProcessing';
+import { copySupportEmail, openSupportEmail, SUPPORT_EMAIL } from '../../lib/supportEmail';
 import { useAuth } from '../../context/AuthContext';
 import {
   cancelDeletionRequest,
@@ -20,7 +22,6 @@ import {
   type DeletionRequestView,
 } from '../../services/deletionApi';
 
-const SUPPORT = 'mailto:support@mawahib.io';
 const CONFIRMATION = 'Delete this account';
 
 type DeleteAccountNavigation = NativeStackNavigationProp<{
@@ -40,6 +41,40 @@ function resolutionHint(blocker: DeletionBlocker): string {
     return 'Mawahib still has financial follow-up to record. Emailing support does not resolve it.';
   }
   return 'Use the existing actions on that work, or contact support if you cannot. Emailing support does not close the work.';
+}
+
+async function copySupportAddress() {
+  const result = await copySupportEmail({
+    setString: (value) => Clipboard.setStringAsync(value),
+  });
+  if (result === 'copied') {
+    Alert.alert('Email address copied', `${SUPPORT_EMAIL} is on your clipboard.`);
+    return;
+  }
+  Alert.alert(
+    'Could not copy the email address',
+    `You can still contact Mawahib at ${SUPPORT_EMAIL}.`,
+  );
+}
+
+async function contactSupport() {
+  const result = await openSupportEmail({
+    openURL: (url) => Linking.openURL(url),
+  });
+  if (result === 'opened') return;
+  Alert.alert(
+    'Email app unavailable',
+    `You can contact Mawahib at ${SUPPORT_EMAIL}.`,
+    [
+      { text: 'Close', style: 'cancel' },
+      {
+        text: 'Copy email address',
+        onPress: () => {
+          void copySupportAddress();
+        },
+      },
+    ],
+  );
 }
 
 export default function DeleteAccountScreen() {
@@ -178,9 +213,12 @@ export default function DeleteAccountScreen() {
         <Text
           style={styles.link}
           accessibilityRole="link"
-          onPress={() => { void Linking.openURL(SUPPORT); }}
+          accessibilityLabel={`Contact ${SUPPORT_EMAIL}`}
+          onPress={() => {
+            void contactSupport();
+          }}
         >
-          Contact support@mawahib.io
+          Contact {SUPPORT_EMAIL}
         </Text>
         <Text style={styles.note}>Emailing support does not itself resolve an obligation.</Text>
         {!view?.selfOrigin ? (
