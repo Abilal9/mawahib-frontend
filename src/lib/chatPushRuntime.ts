@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { canRegisterChatPush } from './chatPush';
+import { canRegisterChatPush, isExpoGoApp } from './chatPush';
 import { pushApi } from '../services/pushApi';
 
 const INSTALLATION_KEY = 'mawahib.push.installation';
@@ -17,7 +17,7 @@ function projectId(): string | null {
 }
 
 function expoGo(): boolean {
-  return Constants.executionEnvironment === 'storeClient';
+  return isExpoGoApp(Constants.appOwnership);
 }
 
 async function installationId(): Promise<string | null> {

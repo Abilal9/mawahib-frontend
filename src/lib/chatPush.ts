@@ -35,6 +35,11 @@ export function shouldRenewChatPushViewing(input: {
   return input.appActive && input.focused;
 }
 
+/** Expo Go only. A development build and a release build both use a native binary. */
+export function isExpoGoApp(appOwnership: string | null | undefined): boolean {
+  return appOwnership === 'expo';
+}
+
 export function canRegisterChatPush(input: {
   expoGo: boolean;
   projectId: string | null;

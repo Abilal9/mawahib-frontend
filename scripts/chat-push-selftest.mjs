@@ -4,6 +4,7 @@ import {
   chatPushRoute,
   chatPushTarget,
   claimChatPushResponse,
+  isExpoGoApp,
   shouldRenewChatPushViewing,
 } from '../src/lib/chatPush.ts';
 
@@ -28,6 +29,9 @@ assert.equal(shouldRenewChatPushViewing({ appActive: true, focused: true }), tru
 assert.equal(shouldRenewChatPushViewing({ appActive: false, focused: true }), false);
 assert.equal(shouldRenewChatPushViewing({ appActive: true, focused: false }), false);
 
+assert.equal(isExpoGoApp('expo'), true);
+assert.equal(isExpoGoApp(null), false);
+assert.equal(isExpoGoApp(undefined), false);
 assert.equal(canRegisterChatPush({ expoGo: true, projectId: 'p', permission: 'granted' }), false);
 assert.equal(canRegisterChatPush({ expoGo: false, projectId: null, permission: 'granted' }), false);
 assert.equal(canRegisterChatPush({ expoGo: false, projectId: 'p', permission: 'denied' }), false);
