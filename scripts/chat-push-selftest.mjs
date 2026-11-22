@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { detachQueueDecision, queueIsStale } from '../src/lib/chatPushDetach.ts';
 import {
   canRegisterChatPush,
   chatPushRoute,
@@ -36,6 +37,12 @@ assert.equal(canRegisterChatPush({ expoGo: true, projectId: 'p', permission: 'gr
 assert.equal(canRegisterChatPush({ expoGo: false, projectId: null, permission: 'granted' }), false);
 assert.equal(canRegisterChatPush({ expoGo: false, projectId: 'p', permission: 'denied' }), false);
 assert.equal(canRegisterChatPush({ expoGo: false, projectId: 'p', permission: 'granted' }), true);
+
+assert.equal(queueIsStale(1, 2), true);
+assert.equal(queueIsStale(2, 2), false);
+assert.equal(detachQueueDecision({ result: 'offline', queuedGeneration: 1, registeredGeneration: null }), 'keep');
+assert.equal(detachQueueDecision({ result: 'sent', queuedGeneration: 1, registeredGeneration: null }), 'clear');
+assert.equal(detachQueueDecision({ result: 'offline', queuedGeneration: 1, registeredGeneration: 2 }), 'clear');
 
 assert.equal(claimChatPushResponse('response-1'), true);
 assert.equal(claimChatPushResponse('response-1'), false);

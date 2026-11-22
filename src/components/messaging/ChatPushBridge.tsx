@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { chatPushRoute, chatPushTarget, claimChatPushResponse } from '../../lib/chatPush';
-import { listenForChatPushes, syncChatPushRegistration } from '../../lib/chatPushRuntime';
+import { flushQueuedDetach, listenForChatPushes, syncChatPushRegistration } from '../../lib/chatPushRuntime';
 import { navigationRef } from '../../navigation/navigationRef';
 
 let pendingTarget: ReturnType<typeof chatPushTarget> = null;
@@ -38,6 +38,7 @@ export function ChatPushBridge() {
   const sessionReady = Boolean(isSignedIn && mediaCacheReady && userId);
 
   useEffect(() => {
+    void flushQueuedDetach().catch(() => undefined);
     if (!userId) return;
     void syncChatPushRegistration(false).catch(() => undefined);
   }, [userId]);
