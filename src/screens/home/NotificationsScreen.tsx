@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,8 +19,9 @@ import { colors, spacing, radius, typography } from '../../theme';
 import {
   NOTIFICATION_TABS,
   NotificationTab,
-  filterNotifications,
 } from '../../data/mock/notifications';
+import { notificationCategoryParam } from '../../lib/notificationCategories';
+import { notificationListPhase } from '../../lib/notificationInbox';
 import { ScreenProps } from '../../navigation/types';
 import { Notification } from '../../data/types';
 import { useUserJobs } from '../../context/UserJobsContext';
@@ -165,15 +166,18 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
     moreFailed,
     hasMore,
     loadMore,
+    setCategory,
     refresh: refreshNotifications,
     markRead,
     markAllRead,
+    unreadCount,
     clearActions,
     clearRatingPrompt,
     remove,
   } = useNotifications();
   const { refresh: refreshConnections } = useConnections();
   const [activeTab, setActiveTab] = useState<NotificationTab>('All');
+  const [markingAll, setMarkingAll] = useState(false);
   const [responding, setResponding] = useState(false);
   const [confirm, setConfirm] = useState<{
     title: string;
@@ -183,10 +187,18 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
     run: () => void;
   } | null>(null);
 
-  const filtered = useMemo(
-    () => filterNotifications(notifications, activeTab),
-    [notifications, activeTab]
-  );
+  useEffect(() => {
+    setCategory(notificationCategoryParam(activeTab));
+  }, [activeTab, setCategory]);
+
+  const phase = notificationListPhase({
+    loading,
+    failed,
+    count: notifications.length,
+    hasMore,
+  });
+  const markAllDisabled = markingAll || unreadCount === 0;
+
   const reviewJobs = useMemo(
     () =>
       jobs.map((job) => ({
@@ -199,7 +211,9 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
   );
 
   const clearAll = () => {
-    markAllRead();
+    if (markingAll || unreadCount === 0) return;
+    setMarkingAll(true);
+    void markAllRead().finally(() => setMarkingAll(false));
   };
 
   /** Notifications carry ids from either side; only work requests can be opened. */
@@ -441,8 +455,15 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Notifications</Text>
-          <TouchableOpacity onPress={clearAll} hitSlop={8}>
-            <Text style={styles.clearAll}>Clear All</Text>
+          <TouchableOpacity
+            onPress={clearAll}
+            hitSlop={8}
+            disabled={markAllDisabled}
+            accessibilityLabel="Mark all categories read"
+          >
+            <Text style={[styles.clearAll, markAllDisabled && styles.clearAllDisabled]}>
+              Mark all categories read
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -471,7 +492,7 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
 
       <FlatList
         style={styles.listFlex}
-        data={filtered}
+        data={notifications}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const engagementId = item.deepLink?.params?.engagementId;
@@ -543,17 +564,21 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          loading ? (
+          phase === 'loading' ? (
             <Text style={styles.empty}>Loading notifications</Text>
-          ) : failed ? (
+          ) : phase === 'error' ? (
             <TouchableOpacity onPress={() => void refreshNotifications()}>
               <Text style={styles.empty}>Couldn’t load notifications. Tap to try again.</Text>
             </TouchableOpacity>
-          ) : (
+          ) : phase === 'empty' ? (
             <Text style={styles.empty}>
               {activeTab === 'All' ? 'No notifications yet.' : 'No notifications in this category.'}
             </Text>
-          )
+          ) : hasMore ? (
+            <TouchableOpacity onPress={loadMore} style={styles.loadOlder}>
+              <Text style={styles.loadOlderText}>Load older notifications</Text>
+            </TouchableOpacity>
+          ) : null
         }
         ListFooterComponent={
           notifications.length === 0 ? undefined : loadingMore ? (
@@ -624,7 +649,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { ...typography.h3, color: colors.text, fontWeight: '700' },
-  clearAll: { ...typography.caption, color: colors.textSecondary },
+  clearAll: { ...typography.caption, color: colors.textSecondary, textAlign: 'right', maxWidth: 108 },
+  clearAllDisabled: { opacity: 0.4 },
   tabsScroll: {
     flexGrow: 0,
     flexShrink: 0,

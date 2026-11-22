@@ -12,7 +12,13 @@ import { AppState, type AppStateStatus } from 'react-native';
 import { Notification } from '../data/types';
 import { NOTIFICATIONS_POLL_MS } from '../config/messaging';
 import { usePolling } from '../hooks/usePolling';
-import { mergeNotificationPages } from '../lib/notificationInbox';
+import type { NotificationListCategory } from '../lib/notificationCategories';
+import {
+  acceptNotificationResult,
+  applyNotificationRefresh,
+  mergeNotificationPages,
+  notificationListQuery,
+} from '../lib/notificationInbox';
 import { notificationService } from '../services';
 import { useAuth } from './AuthContext';
 import { shouldIgnoreStaleIdentityResult } from './identityGuard';
@@ -28,8 +34,10 @@ interface NotificationsContextValue {
   moreFailed: boolean;
   hasMore: boolean;
   loadMore: () => void;
+  /** Switch the one active page stream. The first page of a category never reuses another cursor. */
+  setCategory: (category: NotificationListCategory | null) => void;
   markRead: (id: string) => void;
-  markAllRead: () => void;
+  markAllRead: () => Promise<void>;
   /** Local-only: strip inline accept/decline (legacy mock UX). */
   clearActions: (id: string) => void;
   /** Local-only: hide rating prompt (legacy mock UX). */
@@ -60,7 +68,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [hasMore, setHasMore] = useState(false);
   const notificationsRef = useRef<Notification[]>([]);
   const nextCursorRef = useRef<string | null>(null);
-  const pagedRef = useRef(false);
+  const categoryRef = useRef<NotificationListCategory | null>(null);
   const refreshGen = useRef(0);
   const moreGen = useRef(0);
   const loadingMoreRef = useRef(false);
@@ -83,20 +91,19 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     epochRef.current += 1;
     shownNotifications = [];
     shownUnread = 0;
-    shownLoading = false;
+    shownLoading = Boolean(userId);
     shownFailed = false;
     shownLoadingMore = false;
     shownMoreFailed = false;
     shownHasMore = false;
     notificationsRef.current = [];
     nextCursorRef.current = null;
-    pagedRef.current = false;
     refreshGen.current += 1;
     moreGen.current += 1;
     loadingMoreRef.current = false;
     setNotifications([]);
     setUnreadCount(0);
-    setLoading(false);
+    setLoading(Boolean(userId));
     setFailed(false);
     setLoadingMore(false);
     setMoreFailed(false);
@@ -126,15 +133,38 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, []);
 
+  const stillCurrent = (
+    startedUserId: string | null,
+    epochAtStart: number,
+    generation: number,
+    currentGeneration: number,
+    category: NotificationListCategory | null,
+  ) =>
+    acceptNotificationResult({
+      requestGeneration: generation,
+      currentGeneration,
+      requestCategory: category,
+      currentCategory: categoryRef.current,
+      staleIdentity: shouldIgnoreStaleIdentityResult({
+        startedUserId,
+        currentUserId: userIdRef.current,
+        epochAtStart,
+        epochNow: epochRef.current,
+      }),
+    });
+
   const refresh = useCallback(async () => {
     const generation = ++refreshGen.current;
+    moreGen.current += 1;
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
+    const category = categoryRef.current;
     const startedUserId = userIdRef.current;
     const epochAtStart = epochRef.current;
     const token = tokenFor(startedUserId);
     if (!startedUserId || !token) {
       notificationsRef.current = [];
       nextCursorRef.current = null;
-      pagedRef.current = false;
       setNotifications([]);
       setUnreadCount(0);
       setLoading(false);
@@ -146,57 +176,36 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     if (firstPage) setLoading(true);
     setFailed(false);
     try {
+      const query = notificationListQuery({
+        mode: 'refresh',
+        category,
+        cursor: nextCursorRef.current,
+      });
       const [page, count] = await Promise.all([
-        notificationService.listPage(token),
+        notificationService.listPage(token, query),
         notificationService.unreadCount(token),
       ]);
-      if (
-        generation !== refreshGen.current ||
-        shouldIgnoreStaleIdentityResult({
-          startedUserId,
-          currentUserId: userIdRef.current,
-          epochAtStart,
-          epochNow: epochRef.current,
-        })
-      ) {
+      if (!stillCurrent(startedUserId, epochAtStart, generation, refreshGen.current, category)) {
         return;
       }
-      const nextItems =
-        !pagedRef.current && page.nextCursor === null
-          ? page.items
-          : mergeNotificationPages(notificationsRef.current, page.items);
-      notificationsRef.current = nextItems;
-      setNotifications(nextItems);
+      moreGen.current += 1;
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+      const refreshed = applyNotificationRefresh(notificationsRef.current, page);
+      notificationsRef.current = refreshed.items;
+      nextCursorRef.current = refreshed.cursor;
+      setNotifications(refreshed.items);
       setUnreadCount(count);
-      if (!pagedRef.current) {
-        nextCursorRef.current = page.nextCursor;
-        setHasMore(page.nextCursor !== null);
-      }
+      setHasMore(refreshed.hasMore);
       setFailed(false);
     } catch (e) {
       console.warn('[notifications] refresh failed', e);
-      if (
-        generation !== refreshGen.current ||
-        shouldIgnoreStaleIdentityResult({
-          startedUserId,
-          currentUserId: userIdRef.current,
-          epochAtStart,
-          epochNow: epochRef.current,
-        })
-      ) {
+      if (!stillCurrent(startedUserId, epochAtStart, generation, refreshGen.current, category)) {
         return;
       }
       if (notificationsRef.current.length === 0) setFailed(true);
     } finally {
-      if (
-        generation === refreshGen.current &&
-        !shouldIgnoreStaleIdentityResult({
-          startedUserId,
-          currentUserId: userIdRef.current,
-          epochAtStart,
-          epochNow: epochRef.current,
-        })
-      ) {
+      if (stillCurrent(startedUserId, epochAtStart, generation, refreshGen.current, category)) {
         setLoading(false);
       }
     }
@@ -206,6 +215,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const cursor = nextCursorRef.current;
     if (!cursor || loadingMoreRef.current) return;
     const generation = ++moreGen.current;
+    const refreshAtStart = refreshGen.current;
+    const category = categoryRef.current;
     const startedUserId = userIdRef.current;
     const epochAtStart = epochRef.current;
     const token = tokenFor(startedUserId);
@@ -215,21 +226,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     setMoreFailed(false);
     void (async () => {
       try {
-        const page = await notificationService.listPage(token, { cursor });
+        const query = notificationListQuery({ mode: 'more', category, cursor });
+        const page = await notificationService.listPage(token, query);
         if (
-          generation !== moreGen.current ||
-          shouldIgnoreStaleIdentityResult({
-            startedUserId,
-            currentUserId: userIdRef.current,
-            epochAtStart,
-            epochNow: epochRef.current,
-          })
+          refreshGen.current !== refreshAtStart ||
+          !stillCurrent(startedUserId, epochAtStart, generation, moreGen.current, category)
         ) {
           return;
         }
         const nextItems = mergeNotificationPages(notificationsRef.current, page.items);
         notificationsRef.current = nextItems;
-        pagedRef.current = true;
         nextCursorRef.current = page.nextCursor;
         setNotifications(nextItems);
         setHasMore(page.nextCursor !== null);
@@ -237,25 +243,40 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.warn('[notifications] older page failed', e);
         if (
-          generation !== moreGen.current ||
-          shouldIgnoreStaleIdentityResult({
-            startedUserId,
-            currentUserId: userIdRef.current,
-            epochAtStart,
-            epochNow: epochRef.current,
-          })
+          refreshGen.current !== refreshAtStart ||
+          !stillCurrent(startedUserId, epochAtStart, generation, moreGen.current, category)
         ) {
           return;
         }
         setMoreFailed(true);
       } finally {
-        if (generation === moreGen.current) {
+        if (
+          refreshGen.current === refreshAtStart &&
+          stillCurrent(startedUserId, epochAtStart, generation, moreGen.current, category)
+        ) {
           loadingMoreRef.current = false;
           setLoadingMore(false);
         }
       }
     })();
   }, []);
+
+  const setCategory = useCallback((category: NotificationListCategory | null) => {
+    if (categoryRef.current === category) return;
+    categoryRef.current = category;
+    notificationsRef.current = [];
+    nextCursorRef.current = null;
+    refreshGen.current += 1;
+    moreGen.current += 1;
+    loadingMoreRef.current = false;
+    setNotifications([]);
+    setFailed(false);
+    setMoreFailed(false);
+    setLoadingMore(false);
+    setHasMore(false);
+    setLoading(Boolean(userIdRef.current));
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     void refresh();
@@ -273,6 +294,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       moreFailed: shownMoreFailed,
       hasMore: shownHasMore,
       loadMore,
+      setCategory,
       markRead: (id) => {
         const startedUserId = userIdRef.current;
         const epochAtStart = epochRef.current;
@@ -298,7 +320,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         const startedUserId = userIdRef.current;
         const epochAtStart = epochRef.current;
         const token = tokenFor(startedUserId);
-        if (stale(startedUserId, epochAtStart) || !token) return;
+        if (stale(startedUserId, epochAtStart) || !token) return Promise.resolve();
         setNotifications((prev) => {
           if (stale(startedUserId, epochAtStart)) return prev;
           const next = prev.map((n) => ({ ...n, read: true }));
@@ -309,7 +331,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           if (stale(startedUserId, epochAtStart)) return c;
           return 0;
         });
-        void notificationService.markAllRead(token).catch(() => {
+        return notificationService.markAllRead(token).catch(() => {
           if (stale(startedUserId, epochAtStart)) return;
           void refresh();
         });
@@ -353,7 +375,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       },
       refresh,
     }),
-    [shownNotifications, shownUnread, shownLoading, shownFailed, shownLoadingMore, shownMoreFailed, shownHasMore, refresh, loadMore],
+    [shownNotifications, shownUnread, shownLoading, shownFailed, shownLoadingMore, shownMoreFailed, shownHasMore, refresh, loadMore, setCategory],
   );
 
   return (

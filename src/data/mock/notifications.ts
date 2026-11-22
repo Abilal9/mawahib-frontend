@@ -1,3 +1,4 @@
+import { screenTabForUiType } from '../../lib/notificationCategories';
 import { Notification } from '../types';
 import { users } from './users';
 
@@ -19,20 +20,7 @@ export const NOTIFICATION_TABS: NotificationTab[] = [
 ];
 
 export function tabForNotification(n: Notification): Exclude<NotificationTab, 'All'> {
-  switch (n.type) {
-    case 'job':
-      return 'Jobs';
-    case 'message':
-      return 'Messages';
-    case 'follow':
-      return 'Connections';
-    case 'like':
-    case 'comment':
-      return 'Posts';
-    case 'system':
-    default:
-      return 'Platform Updates';
-  }
+  return screenTabForUiType(n.type);
 }
 
 export function filterNotifications(

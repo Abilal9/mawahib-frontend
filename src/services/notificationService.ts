@@ -1,4 +1,5 @@
 import { Notification } from '../data/types';
+import { uiTypeForApiType } from '../lib/notificationCategories';
 import {
   notificationsApi,
   type ApiNotification,
@@ -8,23 +9,7 @@ import {
 type UiNotificationType = Notification['type'];
 
 function mapType(type: ApiNotificationType): UiNotificationType {
-  switch (type) {
-    case 'connection_request':
-    case 'connection_accepted':
-      return 'follow';
-    case 'message_received':
-      return 'message';
-    case 'engagement_status':
-    case 'work_request_event':
-      return 'job';
-    case 'post_liked':
-      return 'like';
-    case 'post_commented':
-      return 'comment';
-    case 'system':
-    default:
-      return 'system';
-  }
+  return uiTypeForApiType(type);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -216,12 +201,13 @@ export function mapApiNotification(api: ApiNotification): Notification {
 export const notificationService = {
   async listPage(
     accessToken?: string,
-    options?: { cursor?: string | null; take?: number },
+    options?: { cursor?: string | null; take?: number; category?: string | null },
   ): Promise<{ items: Notification[]; nextCursor: string | null }> {
     const page = await notificationsApi.list({
       accessToken,
       cursor: options?.cursor,
       take: options?.take,
+      category: options?.category,
     });
     return {
       items: page.items.map(mapApiNotification),

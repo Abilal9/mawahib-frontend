@@ -41,10 +41,12 @@ export const notificationsApi = {
     accessToken?: string;
     cursor?: string | null;
     take?: number;
+    category?: string | null;
   } = {}): Promise<{ items: ApiNotification[]; nextCursor: string | null }> {
     const qs = new URLSearchParams();
     if (options.cursor) qs.set('cursor', options.cursor);
     if (options.take) qs.set('take', String(options.take));
+    if (options.category) qs.set('category', options.category);
     const suffix = qs.toString() ? `?${qs}` : '';
     return apiRequest<{ items: ApiNotification[]; nextCursor: string | null }>(
       `/users/me/notifications${suffix}`,
