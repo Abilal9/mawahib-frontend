@@ -24,6 +24,7 @@ import {
 import { ScreenProps } from '../../navigation/types';
 import { Notification } from '../../data/types';
 import { useUserJobs } from '../../context/UserJobsContext';
+import { notificationShowsReviewPrompt, reviewPromptJob } from '../../lib/notificationReviewPrompt';
 import { useMyProfile } from '../../context/ProfileContext';
 import { useNotifications } from '../../context/NotificationsContext';
 import { useConnections } from '../../context/ConnectionsContext';
@@ -147,7 +148,7 @@ function NotificationItem({
 }
 
 export default function NotificationsScreen({ navigation }: ScreenProps<'Notifications'>) {
-  const { getJobById, acceptRequest, rejectRequest, refresh } = useUserJobs();
+  const { jobs, getJobById, acceptRequest, rejectRequest, refresh } = useUserJobs();
   const { user: me } = useMyProfile();
   const {
     successVisible,
@@ -185,6 +186,16 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
   const filtered = useMemo(
     () => filterNotifications(notifications, activeTab),
     [notifications, activeTab]
+  );
+  const reviewJobs = useMemo(
+    () =>
+      jobs.map((job) => ({
+        id: job.id,
+        requestId: job.requestId,
+        engagementId: job.engagementId,
+        canSubmit: job.reviewState?.canSubmit,
+      })),
+    [jobs],
   );
 
   const clearAll = () => {
@@ -463,10 +474,18 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
-          const linked = item.userJobId ? getJobById(item.userJobId) : undefined;
-          const showRating = linked?.reviewState
-            ? linked.reviewState.canSubmit
-            : !!item.showRating;
+          const engagementId = item.deepLink?.params?.engagementId;
+          const engagementStatus = item.deepLink?.params?.status;
+          const linked = reviewPromptJob({
+            workRequestId: item.userJobId,
+            engagementId: typeof engagementId === 'string' ? engagementId : null,
+            jobs: reviewJobs,
+          });
+          const showRating = notificationShowsReviewPrompt({
+            apiType: item.apiType,
+            engagementStatus: typeof engagementStatus === 'string' ? engagementStatus : null,
+            canSubmit: linked?.canSubmit,
+          });
           return (
           <NotificationItem
             item={item}
@@ -505,13 +524,15 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
             }
             onRate={(rating) => {
               clearRatingPrompt(item.id);
-              const requestId = resolveRequestId(item);
+              const requestId = linked?.requestId ?? linked?.id ?? resolveRequestId(item);
               if (requestId) {
                 const job = getJobById(requestId);
                 openEngagementReview(navigation, {
                   jobId: requestId,
                   workRequestId: requestId,
-                  engagementId: job?.engagementId,
+                  engagementId:
+                    job?.engagementId ??
+                    (typeof engagementId === 'string' ? engagementId : undefined),
                   initialRating: rating,
                 });
               }
