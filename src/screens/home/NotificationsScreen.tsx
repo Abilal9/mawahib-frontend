@@ -578,7 +578,7 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
             <TouchableOpacity onPress={loadMore} style={styles.loadOlder}>
               <Text style={styles.loadOlderText}>Load older notifications</Text>
             </TouchableOpacity>
-          ) : null
+          ) : undefined
         }
         ListFooterComponent={
           notifications.length === 0 ? undefined : loadingMore ? (

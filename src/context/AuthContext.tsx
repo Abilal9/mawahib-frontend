@@ -804,6 +804,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             },
             signOutLocal: async () => {
               try {
+                const { releaseChatPushRegistration } = await import('../lib/chatPushRuntime');
+                await releaseChatPushRegistration();
+              } catch {
+                // Signing out continues if this installation cannot be detached.
+              }
+              try {
                 const { error } = await supabase.auth.signOut({ scope: 'local' });
                 return Boolean(error);
               } catch {

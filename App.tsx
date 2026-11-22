@@ -11,6 +11,7 @@ import { navigationRef } from './src/navigation/navigationRef';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AuthGateProvider } from './src/context/AuthGateContext';
 import AuthDeepLinkListener from './src/components/auth/AuthDeepLinkListener';
+import { ChatPushBridge } from './src/components/messaging/ChatPushBridge';
 import AuthGateSheet from './src/components/auth/AuthGateSheet';
 import AuthTransitionOverlay from './src/components/auth/AuthTransitionOverlay';
 import { hasConsumedProcessStart } from './src/lib/processStart';
@@ -70,6 +71,7 @@ function AppProviders() {
       <NavigationContainer ref={navigationRef}>
         <StatusBar style="dark" />
         <AuthDeepLinkListener />
+        <ChatPushBridge />
         <RootNavigator />
       </NavigationContainer>
       <AuthTransitionOverlay

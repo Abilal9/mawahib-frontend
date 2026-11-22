@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ import type { ApiConversation } from '../../services/messagingApi';
 import { useAuth } from '../../context/AuthContext';
 import { useMessagingUnread } from '../../context/MessagingUnreadContext';
 import { TabScreenProps } from '../../navigation/types';
+import { syncChatPushRegistration } from '../../lib/chatPushRuntime';
 
 function formatTime(dateStr: string | null): string {
   if (!dateStr) return '';
@@ -101,8 +102,13 @@ export default function MessagesInboxScreen({
     }
   }, [isStale, refreshUnread, snapshot]);
 
+  const askedForPush = useRef(false);
   useFocusEffect(
     useCallback(() => {
+      if (!askedForPush.current) {
+        askedForPush.current = true;
+        void syncChatPushRegistration(true).catch(() => undefined);
+      }
       setFocused(true);
       setLoading(true);
       void load();

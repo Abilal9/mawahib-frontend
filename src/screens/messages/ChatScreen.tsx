@@ -50,6 +50,8 @@ import {
   unreadDividerMessageId,
   visibleReadBoundaryId,
 } from '../../lib/chatReadBoundary';
+import { shouldRenewChatPushViewing } from '../../lib/chatPush';
+import { clearChatPushViewing, renewChatPushViewing } from '../../lib/chatPushRuntime';
 import { mergeChatMessages } from '../../lib/mergeChatMessages';
 import { createClientId } from '../../lib/clientId';
 import { ApiError } from '../../lib/apiClient';
@@ -587,6 +589,22 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
       };
     }, [refreshLatest, userId]),
   );
+
+  useEffect(() => {
+    if (!shouldRenewChatPushViewing({ appActive, focused })) {
+      void clearChatPushViewing().catch(() => undefined);
+      return;
+    }
+    const renew = () => {
+      void renewChatPushViewing(conversationId).catch(() => undefined);
+    };
+    renew();
+    const timer = setInterval(renew, 20_000);
+    return () => {
+      clearInterval(timer);
+      void clearChatPushViewing().catch(() => undefined);
+    };
+  }, [appActive, focused, conversationId]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {

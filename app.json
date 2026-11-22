@@ -36,7 +36,9 @@
           "photosPermission": "Allow Mawahib to access your photos for portfolio, services, and avatar uploads."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-notifications"
     ]
   }
 }
