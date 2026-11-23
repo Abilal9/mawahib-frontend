@@ -16,6 +16,7 @@ import AuthGateSheet from './src/components/auth/AuthGateSheet';
 import AuthTransitionOverlay from './src/components/auth/AuthTransitionOverlay';
 import { hasConsumedProcessStart } from './src/lib/processStart';
 import { colors } from './src/theme';
+import { LocaleProvider } from './src/i18n/LocaleProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -87,12 +88,14 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <LocaleProvider>
         <AuthProvider>
           <AuthGateProvider>
             <AppProviders />
             <AuthGateSheet />
           </AuthGateProvider>
         </AuthProvider>
+        </LocaleProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

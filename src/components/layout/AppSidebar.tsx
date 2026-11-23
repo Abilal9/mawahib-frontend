@@ -8,6 +8,7 @@ import {
   Animated,
   Dimensions,
   Pressable,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -22,35 +23,37 @@ import { useLocalSignOutPrompt } from '../auth/LocalSignOutConfirm';
 import { RootStackParamList } from '../../navigation/types';
 import { displayProfileTitle } from '../../constants/profile';
 import { formatRatingValue, hasRealReviews } from '../../utils/profileRating';
+import { t, reviewCountLabel } from '../../i18n/runtime';
+import { useLocale } from '../../i18n/LocaleProvider';
 const SIDEBAR_WIDTH = Dimensions.get('window').width * 0.82;
 
 const PRIMARY_LINKS: {
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  label: 'nav.profile' | 'nav.connections' | 'nav.saved';
   route: 'Profile' | 'Connections' | 'Saved';
 }[] = [
-  { icon: 'person-outline', label: 'My Profile', route: 'Profile' },
-  { icon: 'people-outline', label: 'My Connections', route: 'Connections' },
-  { icon: 'bookmark-outline', label: 'Saved', route: 'Saved' },
+  { icon: 'person-outline', label: 'nav.profile', route: 'Profile' },
+  { icon: 'people-outline', label: 'nav.connections', route: 'Connections' },
+  { icon: 'bookmark-outline', label: 'nav.saved', route: 'Saved' },
 ];
 
 const FOOTER_LINKS: {
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  label: 'nav.documentation' | 'nav.settings' | 'nav.language' | 'nav.logout';
   route?: 'Documentation' | 'Settings' | 'ChangeLanguage';
   action?: 'logout';
   danger?: boolean;
-  trailing?: string;
+  trailing?: boolean;
 }[] = [
-  { icon: 'book-outline', label: 'Documentation', route: 'Documentation' },
-  { icon: 'settings-outline', label: 'Settings', route: 'Settings' },
+  { icon: 'book-outline', label: 'nav.documentation', route: 'Documentation' },
+  { icon: 'settings-outline', label: 'nav.settings', route: 'Settings' },
   {
     icon: 'globe-outline',
-    label: 'Change Language',
+    label: 'nav.language',
     route: 'ChangeLanguage',
-    trailing: 'العربية',
+    trailing: true,
   },
-  { icon: 'log-out-outline', label: 'Logout', action: 'logout', danger: true },
+  { icon: 'log-out-outline', label: 'nav.logout', action: 'logout', danger: true },
 ];
 
 export default function AppSidebar() {
@@ -59,7 +62,9 @@ export default function AppSidebar() {
   const signOutPrompt = useLocalSignOutPrompt();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
+  const rtl = I18nManager.isRTL;
+  const { applied } = useLocale();
+  const slideAnim = useRef(new Animated.Value(rtl ? SIDEBAR_WIDTH : -SIDEBAR_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const logoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -72,14 +77,14 @@ export default function AppSidebar() {
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: -SIDEBAR_WIDTH,
+          toValue: rtl ? SIDEBAR_WIDTH : -SIDEBAR_WIDTH,
           duration: 220,
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
       ]).start();
     }
-  }, [isOpen, slideAnim, fadeAnim]);
+  }, [isOpen, slideAnim, fadeAnim, rtl]);
 
   useEffect(() => {
     return () => {
@@ -130,7 +135,13 @@ export default function AppSidebar() {
           <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         </Animated.View>
 
-        <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
+        <Animated.View
+          style={[
+            styles.sidebar,
+            rtl && styles.sidebarRtl,
+            { transform: [{ translateX: slideAnim }] },
+          ]}
+        >
           <View
             style={[
               styles.content,
@@ -170,10 +181,10 @@ export default function AppSidebar() {
                     <>
                       <Ionicons name="star" size={14} color="#F5A623" />
                       <Text style={styles.ratingValue}>{formatRatingValue(rating)}</Text>
-                      <Text style={styles.reviewsLink}>{reviews} reviews</Text>
+                      <Text style={styles.reviewsLink}>{reviewCountLabel(reviews)}</Text>
                     </>
                   ) : (
-                    <Text style={styles.reviewsLink}>No reviews yet</Text>
+                    <Text style={styles.reviewsLink}>{t('nav.noReviews')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -189,7 +200,7 @@ export default function AppSidebar() {
                   activeOpacity={0.7}
                 >
                   <Ionicons name={item.icon} size={20} color={colors.textTertiary} />
-                  <Text style={styles.primaryLinkLabel}>{item.label}</Text>
+                  <Text style={styles.primaryLinkLabel}>{t(item.label)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -204,14 +215,14 @@ export default function AppSidebar() {
                   <View style={styles.crownWrap}>
                     <Ionicons name="diamond-outline" size={16} color={colors.primary} />
                   </View>
-                  <Text style={styles.premiumTitle}>Get Premium Features</Text>
+                  <Text style={styles.premiumTitle}>{t('nav.premium')}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.upgradeBtn}
                   onPress={() => handleNavigate('Premium')}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.upgradeText}>Upgrade Plan</Text>
+                  <Text style={styles.upgradeText}>{t('nav.upgrade')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -234,12 +245,18 @@ export default function AppSidebar() {
                     <Text
                       style={[styles.footerLinkText, link.danger && styles.footerLinkDanger]}
                     >
-                      {link.label}
+                      {t(link.label)}
                     </Text>
                     {link.trailing ? (
                       <View style={styles.trailing}>
-                        <Text style={styles.trailingText}>{link.trailing}</Text>
-                        <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                        <Text style={styles.trailingText}>
+                          {applied === 'ar' ? t('language.arabic') : t('language.english')}
+                        </Text>
+                        <Ionicons
+                          name={rtl ? 'chevron-back' : 'chevron-forward'}
+                          size={14}
+                          color={colors.primary}
+                        />
                       </View>
                     ) : null}
                   </TouchableOpacity>
@@ -276,6 +293,13 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 10,
     overflow: 'hidden',
+  },
+  sidebarRtl: {
+    marginLeft: 'auto',
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+    borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
   },
   content: {
     flex: 1,

@@ -17,6 +17,7 @@ import {
   UserJobStatus,
 } from '../data/types/userJobs';
 import { ApiError } from '../lib/apiClient';
+import { t } from '../i18n/runtime';
 import { INBOX_POLL_MS } from '../config/messaging';
 import { usePolling } from '../hooks/usePolling';
 import { useAuth } from './AuthContext';
@@ -154,20 +155,20 @@ function mapStatus(request: ApiWorkRequest): {
   section: UserJobSection;
 } {
   if (request.closedByMawahib) {
-    return { status: 'cancelled', statusLabel: 'Closed by Mawahib', section: 'completed' };
+    return { status: 'cancelled', statusLabel: t('status.closedByMawahib'), section: 'completed' };
   }
   const stage = engagementStage(request.workEngagementStatus);
   if (stage === 'in-progress') {
-    return { status: 'in-progress', statusLabel: 'In Progress', section: 'in-progress' };
+    return { status: 'in-progress', statusLabel: t('status.inProgress'), section: 'in-progress' };
   }
   if (stage === 'delivered') {
-    return { status: 'delivered', statusLabel: 'Delivered', section: 'in-progress' };
+    return { status: 'delivered', statusLabel: t('status.delivered'), section: 'in-progress' };
   }
   if (stage === 'disputed') {
-    return { status: 'disputed', statusLabel: 'Disputed', section: 'in-progress' };
+    return { status: 'disputed', statusLabel: t('status.disputed'), section: 'in-progress' };
   }
   if (stage === 'completed') {
-    return { status: 'completed', statusLabel: 'Completed', section: 'completed' };
+    return { status: 'completed', statusLabel: t('status.completed'), section: 'completed' };
   }
 
   // Job cards use JobApplication.status while the work request is still pending.
@@ -177,17 +178,17 @@ function mapStatus(request: ApiWorkRequest): {
       case 'under_review':
         return {
           status: 'under-review',
-          statusLabel: 'Under Review',
+          statusLabel: t('status.underReview'),
           section: 'requests',
         };
       case 'accepted':
-        return { status: 'selected', statusLabel: 'Selected', section: 'requests' };
+        return { status: 'selected', statusLabel: t('status.selected'), section: 'requests' };
       case 'rejected':
-        return { status: 'rejected', statusLabel: 'Rejected', section: 'completed' };
+        return { status: 'rejected', statusLabel: t('status.rejected'), section: 'completed' };
       case 'withdrawn':
-        return { status: 'withdrawn', statusLabel: 'Cancelled', section: 'completed' };
+        return { status: 'withdrawn', statusLabel: t('status.cancelled'), section: 'completed' };
       case 'submitted':
-        return { status: 'pending', statusLabel: 'Pending', section: 'requests' };
+        return { status: 'pending', statusLabel: t('status.pending'), section: 'requests' };
       default:
         break;
     }
@@ -197,28 +198,28 @@ function mapStatus(request: ApiWorkRequest): {
     case 'pending_payment':
       return {
         status: 'pending-payment',
-        statusLabel: 'Pending Payment',
+        statusLabel: t('status.pendingPayment'),
         section: 'pending-payment',
       };
     case 'changes_requested':
       return {
         status: 'changes-requested',
-        statusLabel: 'Changes Requested',
+        statusLabel: t('status.changesRequested'),
         section: 'requests',
       };
     case 'changes_declined':
       return {
         status: 'changes-declined',
-        statusLabel: 'Changes Declined',
+        statusLabel: t('status.changesDeclined'),
         section: 'requests',
       };
     case 'rejected':
-      return { status: 'rejected', statusLabel: 'Rejected', section: 'completed' };
+      return { status: 'rejected', statusLabel: t('status.rejected'), section: 'completed' };
     case 'withdrawn':
       // API status remains `withdrawn`; users always see Cancelled.
-      return { status: 'withdrawn', statusLabel: 'Cancelled', section: 'completed' };
+      return { status: 'withdrawn', statusLabel: t('status.cancelled'), section: 'completed' };
     default:
-      return { status: 'pending', statusLabel: 'Pending', section: 'requests' };
+      return { status: 'pending', statusLabel: t('status.pending'), section: 'requests' };
   }
 }
 
