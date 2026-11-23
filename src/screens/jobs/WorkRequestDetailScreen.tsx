@@ -79,6 +79,79 @@ import {
 } from '../../utils/workRequestNegotiation';
 import { deliveryAcceptanceCopy, disputeNoticeTitle, providerDeliveryWaiting, retainsClosedWorkRecords, workStatusPresentation } from '../../utils/workStatusPresentation';
 import { ScreenProps } from '../../navigation/types';
+
+function localizedNegotiation(action: NegotiationAction): string {
+  switch (action) {
+    case 'accept':
+      return t('discover.accept');
+    case 'accept_original_terms':
+      return t('work.acceptOriginal');
+    case 'accept_changes':
+      return t('work.acceptChanges');
+    case 'request_changes':
+      return t('work.requestChanges');
+    case 'request_changes_again':
+      return t('work.requestChangesAgain');
+    case 'decline_changes':
+      return t('work.declineChanges');
+    case 'reject_request':
+      return t('work.rejectRequest');
+    default:
+      return negotiationActionLabel(action);
+  }
+}
+
+function localizedOverflow(action: OverflowMenuAction): string {
+  switch (action) {
+    case 'withdraw_change_request':
+      return t('work.withdrawChange');
+    case 'cancel_request':
+      return t('work.cancelRequest');
+    case 'report':
+      return t('work.report');
+    default:
+      return overflowMenuActionLabel(action);
+  }
+}
+
+function localizedStatus(label: string): string {
+  switch (label) {
+    case 'Pending':
+      return t('status.pending');
+    case 'Changes Requested':
+      return t('status.changesRequested');
+    case 'Changes Declined':
+      return t('status.changesDeclined');
+    case 'Pending Payment':
+      return t('status.pendingPayment');
+    case 'Rejected':
+      return t('status.rejected');
+    case 'Cancelled':
+      return t('status.cancelled');
+    case 'Payment Failed':
+      return t('calendar.paymentFailed');
+    case 'In Progress':
+      return t('status.inProgress');
+    case 'Delivered':
+      return t('status.delivered');
+    case 'Disputed':
+      return t('status.disputed');
+    case 'Completed':
+      return t('status.completed');
+    case 'Closed by Mawahib':
+      return t('status.closedByMawahib');
+    case 'Submitted':
+      return t('work.submitted');
+    case 'Under Review':
+      return t('status.underReview');
+    case 'Accepted':
+      return t('work.accepted');
+    case 'Withdrawn':
+      return t('work.withdrawn');
+    default:
+      return label;
+  }
+}
 import {
   ApiWorkRequest,
   DEFAULT_CURRENCY,
@@ -237,7 +310,7 @@ function PriceBreakdown({
 
   return (
     <>
-      <Text style={styles.sectionTitle}>Price breakdown</Text>
+      <Text style={styles.sectionTitle}>{t('work.priceBreakdown')}</Text>
       <View style={styles.termsCard}>
         {singleAmount ? (
           <MoneyRow label="Agreed total" money={total} fallback="—" />
@@ -680,7 +753,7 @@ export default function WorkRequestDetailScreen({
       await refreshUnread();
     } catch (e) {
       Alert.alert(
-        'Could not update request',
+        t('work.updateFailed'),
         e instanceof ApiError || e instanceof Error
           ? e.message
           : 'Please try again.',
@@ -704,12 +777,12 @@ export default function WorkRequestDetailScreen({
     return (
       <ScreenContainer>
         <View style={styles.centered}>
-          <Text style={styles.missingText}>{error || 'Request not found'}</Text>
+          <Text style={styles.missingText}>{error || t('work.requestNotFound')}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => void load()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.linkText}>Go back</Text>
+            <Text style={styles.linkText}>{t('profile.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </ScreenContainer>
@@ -829,8 +902,8 @@ export default function WorkRequestDetailScreen({
       return;
     }
     Alert.alert(
-      'Chat not ready',
-      'The work conversation is not available yet. Try again in a moment.',
+      t('work.chatNotReady'),
+      t('work.chatNotReadyBody'),
     );
   };
 
@@ -988,10 +1061,10 @@ export default function WorkRequestDetailScreen({
       case 'accept':
       case 'accept_original_terms':
         setConfirm({
-          title: `${negotiationActionLabel(action)}?`,
+          title: `${localizedNegotiation(action)}?`,
           message:
             'This accepts the current terms and moves the request to Pending Payment.',
-          confirmLabel: negotiationActionLabel(action),
+          confirmLabel: localizedNegotiation(action),
           successKey: 'requestAccepted',
           landingOverride: { tab: jobsTab, section: 'pending-payment' },
           run: () => acceptRequest(request.id),
@@ -1181,7 +1254,7 @@ export default function WorkRequestDetailScreen({
     onPress: () => void;
   } | null = primaryNegotiation
     ? {
-        title: negotiationActionLabel(primaryNegotiation),
+        title: localizedNegotiation(primaryNegotiation),
         onPress: () => queueNegotiationAction(primaryNegotiation),
       }
     : canPay
@@ -1324,7 +1397,7 @@ export default function WorkRequestDetailScreen({
         </Text>
         <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
           <Text style={[styles.statusPillText, { color: tone.text }]}>
-            {presentation.primaryLabel}
+            {localizedStatus(presentation.primaryLabel)}
           </Text>
         </View>
         {overflow.visible ? (
@@ -1332,7 +1405,7 @@ export default function WorkRequestDetailScreen({
             onPress={() => setMenuOpen(true)}
             style={styles.menuButton}
             hitSlop={8}
-            accessibilityLabel="More actions"
+            accessibilityLabel={t('work.moreActions')}
           >
             <Ionicons
               name="ellipsis-horizontal"
@@ -1366,9 +1439,15 @@ export default function WorkRequestDetailScreen({
         </View>
         {presentation.requestLabel || presentation.applicationLabel ? (
           <Text style={styles.directionText}>
-            {presentation.requestLabel ? `Request: ${presentation.requestLabel}` : ''}
+            {presentation.requestLabel
+              ? t('work.requestPrefix', { status: localizedStatus(presentation.requestLabel) })
+              : ''}
             {presentation.requestLabel && presentation.applicationLabel ? ' · ' : ''}
-            {presentation.applicationLabel ? `Application: ${presentation.applicationLabel}` : ''}
+            {presentation.applicationLabel
+              ? t('work.applicationPrefix', {
+                  status: localizedStatus(presentation.applicationLabel),
+                })
+              : ''}
           </Text>
         ) : null}
 
@@ -1423,12 +1502,12 @@ export default function WorkRequestDetailScreen({
             activeOpacity={0.8}
           >
             <Ionicons name="briefcase-outline" size={18} color={colors.primary} />
-            <Text style={styles.listingLinkText}>View job posting</Text>
+            <Text style={styles.listingLinkText}>{t('work.viewPosting')}</Text>
             <Ionicons name={chevronForwardIcon()} size={16} color={colors.primary} />
           </TouchableOpacity>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Original terms</Text>
+        <Text style={styles.sectionTitle}>{t('work.originalTerms')}</Text>
         <TermsBlock
           terms={request.terms}
           compareWith={
@@ -1443,7 +1522,7 @@ export default function WorkRequestDetailScreen({
 
         {request.status === 'changes_requested' && request.proposedTerms ? (
           <>
-            <Text style={styles.sectionTitle}>Proposed terms</Text>
+            <Text style={styles.sectionTitle}>{t('work.proposedTerms')}</Text>
             <TermsBlock
               terms={request.proposedTerms}
               compareWith={request.terms}
@@ -1451,7 +1530,7 @@ export default function WorkRequestDetailScreen({
             />
             {request.proposalComment ? (
               <View style={styles.commentCard}>
-                <Text style={styles.rowLabel}>Comment</Text>
+                <Text style={styles.rowLabel}>{t('work.comment')}</Text>
                 <Text style={styles.blockValue}>{request.proposalComment}</Text>
               </View>
             ) : null}
@@ -1460,7 +1539,7 @@ export default function WorkRequestDetailScreen({
 
         {request.agreedTerms ? (
           <>
-            <Text style={styles.sectionTitle}>Accepted terms</Text>
+            <Text style={styles.sectionTitle}>{t('work.acceptedTerms')}</Text>
             <TermsBlock terms={request.agreedTerms} />
           </>
         ) : null}
@@ -1472,7 +1551,7 @@ export default function WorkRequestDetailScreen({
 
         {request.rejectionComment ? (
           <View style={[styles.commentCard, styles.rejectionCard]}>
-            <Text style={styles.rowLabel}>Reason</Text>
+            <Text style={styles.rowLabel}>{t('work.reason')}</Text>
             <Text style={styles.blockValue}>{request.rejectionComment}</Text>
           </View>
         ) : null}
@@ -1555,10 +1634,10 @@ export default function WorkRequestDetailScreen({
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Timeline</Text>
+        <Text style={styles.sectionTitle}>{t('work.timeline')}</Text>
         <View style={styles.termsCard}>
           {timelineEntries.length === 0 ? (
-            <Text style={styles.rowValue}>No activity yet.</Text>
+            <Text style={styles.rowValue}>{t('work.noActivity')}</Text>
           ) : (
             timelineEntries.map((entry) => (
               <View key={entry.key} style={styles.eventRow}>
@@ -1591,7 +1670,7 @@ export default function WorkRequestDetailScreen({
                   onPress={addAttachment}
                   disabled={uploadingAttachment || busy}
                   hitSlop={8}
-                  accessibilityLabel="Add attachment"
+                  accessibilityLabel={t('work.addAttachment')}
                 >
                   <Ionicons name="add-circle-outline" size={26} color={colors.primary} />
                 </TouchableOpacity>
@@ -1626,7 +1705,7 @@ export default function WorkRequestDetailScreen({
                   {openingAttachmentId === file.id ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
-                    <Text style={styles.attachmentAction}>Open</Text>
+                    <Text style={styles.attachmentAction}>{t('work.open')}</Text>
                   )}
                   {canRemoveAttachment(file) ? (
                     <TouchableOpacity
@@ -1650,7 +1729,7 @@ export default function WorkRequestDetailScreen({
 
         {documentedInvoices.length > 0 ? (
           <>
-            <Text style={styles.sectionTitle}>Invoice</Text>
+            <Text style={styles.sectionTitle}>{t('work.invoice')}</Text>
             {documentedInvoices.map((invoice) => (
               <TouchableOpacity
                 key={invoice.id}
@@ -1675,7 +1754,7 @@ export default function WorkRequestDetailScreen({
                 {openingInvoiceId === invoice.id ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
-                  <Text style={styles.attachmentAction}>View</Text>
+                  <Text style={styles.attachmentAction}>{t('work.view')}</Text>
                 )}
               </TouchableOpacity>
             ))}
@@ -1733,7 +1812,7 @@ export default function WorkRequestDetailScreen({
           {hasSecondaryActions ? (
             <View style={styles.secondaryActions}>
               {secondaryNegotiation.map((action) => {
-                const label = negotiationActionLabel(action);
+                const label = localizedNegotiation(action);
                 const danger = action === 'reject_request';
                 return (
                   <Button
@@ -1753,7 +1832,7 @@ export default function WorkRequestDetailScreen({
               {canDeclineDelivery ? (
                 <>
                   <Button
-                    title="Request changes"
+                    title={t('work.requestChangesButton')}
                     variant="secondary"
                     style={styles.halfBtn}
                     textStyle={styles.requestChangesText}
@@ -1765,7 +1844,7 @@ export default function WorkRequestDetailScreen({
                     }}
                   />
                   <Button
-                    title="Dispute"
+                    title={t('work.dispute')}
                     variant="secondary"
                     style={styles.halfBtn}
                     textStyle={styles.rejectBtnText}
@@ -2073,7 +2152,7 @@ export default function WorkRequestDetailScreen({
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.sheetHandle} />
-            <Text style={styles.menuTitle}>Actions</Text>
+            <Text style={styles.menuTitle}>{t('work.actions')}</Text>
             {overflow.items.map((item) => {
               const danger =
                 item === 'cancel_request' || item === 'withdraw_change_request';
@@ -2090,7 +2169,7 @@ export default function WorkRequestDetailScreen({
                       danger ? styles.menuItemDanger : null,
                     ]}
                   >
-                    {overflowMenuActionLabel(item)}
+                    {localizedOverflow(item)}
                   </Text>
                 </TouchableOpacity>
               );
