@@ -15,6 +15,7 @@ import ScreenContainer from '../../components/ui/ScreenContainer';
 import { toImageSource } from '../../utils/image';
 import UserAvatar from '../../components/ui/UserAvatar';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { useConnections } from '../../context/ConnectionsContext';
 import {
   connectionPeerToUser,
@@ -106,7 +107,7 @@ export default function ConnectionsScreen({
           setMutualError(
             error instanceof Error
               ? error.message
-              : 'Could not load mutual connections',
+              : t('profile.failedMutual'),
           );
         })
         .finally(() => {
@@ -126,30 +127,33 @@ export default function ConnectionsScreen({
         <View>
           <Text style={styles.count}>
             {visitorUser.loading || visitorHeaderPending
-              ? 'Loading connections…'
+              ? t('profile.loadingConnections')
               : visitorUser.error
                 ? visitorUser.error
-                : `${visitorCount} connection${visitorCount === 1 ? '' : 's'}`}
+                : t(
+                    visitorCount === 1 ? 'profile.connectionOne' : 'profile.connectionOther',
+                    { count: visitorCount },
+                  )}
           </Text>
           {mutualTotal !== null && !mutualLoading && !mutualError && !visitorUser.error ? (
             <View>
               <Text style={styles.mutualHeading}>
                 {mutualCount > 0
-                  ? `Mutual Connections (${mutualCount})`
-                  : 'No mutual connections yet.'}
+                  ? t('profile.mutualCount', { count: mutualCount })
+                  : t('profile.noMutual')}
               </Text>
               <Text style={styles.privateNote}>
-                Showing only connections you share.
+                {t('profile.sharedConnections')}
               </Text>
             </View>
           ) : null}
           {mutualLoading ? (
-            <Text style={styles.privateNote}>Loading mutual connections…</Text>
+            <Text style={styles.privateNote}>{t('profile.loadingMutual')}</Text>
           ) : null}
           {mutualError ? (
             <TouchableOpacity onPress={() => setMutualAttempt((n) => n + 1)}>
               <Text style={styles.privateNote}>
-                {mutualError}. Tap to retry.
+                {mutualError ? t('profile.tapRetry', { message: mutualError }) : null}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -166,7 +170,9 @@ export default function ConnectionsScreen({
             activeOpacity={0.85}
           >
             <Text style={[styles.tabText, tab === 'requests' && styles.tabTextActive]}>
-              Requests{incomingUsers.length > 0 ? ` (${incomingUsers.length})` : ''}
+              {incomingUsers.length > 0
+                ? t('profile.requestsCount', { count: incomingUsers.length })
+                : t('profile.requests')}
             </Text>
             <View style={[styles.tabUnderline, tab !== 'requests' && styles.tabUnderlineHidden]} />
           </TouchableOpacity>
@@ -176,7 +182,7 @@ export default function ConnectionsScreen({
             activeOpacity={0.85}
           >
             <Text style={[styles.tabText, tab === 'connections' && styles.tabTextActive]}>
-              Connections ({connectedUsers.length})
+              {t('profile.connectionsCount', { count: connectedUsers.length })}
             </Text>
             <View
               style={[styles.tabUnderline, tab !== 'connections' && styles.tabUnderlineHidden]}
@@ -186,9 +192,15 @@ export default function ConnectionsScreen({
         <Text style={styles.count}>
           {tab === 'requests'
             ? incomingUsers.length === 0
-              ? 'No pending requests'
-              : `${incomingUsers.length} pending request${incomingUsers.length === 1 ? '' : 's'}`
-            : `${connectedUsers.length} connection${connectedUsers.length === 1 ? '' : 's'}`}
+              ? t('profile.noPending')
+              : t(
+                  incomingUsers.length === 1 ? 'profile.pendingOne' : 'profile.pendingOther',
+                  { count: incomingUsers.length },
+                )
+            : t(
+                connectedUsers.length === 1 ? 'profile.connectionOne' : 'profile.connectionOther',
+                { count: connectedUsers.length },
+              )}
         </Text>
       </View>
     );
@@ -254,7 +266,7 @@ export default function ConnectionsScreen({
           disabled={mutationBusy}
           activeOpacity={0.85}
         >
-          <Text style={styles.acceptText}>Accept</Text>
+          <Text style={styles.acceptText}>{t('discover.accept')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.denyBtn}
@@ -262,17 +274,17 @@ export default function ConnectionsScreen({
           disabled={mutationBusy}
           activeOpacity={0.85}
         >
-          <Text style={styles.denyText}>Deny</Text>
+          <Text style={styles.denyText}>{t('profile.deny')}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   const title = isOwn
-    ? 'My Connections'
+    ? t('nav.connections')
     : viewedUser
-      ? `${viewedUser.name.split(' ')[0]}’s Connections`
-      : 'Connections';
+      ? t('profile.personsConnections', { name: viewedUser.name.split(' ')[0] })
+      : t('profile.connections');
 
   return (
     <ScreenContainer padded={false} backgroundColor={colors.white}>
@@ -298,8 +310,8 @@ export default function ConnectionsScreen({
           ListEmptyComponent={
             <Text style={styles.empty}>
               {tab === 'requests'
-                ? 'When someone wants to connect, they’ll show up here.'
-                : 'People you connect with will appear here.'}
+                ? t('profile.requestsEmpty')
+                : t('profile.connectionsEmpty')}
             </Text>
           }
         />

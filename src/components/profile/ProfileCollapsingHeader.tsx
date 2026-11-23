@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../ui/UserAvatar';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { User } from '../../data/types';
 import { PROFILE_COVER_HEIGHT, displayProfileTitle } from '../../constants/profile';
 import { formatRatingValue, hasRealReviews } from '../../utils/profileRating';
@@ -53,7 +54,7 @@ export default function ProfileCollapsingHeader({
   const showRating = hasRealReviews(user);
   const rating = overall.average ?? 0;
   const reviews = overall.count;
-  const connections = connectionsLabel ?? 'Connections';
+  const connections = connectionsLabel ?? t('profile.connections');
 
   const avatarSize = scrollY.interpolate({
     inputRange: [0, PROFILE_COLLAPSE_DISTANCE],
@@ -213,7 +214,7 @@ export default function ProfileCollapsingHeader({
                 <Text style={styles.reviewsLink}>{reviewCountLabel(reviews)}</Text>
               </>
             ) : (
-              <Text style={styles.reviewsLink}>No reviews yet</Text>
+              <Text style={styles.reviewsLink}>{t('nav.noReviews')}</Text>
             )}
           </TouchableOpacity>
           {connectionsLabel ? (

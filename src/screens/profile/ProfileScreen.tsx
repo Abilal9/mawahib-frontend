@@ -30,6 +30,7 @@ import { shareProfile } from '../../utils/shareProfile';
 import { openUserProfile } from '../../utils/openUserProfile';
 import { getAboutCompletionState } from '../../utils/aboutCompletion';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { useMyProfile } from '../../context/ProfileContext';
 import { useAuth } from '../../context/AuthContext';
 import { accessTokenSubject } from '../../lib/apiClient';
@@ -145,9 +146,10 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
           scrollY={scrollY}
           onReviewsPress={() => navigation.navigate('Reviews', { userId: user.id })}
           onConnectionsPress={() => navigation.navigate('Connections')}
-          connectionsLabel={`${connectedUsers.length} connection${
-            connectedUsers.length === 1 ? '' : 's'
-          }`}
+          connectionsLabel={t(
+            connectedUsers.length === 1 ? 'profile.connectionOne' : 'profile.connectionOther',
+            { count: connectedUsers.length },
+          )}
         />
 
         <View onLayout={(e) => setTabsHeight(e.nativeEvent.layout.height)}>
@@ -163,7 +165,7 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             activeOpacity={0.85}
           >
             <Text style={styles.errorBannerText}>
-              Couldn’t load portfolio/services. Tap to retry.
+              {t('profile.portfolioRetry')}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -182,10 +184,8 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
                     <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
                   </View>
                   <View style={styles.completeBannerText}>
-                    <Text style={styles.completeBannerTitle}>Complete your profile</Text>
-                    <Text style={styles.completeBannerSub}>
-                      Add your bio, languages, and talents so clients can understand your work.
-                    </Text>
+                    <Text style={styles.completeBannerTitle}>{t('profile.completeProfile')}</Text>
+                    <Text style={styles.completeBannerSub}>{t('profile.completeProfileBody')}</Text>
                   </View>
                   <Ionicons name={chevronForwardIcon()} size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -204,17 +204,17 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             (content.portfolio.length === 0 ? (
               <ProfileEmptyState
                 icon="briefcase-outline"
-                title="No portfolio projects yet"
-                description="Showcase your work by adding your first portfolio project."
-                cta="Add Portfolio"
+                title={t('profile.noPortfolio')}
+                description={t('profile.noPortfolioBody')}
+                cta={t('profile.addPortfolio')}
                 onPress={() => navigation.navigate('AddPortfolioProject')}
                 showHeaderAdd
-                headerTitle="Portfolio"
+                headerTitle={t('profile.tabPortfolio')}
               />
             ) : (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Portfolio</Text>
+                  <Text style={styles.sectionTitle}>{t('profile.tabPortfolio')}</Text>
                   <View style={styles.headerActions}>
                     <TouchableOpacity
                       style={styles.actionIconBtn}
@@ -297,17 +297,17 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             (content.services.length === 0 ? (
               <ProfileEmptyState
                 icon="document-text-outline"
-                title="No services yet"
-                description="Create a service to show what clients can book or request from you."
-                cta="Add Service"
+                title={t('profile.noServices')}
+                description={t('profile.noServicesBody')}
+                cta={t('profile.addService')}
                 onPress={() => navigation.navigate('AddProfileService')}
                 showHeaderAdd
-                headerTitle="Services"
+                headerTitle={t('profile.tabServices')}
               />
             ) : (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Services</Text>
+                  <Text style={styles.sectionTitle}>{t('profile.tabServices')}</Text>
                   <View style={styles.headerActions}>
                     <TouchableOpacity
                       style={styles.actionIconBtn}
@@ -362,7 +362,7 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
                             </Text>
                           </TouchableOpacity>
                         ) : (
-                          <Text style={styles.reviewCount}>No reviews yet</Text>
+                          <Text style={styles.reviewCount}>{t('nav.noReviews')}</Text>
                         )}
                       </View>
                       <Text style={styles.serviceDesc} numberOfLines={2}>
@@ -402,17 +402,17 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             (userPosts.length === 0 ? (
               <ProfileEmptyState
                 icon="grid-outline"
-                title="Share your first post"
-                description="Post updates to stay active and grow your audience."
-                cta="Create post"
+                title={t('profile.firstPost')}
+                description={t('profile.firstPostBody')}
+                cta={t('profile.createPost')}
                 onPress={() => navigation.navigate('PostCreate')}
                 showHeaderAdd
-                headerTitle="Posts"
+                headerTitle={t('profile.tabPosts')}
               />
             ) : (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Posts</Text>
+                  <Text style={styles.sectionTitle}>{t('profile.tabPosts')}</Text>
                   <TouchableOpacity
                     style={styles.actionIconBtn}
                     onPress={() => navigation.navigate('PostCreate')}
@@ -441,7 +441,7 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
                     onPress={() => navigation.navigate('UserPosts')}
                     activeOpacity={0.85}
                   >
-                    <Text style={styles.viewMoreText}>View more</Text>
+                    <Text style={styles.viewMoreText}>{t('profile.viewMore')}</Text>
                     <Ionicons name={chevronForwardIcon()} size={18} color={colors.primary} />
                   </TouchableOpacity>
                 ) : null}

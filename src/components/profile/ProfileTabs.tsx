@@ -1,9 +1,17 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
+import type { MessageKey } from '../../i18n/messages';
 import { ProfileTab } from '../../data/types';
 
 const TABS: ProfileTab[] = ['About', 'Portfolio', 'Services', 'Posts'];
+const TAB_LABEL: Record<ProfileTab, MessageKey> = {
+  About: 'profile.tabAbout',
+  Portfolio: 'profile.tabPortfolio',
+  Services: 'profile.tabServices',
+  Posts: 'profile.tabPosts',
+};
 
 interface ProfileTabsProps {
   active: ProfileTab;
@@ -24,7 +32,7 @@ export default function ProfileTabs({ active, onChange }: ProfileTabsProps) {
                 onPress={() => onChange(tab)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.text, selected && styles.textActive]}>{tab}</Text>
+                <Text style={[styles.text, selected && styles.textActive]}>{t(TAB_LABEL[tab])}</Text>
               </TouchableOpacity>
             </React.Fragment>
           );

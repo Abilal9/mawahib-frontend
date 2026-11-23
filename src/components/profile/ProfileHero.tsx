@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UserAvatar from '../ui/UserAvatar';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { User } from '../../data/types';
 import { displayProfileTitle } from '../../constants/profile';
 import { formatRatingValue, hasRealReviews } from '../../utils/profileRating';
@@ -36,7 +37,7 @@ export default function ProfileHero({
   const showRating = hasRealReviews(user);
   const rating = user.rating ?? 0;
   const reviews = user.reviewCount ?? 0;
-  const connections = connectionsLabel ?? 'Connections';
+  const connections = connectionsLabel ?? t('profile.connections');
 
   return (
     <View style={styles.header}>
@@ -95,7 +96,7 @@ export default function ProfileHero({
                 <Text style={styles.reviewsLink}>{reviews} reviews</Text>
               </>
             ) : (
-              <Text style={styles.reviewsLink}>No reviews yet</Text>
+              <Text style={styles.reviewsLink}>{t('nav.noReviews')}</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity onPress={onConnectionsPress} activeOpacity={0.8}>

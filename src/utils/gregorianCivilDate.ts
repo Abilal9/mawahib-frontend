@@ -244,6 +244,11 @@ function shortMonthNames(locale?: string): readonly string[] {
   return schedulingLanguage(locale) === 'ar' ? MONTHS_SHORT_AR : MONTHS_SHORT;
 }
 
+export function gregorianMonthYear(month: number, year: number, locale?: string): string {
+  const name = shortMonthNames(locale)[month - 1] ?? '';
+  return name ? `${name} ${year}` : String(year);
+}
+
 /** `monthIndex` matches `Date#getMonth`: 0 is January and 9 is October. */
 export function gregorianMonthName(monthIndex: number, locale?: string): string {
   return monthNames(locale)[monthIndex] ?? '';

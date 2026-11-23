@@ -1,3 +1,5 @@
+import { gregorianMonthYear } from './gregorianCivilDate';
+import { t, getAppliedLocale } from '../i18n/runtime';
 import type {
   ProfileCertification,
   ProfileEducation,
@@ -5,7 +7,6 @@ import type {
   ProfileLanguage,
 } from '../data/types';
 import { displayLanguageLevel } from '../constants/languageLevels';
-import { MONTH_SHORT } from '../constants/aboutOptions';
 
 export function formatMonthYear(
   month?: number | null,
@@ -13,7 +14,7 @@ export function formatMonthYear(
 ): string {
   if (!year) return '';
   if (month && month >= 1 && month <= 12) {
-    return `${MONTH_SHORT[month]} ${year}`;
+    return gregorianMonthYear(month, year, getAppliedLocale());
   }
   return String(year);
 }
@@ -28,7 +29,7 @@ export function formatDateRange(input: {
 }): string {
   const start = formatMonthYear(input.startMonth, input.startYear);
   if (input.current) {
-    return start ? `${start} – Present` : 'Present';
+    return start ? t('profile.presentRange', { start }) : t('profile.present');
   }
   const end = formatMonthYear(input.endMonth, input.endYear);
   if (start && end) return `${start} – ${end}`;
@@ -73,15 +74,15 @@ export function certificationIssuer(item: ProfileCertification): string {
 
 export function certificationIssueLabel(item: ProfileCertification): string {
   const structured = formatMonthYear(item.issueMonth, item.issueYear);
-  if (structured) return `Issued ${structured}`;
-  if (item.year?.trim()) return `Issued ${item.year.trim()}`;
+  if (structured) return t('profile.issued', { date: structured });
+  if (item.year?.trim()) return t('profile.issued', { date: item.year.trim() });
   return '';
 }
 
 export function certificationExpiryLabel(item: ProfileCertification): string {
-  if (item.doesNotExpire) return 'Does not expire';
+  if (item.doesNotExpire) return t('profile.doesNotExpire');
   const structured = formatMonthYear(item.expirationMonth, item.expirationYear);
-  return structured ? `Expires ${structured}` : '';
+  return structured ? t('profile.expires', { date: structured }) : '';
 }
 
 function sortKey(

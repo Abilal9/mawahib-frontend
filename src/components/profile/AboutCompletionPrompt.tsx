@@ -11,7 +11,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius, typography } from '../../theme';
-import { ABOUT_SECTION_LABELS } from '../../data/types/profile';
+import { t } from '../../i18n/runtime';
+import { aboutSectionLabel } from '../../i18n/profileLabels';
 import {
   AboutCompletionKey,
   AboutCompletionState,
@@ -38,13 +39,13 @@ export default function AboutCompletionPrompt({
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Complete your profile</Text>
+          <Text style={styles.title}>{t('profile.completeProfile')}</Text>
           <TouchableOpacity onPress={onClose} hitSlop={8} style={styles.closeBtn}>
             <Ionicons name="close" size={22} color={colors.text} />
           </TouchableOpacity>
         </View>
         <Text style={styles.subtitle}>
-          Add your bio, languages, and talents so clients can understand your work.
+          {t('profile.completeProfileBody')}
         </Text>
         {ABOUT_COMPLETION_KEYS.map((key) => {
           const done =
@@ -67,7 +68,7 @@ export default function AboutCompletionPrompt({
                   color={done ? colors.white : colors.primary}
                 />
               </View>
-              <Text style={styles.rowLabel}>{ABOUT_SECTION_LABELS[key]}</Text>
+              <Text style={styles.rowLabel}>{aboutSectionLabel(key)}</Text>
               <Ionicons name={chevronForwardIcon()} size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           );

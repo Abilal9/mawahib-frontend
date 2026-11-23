@@ -18,6 +18,7 @@ import ReviewRow from '../../components/reviews/ReviewRow';
 import ContentReportSheet from '../../components/report/ContentReportSheet';
 import ReviewSummaryCard from '../../components/reviews/ReviewSummaryCard';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { User } from '../../data/types';
 import { distributionFromStars } from '../../lib/reviewDistribution';
 import { useMyProfile } from '../../context/ProfileContext';
@@ -49,10 +50,10 @@ const REVIEWS_MAX_PAGES = 10;
 type SortKey = 'newest' | 'highest' | 'lowest';
 type RoleFilter = 'all' | 'provider' | 'client';
 
-const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'provider', label: 'As Talent' },
-  { value: 'client', label: 'As Client' },
+const ROLE_OPTIONS: { value: RoleFilter; labelKey: 'profile.all' | 'profile.asTalent' | 'profile.asClient' }[] = [
+  { value: 'all', labelKey: 'profile.all' },
+  { value: 'provider', labelKey: 'profile.asTalent' },
+  { value: 'client', labelKey: 'profile.asClient' },
 ];
 
 function aggregateFor(
@@ -162,7 +163,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
       setApiReviews(null);
       setListComplete(false);
       setReviewsError(
-        e instanceof ApiError ? e.message : 'Could not load reviews',
+        e instanceof ApiError ? e.message : t('profile.failedReviews'),
       );
     } finally {
       if (gen === loadGen.current) setReviewsLoading(false);
@@ -223,10 +224,10 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
   const emptyMessage = reviewsError
     ? reviewsError
     : summaryTotal === 0
-      ? 'No reviews yet. Reviews appear here after completed work.'
+      ? t('profile.reviewsAfterWork')
       : reviews.length === 0 && minStars != null
-        ? 'No reviews match this filter.'
-        : 'No reviews to show.';
+        ? t('profile.noReviewMatch')
+        : t('profile.noReviewsToShow');
 
   if (!isOwn && visitorLoading && !user) {
     return (
@@ -237,7 +238,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
             <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
               <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Reviews</Text>
+            <Text style={styles.headerTitle}>{t('profile.reviews')}</Text>
           </View>
         </View>
         <View style={styles.loadingBody}>
@@ -257,7 +258,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
             <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {summaryTotal === 0 ? 'No reviews yet' : reviewCountLabel(summaryTotal)}
+            {summaryTotal === 0 ? t('nav.noReviews') : reviewCountLabel(summaryTotal)}
           </Text>
         </View>
         <View style={styles.headerActions}>
@@ -289,7 +290,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
               activeOpacity={0.85}
             >
               <Text style={[styles.roleChipText, selected && styles.roleChipTextOn]}>
-                {option.label}
+                {t(option.labelKey)}
               </Text>
             </TouchableOpacity>
           );
@@ -341,7 +342,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
                   style={styles.retryBtn}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.retryText}>Retry</Text>
+                  <Text style={styles.retryText}>{t('common.retry')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -351,11 +352,11 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
 
       <ActionSheet
         visible={sortOpen}
-        title="Sort by"
+        title={t('discover.sortBy')}
         options={[
-          { label: 'Newest', value: 'newest' as SortKey },
-          { label: 'Highest rating', value: 'highest' as SortKey },
-          { label: 'Lowest rating', value: 'lowest' as SortKey },
+          { label: t('discover.newest'), value: 'newest' as SortKey },
+          { label: t('profile.highest'), value: 'highest' as SortKey },
+          { label: t('profile.lowest'), value: 'lowest' as SortKey },
         ]}
         selected={sort}
         onSelect={(value) => {
@@ -367,12 +368,12 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
 
       <ActionSheet
         visible={filterOpen}
-        title="Filter by rating"
+        title={t('profile.filterRating')}
         options={[
-          { label: 'All ratings', value: null },
-          { label: '5 stars & up', value: 5 },
-          { label: '4 stars & up', value: 4 },
-          { label: '3 stars & up', value: 3 },
+          { label: t('profile.allRatings'), value: null },
+          { label: t('profile.starsUp', { count: 5 }), value: 5 },
+          { label: t('profile.starsUp', { count: 4 }), value: 4 },
+          { label: t('profile.starsUp', { count: 3 }), value: 3 },
         ]}
         selected={minStars}
         onSelect={(value) => {

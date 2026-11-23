@@ -35,6 +35,7 @@ import ServiceMediaMosaic from '../../components/explore/ServiceMediaMosaic';
 import { shareProfile } from '../../utils/shareProfile';
 import { openUserProfile } from '../../utils/openUserProfile';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { ProfileTab, Post } from '../../data/types';
 import { useConnections } from '../../context/ConnectionsContext';
 import { useMyProfile } from '../../context/ProfileContext';
@@ -133,13 +134,13 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.skeletonBack}
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('profile.goBack')}
           >
             <Ionicons name={backIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
         {visitorUser.loading ? (
-          <LoadingSkeleton label="Loading profile" style={styles.skeletonBody}>
+          <LoadingSkeleton label={t('profile.loadingProfile')} style={styles.skeletonBody}>
             <LoadingBlock width={96} height={96} round />
             <LoadingBlock width="55%" height={18} />
             <LoadingBlock width="35%" height={14} />
@@ -150,7 +151,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
         ) : (
           <View style={styles.missingWrap}>
             <Text style={styles.missingText}>
-              {visitorUser.error || 'User not found'}
+              {visitorUser.error || t('profile.userNotFound')}
             </Text>
           </View>
         )}
@@ -161,7 +162,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
   if (user.id === me.id) {
     return (
       <ScreenContainer>
-        <Text>Opening your profile…</Text>
+        <Text>{t('profile.openingProfile')}</Text>
       </ScreenContainer>
     );
   }
@@ -191,8 +192,8 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
   const onMessagePress = () => {
     if (relation !== 'connected') {
       Alert.alert(
-        'Connect to message',
-        'You can only message people you’re connected with. Send a connection request first.',
+        t('profile.connectToMessage'),
+        t('profile.connectToMessageBody'),
       );
       return;
     }
@@ -204,8 +205,8 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
         navigation.navigate('Chat', { conversationId });
       } catch (e) {
         Alert.alert(
-          'Could not open chat',
-          e instanceof Error ? e.message : 'Please try again.',
+          t('profile.couldNotOpenChat'),
+          e instanceof Error ? e.message : t('profile.tryAgain'),
         );
       } finally {
         setMessageOpening(false);
@@ -215,12 +216,12 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
 
   const connectLabel =
     relation === 'connected'
-      ? 'Connected'
+      ? t('profile.connected')
       : relation === 'outgoing'
-        ? 'Requested'
+        ? t('discover.requested')
         : relation === 'incoming'
-          ? 'Respond'
-          : 'Connect';
+          ? t('profile.respond')
+          : t('discover.connect');
 
   const connectIcon: keyof typeof Ionicons.glyphMap =
     relation === 'connected'
@@ -246,7 +247,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
         coverUrl={user.coverImage}
       />
       {visitorUser.refreshing ? (
-        <LoadingSkeleton label="Updating profile">
+        <LoadingSkeleton label={t('profile.updatingProfile')}>
           <LoadingBlock width="100%" height={3} />
         </LoadingSkeleton>
       ) : null}
@@ -258,7 +259,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
 
       <ContentReportSheet
         visible={reportOpen}
-        title="Report account"
+        title={t('profile.reportAccount')}
         targetType="user"
         targetId={user.id}
         onClose={() => setReportOpen(false)}
@@ -287,10 +288,13 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
           }
           connectionsLabel={
             typeof user.connectionsCount === 'number'
-              ? `${user.connectionsCount} connection${
-                  user.connectionsCount === 1 ? '' : 's'
-                }`
-              : 'Connections'
+              ? t(
+                  user.connectionsCount === 1
+                    ? 'profile.connectionOne'
+                    : 'profile.connectionOther',
+                  { count: user.connectionsCount },
+                )
+              : t('profile.connections')
           }
         >
           {relation === 'incoming' ? (
@@ -304,7 +308,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                 hitSlop={ACTION_HIT_SLOP}
               >
                 <Ionicons name="checkmark" size={19} color={colors.white} />
-                <Text style={styles.connectText}>Accept</Text>
+                <Text style={styles.connectText}>{t('discover.accept')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.messageBtn}
@@ -314,7 +318,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                 hitSlop={ACTION_HIT_SLOP}
               >
                 <Ionicons name="close" size={19} color={colors.primary} />
-                <Text style={styles.messageText}>Deny</Text>
+                <Text style={styles.messageText}>{t('profile.deny')}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.hireRow}>
@@ -327,7 +331,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                 hitSlop={ACTION_HIT_SLOP}
               >
                 <Ionicons name="briefcase-outline" size={17} color={colors.primary} />
-                <Text style={styles.hireText}>Request Work</Text>
+                <Text style={styles.hireText}>{t('profile.requestWork')}</Text>
               </TouchableOpacity>
             </View>
             </>
@@ -379,7 +383,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
 
           {activeTab === 'Portfolio' &&
             (visitorProfessional.loading ? (
-              <LoadingSkeleton label="Loading portfolio" style={styles.tabPad}>
+              <LoadingSkeleton label={t('profile.loadingPortfolio')} style={styles.tabPad}>
                 <LoadingBlock width="100%" height={120} />
                 <LoadingBlock width="70%" height={16} />
                 <LoadingBlock width="100%" height={120} />
@@ -387,14 +391,14 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
             ) : visitorProfessional.portfolio.length === 0 ? (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Portfolio</Text>
+                  <Text style={styles.sectionTitle}>{t('profile.tabPortfolio')}</Text>
                 </View>
-                <Text style={styles.emptyCopy}>No portfolio projects yet.</Text>
+                <Text style={styles.emptyCopy}>{t('profile.noPortfolioYet')}</Text>
               </View>
             ) : (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Portfolio</Text>
+                  <Text style={styles.sectionTitle}>{t('profile.tabPortfolio')}</Text>
                   <TouchableOpacity
                     style={styles.actionIconBtn}
                     onPress={() =>
@@ -451,7 +455,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
 
           {activeTab === 'Services' &&
             (visitorProfessional.loading ? (
-              <LoadingSkeleton label="Loading services" style={styles.tabPad}>
+              <LoadingSkeleton label={t('profile.loadingServices')} style={styles.tabPad}>
                 <LoadingBlock width="100%" height={88} />
                 <LoadingBlock width="60%" height={16} />
                 <LoadingBlock width="100%" height={88} />
@@ -459,14 +463,14 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
             ) : visitorProfessional.services.length === 0 ? (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Services</Text>
+                  <Text style={styles.sectionTitle}>{t('profile.tabServices')}</Text>
                 </View>
-                <Text style={styles.emptyCopy}>No services listed yet.</Text>
+                <Text style={styles.emptyCopy}>{t('profile.noServicesListed')}</Text>
               </View>
             ) : (
               <View style={styles.tabPad}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Services</Text>
+                  <Text style={styles.sectionTitle}>{t('profile.tabServices')}</Text>
                 </View>
                 {visitorProfessional.services.map((service) => (
                   <TouchableOpacity
@@ -522,7 +526,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                             </Text>
                           </TouchableOpacity>
                         ) : (
-                          <Text style={styles.reviewCount}>No reviews yet</Text>
+                          <Text style={styles.reviewCount}>{t('nav.noReviews')}</Text>
                         )}
                       </View>
                       <Text style={styles.serviceDesc} numberOfLines={2}>
@@ -561,11 +565,11 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
           {activeTab === 'Posts' && (
             <View style={styles.tabPad}>
               {userPosts.length === 0 ? (
-                <Text style={styles.emptyCopy}>No posts yet.</Text>
+                <Text style={styles.emptyCopy}>{t('profile.noPostsYet')}</Text>
               ) : (
                 <>
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Posts</Text>
+                    <Text style={styles.sectionTitle}>{t('profile.tabPosts')}</Text>
                   </View>
                   {userPosts.slice(0, 2).map((post) => (
                     <ProfileFeedPost
@@ -592,7 +596,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                       }
                       activeOpacity={0.85}
                     >
-                      <Text style={styles.viewMoreText}>View more</Text>
+                      <Text style={styles.viewMoreText}>{t('profile.viewMore')}</Text>
                       <Ionicons name={chevronForwardIcon()} size={18} color={colors.primary} />
                     </TouchableOpacity>
                   ) : null}
@@ -611,11 +615,8 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setUnconnectOpen(false)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Unconnect?</Text>
-            <Text style={styles.modalBody}>
-              Are you sure you want to unconnect? You’ll have to send a request again before
-              connecting with this user.
-            </Text>
+            <Text style={styles.modalTitle}>{t('profile.unconnectTitle')}</Text>
+            <Text style={styles.modalBody}>{t('profile.unconnectBody')}</Text>
             <TouchableOpacity
               style={styles.modalDangerBtn}
               onPress={() => {
@@ -624,20 +625,20 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.modalDangerText}>Unconnect</Text>
+              <Text style={styles.modalDangerText}>{t('profile.unconnect')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalCancelBtn}
               onPress={() => setUnconnectOpen(false)}
               activeOpacity={0.85}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
-      <ActionBusyOverlay visible={messageOpening} message="Opening chat…" />
+      <ActionBusyOverlay visible={messageOpening} message={t('profile.openingChat')} />
     </ScreenContainer>
   );
 }

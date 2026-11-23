@@ -21,10 +21,10 @@ import SearchableSelectModal, {
   SelectOption,
 } from '../../components/ui/SearchableSelectModal';
 import TalentChipsEditor from '../../components/profile/TalentChipsEditor';
+import { aboutSectionLabel } from '../../i18n/profileLabels';
 import { colors, spacing, radius, typography } from '../../theme';
 import { useMyProfile } from '../../context/ProfileContext';
 import {
-  ABOUT_SECTION_LABELS,
   AboutSectionKey,
   ProfileCertification,
   ProfileEducation,
@@ -74,7 +74,7 @@ export default function EditAboutSectionScreen({
   const { section, itemId } = route.params;
   const insets = useSafeAreaInsets();
   const profile = useMyProfile();
-  const label = ABOUT_SECTION_LABELS[section];
+  const label = aboutSectionLabel(section);
   const isEdit = Boolean(itemId) && section !== 'talents' && section !== 'bio';
 
   const existingLanguage = profile.content.languages.find((l) => l.id === itemId);

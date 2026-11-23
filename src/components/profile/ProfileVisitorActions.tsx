@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 
 const ACTION_HIT_SLOP = { top: 6, bottom: 6, left: 2, right: 2 } as const;
 
 export default function ProfileVisitorActions({
-  connectLabel = 'Connect',
+  connectLabel = t('discover.connect'),
   connectIcon = 'person-add-outline',
   connectTone = 'default',
   messageEnabled = true,
@@ -49,7 +50,7 @@ export default function ProfileVisitorActions({
           activeOpacity={0.85}
           hitSlop={ACTION_HIT_SLOP}
           accessibilityRole="button"
-          accessibilityLabel="Message"
+          accessibilityLabel={t('profile.message')}
         >
           <Ionicons
             name="chatbubble-outline"
@@ -59,7 +60,7 @@ export default function ProfileVisitorActions({
           <Text
             style={[styles.messageText, !messageEnabled && styles.messageTextDisabled]}
           >
-            Message
+            {t('profile.message')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -70,10 +71,10 @@ export default function ProfileVisitorActions({
           activeOpacity={0.85}
           hitSlop={ACTION_HIT_SLOP}
           accessibilityRole="button"
-          accessibilityLabel="Request Work"
+          accessibilityLabel={t('profile.requestWork')}
         >
           <Ionicons name="briefcase-outline" size={17} color={colors.primary} />
-          <Text style={styles.hireText}>Request Work</Text>
+          <Text style={styles.hireText}>{t('profile.requestWork')}</Text>
         </TouchableOpacity>
       </View>
     </>

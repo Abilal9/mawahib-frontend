@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
+import { aboutSectionAddLabel, aboutSectionLabel } from '../../i18n/profileLabels';
 import {
   ABOUT_SECTION_KEYS,
-  ABOUT_SECTION_ADD_LABELS,
-  ABOUT_SECTION_LABELS,
   AboutSectionKey,
   ProfileContent,
   TALENT_CHIP_STYLES,
@@ -61,9 +61,9 @@ function ExpandableBio({ text }: { text: string }) {
           style={styles.seeMore}
           onPress={() => setExpanded(false)}
           accessibilityRole="button"
-          accessibilityLabel="See less"
+          accessibilityLabel={t('profile.seeLess')}
         >
-          see less
+          {t('profile.seeLessLower')}
         </Text>
       </Text>
     );
@@ -76,9 +76,9 @@ function ExpandableBio({ text }: { text: string }) {
         style={styles.seeMore}
         onPress={() => setExpanded(true)}
         accessibilityRole="button"
-        accessibilityLabel="See more"
+        accessibilityLabel={t('profile.seeMore')}
       >
-        see more
+        {t('profile.seeMoreLower')}
       </Text>
     </Text>
   );
@@ -98,7 +98,7 @@ export default function AboutTab({
       <View style={styles.list}>
         {ABOUT_SECTION_KEYS.map((key) => (
           <View key={key} style={styles.emptyRow}>
-            <Text style={styles.emptyLabel}>{ABOUT_SECTION_LABELS[key]}</Text>
+            <Text style={styles.emptyLabel}>{aboutSectionLabel(key)}</Text>
           </View>
         ))}
       </View>
@@ -114,7 +114,7 @@ export default function AboutTab({
       {content.bio ? (
         <View style={styles.section}>
           <SectionHeader
-            title="Bio"
+            title={t('profile.bio')}
             isOwn={isOwn}
             onEdit={() => onEditSection?.('bio')}
           />
@@ -125,7 +125,7 @@ export default function AboutTab({
       {content.languages.length > 0 ? (
         <View style={styles.section}>
           <SectionHeader
-            title="Languages"
+            title={t('profile.languages')}
             isOwn={isOwn}
             onAdd={() => onAdd?.('languages')}
           />
@@ -157,7 +157,7 @@ export default function AboutTab({
       {content.talents.length > 0 ? (
         <View style={styles.section}>
           <SectionHeader
-            title="Talents"
+            title={t('profile.talents')}
             isOwn={isOwn}
             onEdit={() => onEditSection?.('talents')}
             onAdd={() => onAdd?.('talents')}
@@ -178,7 +178,7 @@ export default function AboutTab({
       {education.length > 0 ? (
         <View style={styles.section}>
           <SectionHeader
-            title="Education"
+            title={t('profile.education')}
             isOwn={isOwn}
             onAdd={() => onAdd?.('education')}
           />
@@ -210,7 +210,9 @@ export default function AboutTab({
                     <Text style={styles.cardMeta}>{educationDateLabel(item)}</Text>
                   ) : null}
                   {(item.grade || item.gpa) ? (
-                    <Text style={styles.cardMeta}>GPA: {item.grade || item.gpa}</Text>
+                    <Text style={styles.cardMeta}>
+                      {t('profile.gpa', { value: item.grade || item.gpa || '' })}
+                    </Text>
                   ) : null}
                   {item.description ? (
                     <Text style={styles.cardDesc}>{item.description}</Text>
@@ -228,7 +230,7 @@ export default function AboutTab({
       {experience.length > 0 ? (
         <View style={styles.section}>
           <SectionHeader
-            title="Experience"
+            title={t('profile.experience')}
             isOwn={isOwn}
             onAdd={() => onAdd?.('experience')}
           />
@@ -280,7 +282,7 @@ export default function AboutTab({
       {certifications.length > 0 ? (
         <View style={styles.section}>
           <SectionHeader
-            title="Certifications"
+            title={t('profile.certifications')}
             isOwn={isOwn}
             onAdd={() => onAdd?.('certifications')}
           />
@@ -305,18 +307,18 @@ export default function AboutTab({
                     <Text style={styles.cardMeta}>{certificationExpiryLabel(item)}</Text>
                   ) : null}
                   {item.credentialId ? (
-                    <Text style={styles.cardMeta}>ID: {item.credentialId}</Text>
+                    <Text style={styles.cardMeta}>{t('profile.credentialId', { id: item.credentialId })}</Text>
                   ) : null}
                   {item.credentialUrl ? (
                     <Text
                       style={styles.link}
                       onPress={() => {
                         Linking.openURL(item.credentialUrl!).catch(() => {
-                          Alert.alert('Could not open link');
+                          Alert.alert(t('profile.couldNotOpenLink'));
                         });
                       }}
                     >
-                      View Credential
+                      {t('profile.viewCredential')}
                     </Text>
                   ) : null}
                 </View>
@@ -339,7 +341,7 @@ export default function AboutTab({
             }
             activeOpacity={0.8}
           >
-            <Text style={styles.emptyLabel}>{ABOUT_SECTION_ADD_LABELS[key]}</Text>
+            <Text style={styles.emptyLabel}>{aboutSectionAddLabel(key)}</Text>
             <View style={styles.actionIconBtn}>
               <Ionicons name="add-outline" size={20} color={colors.primary} />
             </View>
