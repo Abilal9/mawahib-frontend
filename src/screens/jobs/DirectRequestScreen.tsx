@@ -18,7 +18,7 @@ import TextInput from '../../components/ui/TextInput';
 import MoneyAmountField from '../../components/ui/MoneyAmountField';
 import CalendarPicker from '../../components/ui/CalendarPicker';
 import { startOfLocalMonth } from '../../utils/calendarDay';
-import { getAppliedLocale } from '../../i18n/runtime';
+import { getAppliedLocale, t } from '../../i18n/runtime';
 import { formatGregorianLocalDay } from '../../utils/gregorianCivilDate';
 import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
 import ConfirmActionModal from '../../components/ui/ConfirmActionModal';
@@ -54,11 +54,17 @@ type DeadlineMode = 'exact_date' | 'duration' | 'flexible';
 
 type PendingAttachment = { id: string; file: LocalPickedFile };
 
-const DEADLINE_MODES: { id: DeadlineMode; label: string }[] = [
-  { id: 'exact_date', label: 'Exact date' },
-  { id: 'duration', label: 'Duration' },
-  { id: 'flexible', label: 'Flexible' },
-];
+function deadlineModeLabel(id: DeadlineMode): string {
+  if (id === 'exact_date') return t('work.exactDate');
+  if (id === 'duration') return t('work.durationMode');
+  return t('work.flexible');
+}
+
+function durationUnitLabel(unit: DurationUnit): string {
+  if (unit === 'days') return t('work.days');
+  if (unit === 'weeks') return t('work.weeks');
+  return t('work.months');
+}
 
 function formatPickedDate(date: Date) {
   return formatGregorianLocalDay(date, getAppliedLocale());
@@ -134,8 +140,8 @@ export default function DirectRequestScreen({
     if (submitting) return;
     if (attachments.length >= WORK_REQUEST_ATTACHMENT_MAX_COUNT) {
       Alert.alert(
-        'Too many files',
-        `You can attach up to ${WORK_REQUEST_ATTACHMENT_MAX_COUNT} files.`,
+        t('work.tooManyFiles'),
+        t('work.fileLimit', { count: WORK_REQUEST_ATTACHMENT_MAX_COUNT }),
       );
       return;
     }
@@ -143,7 +149,7 @@ export default function DirectRequestScreen({
       const picked = await promptPickWorkRequestFile();
       if (!picked) return;
       if ('error' in picked) {
-        Alert.alert('Could not attach file', picked.error);
+        Alert.alert(t('work.attachFailed'), picked.error);
         return;
       }
       setAttachments((prev) => [
@@ -183,19 +189,19 @@ export default function DirectRequestScreen({
         setSubmitting(false);
         if (attach && attach.failed.length > 0) {
           Alert.alert(
-            'Some files were not attached',
+            t('work.someFilesFailed'),
             attachmentFailureMessage(attach.failed),
-            [{ text: 'OK', onPress: () => showSuccess('directRequestSent') }],
+            [{ text: t('work.ok'), onPress: () => showSuccess('directRequestSent') }],
           );
           return;
         }
         showSuccess('directRequestSent');
       } catch (e) {
         Alert.alert(
-          'Could not send request',
+          t('work.sendFailed'),
           e instanceof ApiError || e instanceof Error
             ? e.message
-            : 'Please try again.',
+            : t('work.pleaseTry'),
         );
       } finally {
         setSubmitting(false);
@@ -219,7 +225,7 @@ export default function DirectRequestScreen({
         >
           <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Request Work</Text>
+        <Text style={styles.headerTitle}>{t('work.requestWork')}</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -234,19 +240,19 @@ export default function DirectRequestScreen({
         >
           <Text style={styles.intro}>
             {recipient.user
-              ? `Send ${recipient.user.name} a work request. They can accept, propose changes, or reject it.`
-              : 'Send a work request. They can accept, propose changes, or reject it.'}
+              ? t('work.directIntroNamed', { name: recipient.user.name })
+              : t('work.directIntro')}
           </Text>
 
           <TextInput
-            label="Title"
-            placeholder="e.g. Brand identity for a new café"
+            label={t('work.title')}
+            placeholder={t('work.titlePlaceholder')}
             value={title}
             onChangeText={setTitle}
           />
           <TextInput
-            label="Scope"
-            placeholder="What needs to be delivered?"
+            label={t('work.scope')}
+            placeholder={t('work.scopePlaceholder')}
             value={scope}
             onChangeText={setScope}
             multiline
@@ -254,25 +260,25 @@ export default function DirectRequestScreen({
             style={styles.multiline}
           />
           <MoneyAmountField
-            label="Budget"
+            label={t('work.budget')}
             placeholder="0"
             value={amountText}
             onChangeText={(text) =>
               setAmountText(normalizeMoneyInputEditing(text))
             }
             currency={requestCurrency}
-            error={amountInvalid ? 'Enter an amount greater than zero.' : undefined}
+            error={amountInvalid ? t('work.amountPositiveZero') : undefined}
           />
 
-          <Text style={styles.fieldLabel}>Deadline</Text>
+          <Text style={styles.fieldLabel}>{t('work.deadline')}</Text>
           <View style={styles.modeToggle}>
-            {DEADLINE_MODES.map((mode) => {
-              const active = deadlineMode === mode.id;
+            {(['exact_date', 'duration', 'flexible'] as DeadlineMode[]).map((modeId) => {
+              const active = deadlineMode === modeId;
               return (
                 <TouchableOpacity
-                  key={mode.id}
+                  key={modeId}
                   style={[styles.modeBtn, active && styles.modeBtnActive]}
-                  onPress={() => chooseDeadlineMode(mode.id)}
+                  onPress={() => chooseDeadlineMode(modeId)}
                   activeOpacity={0.85}
                 >
                   <Text
@@ -281,7 +287,7 @@ export default function DirectRequestScreen({
                       active && styles.modeBtnTextActive,
                     ]}
                   >
-                    {mode.label}
+                    {deadlineModeLabel(modeId)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -292,7 +298,7 @@ export default function DirectRequestScreen({
             <View style={styles.deadlineBlock}>
               <View style={[styles.dateField, styles.dateFieldActive]}>
                 <Text style={styles.dateFieldValue}>
-                  {exactDate ? formatPickedDate(exactDate) : 'Select date'}
+                  {exactDate ? formatPickedDate(exactDate) : t('work.selectDate')}
                 </Text>
                 <Ionicons
                   name="calendar-outline"
@@ -337,7 +343,7 @@ export default function DirectRequestScreen({
                           active && styles.modeBtnTextActive,
                         ]}
                       >
-                        {unit}
+                        {durationUnitLabel(unit)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -348,14 +354,14 @@ export default function DirectRequestScreen({
 
           {deadlineMode === 'flexible' ? (
             <Text style={styles.hintText}>
-              No fixed deadline — you agree on timing together.
+              {t('work.flexibleHint')}
             </Text>
           ) : null}
 
           <View style={styles.messageField}>
             <TextInput
-              label="Message"
-              placeholder="Anything else they should know?"
+              label={t('work.message')}
+              placeholder={t('work.messagePlaceholder')}
               value={message}
               onChangeText={setMessage}
               multiline
@@ -365,13 +371,13 @@ export default function DirectRequestScreen({
           </View>
 
           <View style={styles.attachmentsHeader}>
-            <Text style={styles.fieldLabelInline}>Attachments</Text>
-            <TouchableOpacity onPress={addFile} hitSlop={8} accessibilityLabel="Attach file">
+            <Text style={styles.fieldLabelInline}>{t('work.attachments')}</Text>
+            <TouchableOpacity onPress={addFile} hitSlop={8} accessibilityLabel={t('work.attachFile')}>
               <Ionicons name="add-circle-outline" size={26} color={colors.primary} />
             </TouchableOpacity>
           </View>
           {attachments.length === 0 ? (
-            <Text style={styles.hintText}>Tap + to attach a PDF or image brief or references.</Text>
+            <Text style={styles.hintText}>{t('work.attachHint')}</Text>
           ) : (
             attachments.map((file) => (
               <View key={file.id} style={styles.fileRow}>
@@ -395,7 +401,7 @@ export default function DirectRequestScreen({
 
         <View style={styles.footer}>
           <Button
-            title="Send Request"
+            title={t('work.sendRequest')}
             loading={submitting}
             fullWidth
             disabled={!canSubmit}
@@ -406,9 +412,9 @@ export default function DirectRequestScreen({
 
       <ConfirmActionModal
         visible={confirmSend}
-        title="Send Request?"
-        message="Your work request will be sent to this user."
-        confirmLabel="Send Request"
+        title={t('work.sendRequestTitle')}
+        message={t('work.sendRequestBody')}
+        confirmLabel={t('work.sendRequest')}
         busy={submitting}
         onCancel={() => setConfirmSend(false)}
         onConfirm={() => {
@@ -417,7 +423,7 @@ export default function DirectRequestScreen({
         }}
       />
 
-      <ActionBusyOverlay visible={submitting} message="Sending request…" />
+      <ActionBusyOverlay visible={submitting} message={t('work.sendingRequest')} />
       <SuccessConfirmationModal
         visible={successVisible}
         title={successTitle}

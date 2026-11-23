@@ -19,6 +19,7 @@ import Button from '../../components/ui/Button';
 import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
 import SuccessConfirmationModal from '../../components/ui/SuccessConfirmationModal';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import UserAvatar from '../../components/ui/UserAvatar';
 import { useAuth } from '../../context/AuthContext';
 import { useUserJobs } from '../../context/UserJobsContext';
@@ -90,7 +91,7 @@ export default function WriteReviewScreen({
   }, [initial]);
 
   const titleLabel = useMemo(
-    () => job?.title ?? 'Completed work',
+    () => job?.title ?? t('work.completedWork'),
     [job?.title],
   );
 
@@ -98,12 +99,12 @@ export default function WriteReviewScreen({
     return (
       <ScreenContainer>
         <View style={styles.missingWrap}>
-          <Text style={styles.missingText}>Job not found</Text>
+          <Text style={styles.missingText}>{t('work.jobNotFound')}</Text>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.missingBack}
           >
-            <Text style={styles.missingBackText}>Go back</Text>
+            <Text style={styles.missingBackText}>{t('profile.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </ScreenContainer>
@@ -117,14 +118,14 @@ export default function WriteReviewScreen({
     const owner = authorRef.current;
     setImageError(null);
     if (images.length >= MAX_REVIEW_IMAGES) {
-      setImageError(`You can add up to ${MAX_REVIEW_IMAGES} photos.`);
+      setImageError(t('work.photoLimit', { count: MAX_REVIEW_IMAGES }));
       return;
     }
     try {
       const picked = await pickLocalImage();
       if (!picked || authorRef.current !== owner) return;
       if (!REVIEW_IMAGE_MIME_TYPES.includes(picked.mimeType.toLowerCase())) {
-        setImageError('Only JPG and PNG photos can be added.');
+        setImageError(t('work.photoTypes'));
         return;
       }
       setImages((prev) => [
@@ -132,7 +133,7 @@ export default function WriteReviewScreen({
         { ...picked, key: `${Date.now()}-${prev.length}` },
       ]);
     } catch (e) {
-      setImageError(e instanceof Error ? e.message : 'Could not pick a photo.');
+      setImageError(e instanceof Error ? e.message : t('work.photoPickFailed'));
     }
   };
 
@@ -143,11 +144,11 @@ export default function WriteReviewScreen({
   const confirmSubmit = () => {
     if (rating < 1 || rating > 5) return;
     Alert.alert(
-      'Submit review?',
-      "You won't be able to edit this review after submitting.",
+      t('work.submitReviewTitle'),
+      t('work.submitReviewBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Submit', onPress: () => void onSubmit() },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('work.submit'), onPress: () => void onSubmit() },
       ],
     );
   };
@@ -157,7 +158,7 @@ export default function WriteReviewScreen({
     const owner = authorRef.current;
     const engagementForOwner = engagementId;
     if (rating < 1 || rating > 5) {
-      Alert.alert('Rating required', 'Please choose a star rating.');
+      Alert.alert(t('work.ratingRequired'), t('work.chooseStars'));
       return;
     }
     setSubmitting(true);
@@ -199,10 +200,10 @@ export default function WriteReviewScreen({
       setSubmitted(true);
     } catch (e) {
       Alert.alert(
-        'Could not submit review',
+        t('work.reviewFailed'),
         e instanceof ApiError || e instanceof Error
           ? e.message
-          : 'Please try again.',
+          : t('work.pleaseTry'),
       );
     } finally {
       setSubmitting(false);
@@ -224,7 +225,7 @@ export default function WriteReviewScreen({
           >
             <Ionicons name={backIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Write your review</Text>
+          <Text style={styles.headerTitle}>{t('work.writeReview')}</Text>
           <View style={styles.backButton} />
         </View>
 
@@ -236,11 +237,8 @@ export default function WriteReviewScreen({
         >
           {!canSubmit ? (
             <View style={styles.deferredBanner}>
-              <Text style={styles.deferredTitle}>Review unavailable</Text>
-              <Text style={styles.deferredBody}>
-                This job is not linked to a completed engagement, so a review
-                cannot be submitted.
-              </Text>
+              <Text style={styles.deferredTitle}>{t('work.reviewUnavailable')}</Text>
+              <Text style={styles.deferredBody}>{t('work.reviewUnavailableBody')}</Text>
             </View>
           ) : null}
 
@@ -266,7 +264,7 @@ export default function WriteReviewScreen({
                 <Ionicons name="briefcase-outline" size={24} color={colors.primary} />
               </View>
               <View style={styles.personMeta}>
-                <Text style={styles.personName}>Rate this job</Text>
+                <Text style={styles.personName}>{t('work.rateJob')}</Text>
                 <Text style={styles.jobTitle} numberOfLines={2}>
                   {titleLabel}
                 </Text>
@@ -276,17 +274,16 @@ export default function WriteReviewScreen({
 
           <Text style={styles.promptText}>
             {otherName
-              ? `How was it working with ${otherName}?`
-              : 'How was your experience?'}
+              ? t('work.howWithName', { name: otherName })
+              : t('work.howExperience')}
           </Text>
           {job?.reviewState && !windowOpen && !alreadySubmitted ? (
-            <Text style={styles.privacyCopy}>Review period ended</Text>
+            <Text style={styles.privacyCopy}>{t('work.reviewEnded')}</Text>
           ) : null}
           <Text style={styles.privacyCopy}>
-            Your review will stay private until the other person submits theirs
-            or the 14-day review period ends.
+            {t('work.reviewPrivacy')}
           </Text>
-          <Text style={styles.sectionLabel}>Your rating</Text>
+          <Text style={styles.sectionLabel}>{t('work.yourRating')}</Text>
           <View style={styles.starsRow}>
             {Array.from({ length: 5 }).map((_, i) => {
               const value = i + 1;
@@ -300,6 +297,8 @@ export default function WriteReviewScreen({
                   activeOpacity={0.75}
                   hitSlop={6}
                   disabled={!canSubmit}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('work.starLabel', { count: value })}
                 >
                   <Ionicons
                     name="star"
@@ -311,11 +310,11 @@ export default function WriteReviewScreen({
             })}
           </View>
 
-          <Text style={styles.sectionLabel}>Write your review</Text>
+          <Text style={styles.sectionLabel}>{t('work.writeReview')}</Text>
           <View style={[styles.inputWrap, focused && styles.inputWrapFocused]}>
             <TextInput
               style={styles.input}
-              placeholder="Share details about your experience..."
+              placeholder={t('work.reviewPlaceholder')}
               placeholderTextColor={colors.textSecondary}
               multiline
               textAlignVertical="top"
@@ -330,7 +329,7 @@ export default function WriteReviewScreen({
           <Text style={styles.charCount}>{text.length}/2000</Text>
 
           <Text style={styles.sectionLabel}>
-            Photos (optional · up to {MAX_REVIEW_IMAGES})
+            {t('work.photosOptional', { count: MAX_REVIEW_IMAGES })}
           </Text>
           <View style={styles.imagesRow}>
             {images.map((img) => (
@@ -344,7 +343,7 @@ export default function WriteReviewScreen({
                   style={styles.thumbRemove}
                   hitSlop={6}
                   disabled={submitting}
-                  accessibilityLabel="Remove photo"
+                  accessibilityLabel={t('editor.removePhoto')}
                   onPress={() => removeImage(img.key)}
                 >
                   <Ionicons name="close" size={14} color={colors.white} />
@@ -356,7 +355,7 @@ export default function WriteReviewScreen({
                 style={styles.addThumb}
                 activeOpacity={0.8}
                 disabled={submitting}
-                accessibilityLabel="Add photo"
+                accessibilityLabel={t('editor.addPhoto')}
                 onPress={() => void addImage()}
               >
                 <Ionicons name="add" size={26} color={colors.primary} />
@@ -369,7 +368,7 @@ export default function WriteReviewScreen({
         <View style={styles.footer}>
           {canSubmit ? (
             <Button
-              title="Submit review"
+              title={t('work.submitReview')}
               fullWidth
               loading={submitting}
               disabled={submitting || rating < 1 || alreadySubmitted}
@@ -377,7 +376,7 @@ export default function WriteReviewScreen({
             />
           ) : (
             <Button
-              title="Submit review"
+              title={t('work.submitReview')}
               fullWidth
               disabled
               onPress={() => undefined}
@@ -385,11 +384,11 @@ export default function WriteReviewScreen({
           )}
         </View>
       </KeyboardAvoidingView>
-      <ActionBusyOverlay visible={submitting} message="Submitting review…" />
+      <ActionBusyOverlay visible={submitting} message={t('work.submittingReview')} />
       <SuccessConfirmationModal
         visible={submitted}
-        title="Review submitted"
-        message="Thanks for your feedback."
+        title={t('work.reviewSubmitted')}
+        message={t('work.reviewThanks')}
         onDone={() => {
           setSubmitted(false);
           if (route.params.conversationId) {

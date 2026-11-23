@@ -11,6 +11,7 @@ import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
 import ConfirmActionModal from '../../components/ui/ConfirmActionModal';
 import SuccessConfirmationModal from '../../components/ui/SuccessConfirmationModal';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { ScreenProps } from '../../navigation/types';
 import { useUserJobs } from '../../context/UserJobsContext';
 import { useMarketplaceSuccess } from '../../hooks/useMarketplaceSuccess';
@@ -32,15 +33,27 @@ import type { OfferingSkillChip } from '../../domain/offeringTaxonomy';
 const JOB_TYPES = ['full-time', 'part-time', 'contract', 'freelance'] as const;
 const TOTAL_STEPS = 3;
 
-const PRICING_OPTIONS: { id: ApiJobPricingType; label: string; hint: string }[] = [
-  { id: 'fixed', label: 'Fixed', hint: 'A single agreed amount.' },
-  { id: 'range', label: 'Range', hint: 'Applicants negotiate within a range.' },
-  {
-    id: 'negotiable',
-    label: 'Negotiable',
-    hint: 'No amount yet — agree on one before work starts.',
-  },
-];
+function categoryProblemLabel(problem: string): string {
+  if (problem === 'Invalid category description') return t('work.invalidCategory');
+  if (problem === 'Describe this category') return t('work.describeCategory');
+  if (problem === 'Use 60 characters or fewer') return t('work.categoryTooLong');
+  return problem;
+}
+
+function pricingCopy(id: ApiJobPricingType): { label: string; hint: string } {
+  if (id === 'fixed') return { label: t('work.fixed'), hint: t('work.fixedHint') };
+  if (id === 'range') return { label: t('work.range'), hint: t('work.rangeHint') };
+  return { label: t('work.negotiable'), hint: t('work.negotiableHint') };
+}
+
+const PRICING_OPTIONS: ApiJobPricingType[] = ['fixed', 'range', 'negotiable'];
+
+function jobTypeLabel(id: (typeof JOB_TYPES)[number]): string {
+  if (id === 'full-time') return t('work.typeFull');
+  if (id === 'part-time') return t('work.typePart');
+  if (id === 'contract') return t('work.typeContract');
+  return t('work.typeFreelance');
+}
 
 export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJob'>) {
   const { createPostedJob, refresh } = useUserJobs();
@@ -91,11 +104,11 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
     const trimmedTitle = title.trim();
     const trimmedLocation = location.trim();
     if (!trimmedTitle) {
-      Alert.alert('Add a job title', 'Enter a job title before publishing.');
+      Alert.alert(t('work.addJobTitle'), t('work.enterJobTitle'));
       return;
     }
     if (!categoryId) {
-      Alert.alert('Choose a category', 'Select a category before publishing.');
+      Alert.alert(t('work.chooseCategory'), t('work.selectCategoryPublish'));
       return;
     }
     const problem = customCategoryError({
@@ -103,12 +116,12 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
       customCategory,
     });
     if (problem) {
-      setCustomError(problem);
-      Alert.alert('Describe this category', problem);
+      setCustomError(categoryProblemLabel(problem));
+      Alert.alert(t('work.describeCategoryTitle'), categoryProblemLabel(problem));
       return;
     }
     if (!trimmedLocation) {
-      Alert.alert('Add a location', 'Enter a job location before publishing.');
+      Alert.alert(t('work.addLocation'), t('work.enterLocation'));
       return;
     }
     if (submittingRef.current) return;
@@ -142,10 +155,10 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
           e.code === 'CUSTOM_CATEGORY_MATCHES_CATEGORY' &&
           e.categoryId
         ) {
-          Alert.alert('Choose a category', e.message, [
-            { text: 'Keep editing', style: 'cancel' },
+          Alert.alert(t('work.chooseCategory'), e.message, [
+            { text: t('work.keepEditing'), style: 'cancel' },
             {
-              text: e.nameEn ? `Use ${e.nameEn}` : 'Use that category',
+              text: e.nameEn ? t('work.useCategory', { name: e.nameEn }) : t('work.useThatCategory'),
               onPress: () => {
                 setCategoryId(e.categoryId ?? null);
                 setCategoryName(e.nameEn ?? null);
@@ -158,8 +171,8 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
           return;
         }
         Alert.alert(
-          'Could not publish job',
-          e instanceof ApiError ? e.message : 'Please try again.',
+          t('work.publishFailed'),
+          e instanceof ApiError ? e.message : t('work.pleaseTry'),
         );
       } finally {
         submittingRef.current = false;
@@ -171,7 +184,7 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
   const goNext = () => {
     if (submitting) return;
     if (step === 1 && !categoryId) {
-      Alert.alert('Choose a category', 'Select a category before continuing.');
+      Alert.alert(t('work.chooseCategory'), t('work.selectCategoryContinue'));
       return;
     }
     if (step === 1) {
@@ -180,7 +193,7 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
         customCategory,
       });
       if (problem) {
-        setCustomError(problem);
+        setCustomError(categoryProblemLabel(problem));
         return;
       }
     }
@@ -199,7 +212,7 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
         <TouchableOpacity onPress={() => (step > 1 ? navigation.navigate('PostJob', { step: step - 1 }) : navigation.goBack())}>
           <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Post a Job</Text>
+        <Text style={styles.headerTitle}>{t('work.postJob')}</Text>
         <Text style={styles.stepIndicator}>{step}/{TOTAL_STEPS}</Text>
       </View>
 
@@ -210,8 +223,8 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {step === 1 && (
           <>
-            <Text style={styles.title}>Job Details</Text>
-            <TextInput label="Job Title" placeholder="e.g. Senior UI Designer" value={title} onChangeText={setTitle} />
+            <Text style={styles.title}>{t('work.jobDetails')}</Text>
+            <TextInput label={t('work.jobTitle')} placeholder={t('work.jobTitlePlaceholder')} value={title} onChangeText={setTitle} />
             <TaxonomyFields
               categoryId={categoryId}
               categoryName={categoryName}
@@ -232,21 +245,21 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
                 setCustomCategory(value);
                 setCustomError(null);
               }}
-              customLabel="What type of job is this?"
+              customLabel={t('work.jobKind')}
               customError={customError}
               onAllowsCustomCategoryChange={setAllowsCustom}
             />
-            <Text style={styles.label}>Job Type</Text>
+            <Text style={styles.label}>{t('work.jobType')}</Text>
             <View style={styles.typeRow}>
-              {JOB_TYPES.map((t) => (
+              {JOB_TYPES.map((jobType) => (
                 <TouchableOpacity
-                  key={t}
-                  style={[styles.typeChip, type === t && styles.typeChipSelected]}
-                  onPress={() => setType(t)}
+                  key={jobType}
+                  style={[styles.typeChip, type === jobType && styles.typeChipSelected]}
+                  onPress={() => setType(jobType)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.typeText, type === t && styles.typeTextSelected]}>
-                    {t.replace('-', ' ')}
+                  <Text style={[styles.typeText, type === jobType && styles.typeTextSelected]}>
+                    {jobTypeLabel(jobType)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -256,46 +269,49 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
 
         {step === 2 && (
           <>
-            <Text style={styles.title}>Location & Compensation</Text>
-            <TextInput label="Location" placeholder="City, Country or Remote" value={location} onChangeText={setLocation} />
-            <Text style={styles.label}>Compensation</Text>
+            <Text style={styles.title}>{t('work.locationPay')}</Text>
+            <TextInput label={t('work.location')} placeholder={t('work.locationPlaceholder')} value={location} onChangeText={setLocation} />
+            <Text style={styles.label}>{t('work.compensation')}</Text>
             <View style={styles.typeRow}>
-              {PRICING_OPTIONS.map((option) => (
+              {PRICING_OPTIONS.map((optionId) => {
+                const option = pricingCopy(optionId);
+                return (
                 <TouchableOpacity
-                  key={option.id}
+                  key={optionId}
                   style={[
                     styles.typeChip,
-                    pricingType === option.id && styles.typeChipSelected,
+                    pricingType === optionId && styles.typeChipSelected,
                   ]}
-                  onPress={() => setPricingType(option.id)}
+                  onPress={() => setPricingType(optionId)}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.typeText,
-                      pricingType === option.id && styles.typeTextSelected,
+                      pricingType === optionId && styles.typeTextSelected,
                     ]}
                   >
                     {option.label}
                   </Text>
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </View>
             <Text style={styles.hint}>
-              {PRICING_OPTIONS.find((o) => o.id === pricingType)?.hint}
-              {currency ? ` Amounts are in ${currency}.` : ''}
+              {pricingCopy(pricingType).hint}
+              {currency ? t('work.amountsIn', { currency }) : ''}
             </Text>
 
             {pricingType === 'fixed' ? (
               <MoneyAmountField
-                label="Amount"
+                label={t('work.amount')}
                 placeholder="0.00"
                 currency={currency}
                 value={fixedText}
                 onChangeText={(t) => setFixedText(normalizeMoneyInputEditing(t))}
                 error={
                   fixedText.trim() && fixedAmount === null
-                    ? 'Enter an amount greater than 0'
+                    ? t('work.amountPositive')
                     : undefined
                 }
               />
@@ -304,28 +320,28 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
             {pricingType === 'range' ? (
               <>
                 <MoneyAmountField
-                  label="Minimum"
+                  label={t('work.minimum')}
                   placeholder="0.00"
                   currency={currency}
                   value={minText}
                   onChangeText={(t) => setMinText(normalizeMoneyInputEditing(t))}
                   error={
                     minText.trim() && minAmount === null
-                      ? 'Enter an amount greater than 0'
+                      ? t('work.amountPositive')
                       : undefined
                   }
                 />
                 <MoneyAmountField
-                  label="Maximum"
+                  label={t('work.maximum')}
                   placeholder="0.00"
                   currency={currency}
                   value={maxText}
                   onChangeText={(t) => setMaxText(normalizeMoneyInputEditing(t))}
                   error={
                     maxText.trim() && maxAmount === null
-                      ? 'Enter an amount greater than 0'
+                      ? t('work.amountPositive')
                       : rangeInvalidOrder
-                        ? 'Maximum must be at least the minimum'
+                        ? t('work.maxAtLeastMin')
                         : undefined
                   }
                 />
@@ -333,25 +349,24 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
             ) : null}
 
             <TextInput
-              label="Display label (optional)"
-              placeholder="e.g. Paid per project"
+              label={t('work.displayLabel')}
+              placeholder={t('work.displayLabelPlaceholder')}
               value={salaryLabel}
               onChangeText={setSalaryLabel}
               maxLength={120}
             />
             <Text style={styles.hint}>
-              Shown on the listing only. The amounts above are what gets
-              charged — never this label.
+              {t('work.displayLabelHint')}
             </Text>
           </>
         )}
 
         {step === 3 && (
           <>
-            <Text style={styles.title}>Description</Text>
+            <Text style={styles.title}>{t('work.description')}</Text>
             <TextInput
-              label="Job Description"
-              placeholder="Describe the role, responsibilities, and requirements..."
+              label={t('work.jobDescription')}
+              placeholder={t('work.jobDescriptionPlaceholder')}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -364,7 +379,7 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
 
       <View style={styles.footer}>
         <Button
-          title={step === TOTAL_STEPS ? 'Publish' : 'Continue'}
+          title={step === TOTAL_STEPS ? t('work.publish') : t('work.continue')}
           onPress={goNext}
           fullWidth
           loading={submitting}
@@ -378,9 +393,9 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
 
       <ConfirmActionModal
         visible={confirmPublish}
-        title="Publish?"
-        message="Your job listing will go live for applicants."
-        confirmLabel="Publish"
+        title={t('work.publishTitle')}
+        message={t('work.publishBody')}
+        confirmLabel={t('work.publish')}
         busy={submitting}
         onCancel={() => setConfirmPublish(false)}
         onConfirm={() => {

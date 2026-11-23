@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { NavigationProp, ParamListBase } from '@react-navigation/native';
+import { t } from '../i18n/runtime';
 import {
   JobsLanding,
   MARKETPLACE_SUCCESS,
@@ -27,10 +28,20 @@ export function useMarketplaceSuccess(
   const showSuccess = useCallback(
     (key: MarketplaceSuccessKey, landingOverride?: Partial<JobsLanding>) => {
       const copy = MARKETPLACE_SUCCESS[key];
+      const localized =
+        key === 'jobPosted'
+          ? { title: t('work.successJobPostedTitle'), message: t('work.successJobPostedBody') }
+          : key === 'applicationSent'
+            ? { title: t('work.successApplicationTitle'), message: t('work.successApplicationBody') }
+            : key === 'serviceRequestSent'
+              ? { title: t('work.successServiceTitle'), message: t('work.successServiceBody') }
+              : key === 'directRequestSent'
+                ? { title: t('work.successDirectTitle'), message: t('work.successDirectBody') }
+                : { title: copy.title, message: copy.message };
       setSuccess({
         key,
-        title: copy.title,
-        message: copy.message,
+        title: localized.title,
+        message: localized.message,
         landing: { ...copy.landing, ...landingOverride },
       });
     },

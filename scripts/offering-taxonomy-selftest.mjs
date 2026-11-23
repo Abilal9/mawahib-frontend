@@ -234,7 +234,12 @@ assert.equal(serviceScreen.includes('Boolean(existing?.customCategory)'), false)
 assert.equal(serviceScreen.includes('Boolean(existing.customCategory)'), false);
 assert.equal(jobScreen.includes('TaxonomyFields'), true);
 assert.equal(serviceScreen.includes('What type of service is this?'), true);
-assert.equal(jobScreen.includes('What type of job is this?'), true);
+const workCatalog = readFileSync(
+  new URL('../src/i18n/catalogs/work.ts', import.meta.url),
+  'utf8',
+);
+assert.equal(jobScreen.includes("t('work.jobKind')"), true);
+assert.equal(workCatalog.includes("'work.jobKind': 'What type of job is this?'"), true);
 assert.equal(serviceScreen.includes("category: 'Design'"), false);
 assert.equal(jobScreen.includes('exploreTag:'), false);
 assert.equal(serviceScreen.includes("category || 'Other'"), false);
