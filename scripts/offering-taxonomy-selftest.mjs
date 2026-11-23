@@ -233,11 +233,12 @@ assert.equal(serviceScreen.includes('TaxonomyFields'), true);
 assert.equal(serviceScreen.includes('Boolean(existing?.customCategory)'), false);
 assert.equal(serviceScreen.includes('Boolean(existing.customCategory)'), false);
 assert.equal(jobScreen.includes('TaxonomyFields'), true);
-assert.equal(serviceScreen.includes('What type of service is this?'), true);
 const workCatalog = readFileSync(
   new URL('../src/i18n/catalogs/work.ts', import.meta.url),
   'utf8',
 );
+assert.equal(serviceScreen.includes("t('work.serviceKind')"), true);
+assert.equal(workCatalog.includes("'work.serviceKind': 'What type of service is this?'"), true);
 assert.equal(jobScreen.includes("t('work.jobKind')"), true);
 assert.equal(workCatalog.includes("'work.jobKind': 'What type of job is this?'"), true);
 assert.equal(serviceScreen.includes("category: 'Design'"), false);
@@ -288,7 +289,8 @@ const jobDetail = readFileSync(
 );
 assert.equal(/required skills/i.test(jobDetail), false);
 assert.equal(jobDetail.includes('visibleJobSkillLabels(job.skills)'), true);
-assert.equal(jobDetail.includes('>Skills<'), true);
+assert.equal(jobDetail.includes("t('work.skills')"), true);
+assert.equal(workCatalog.includes("'work.skills': 'Skills'"), true);
 assert.equal(jobDetail.includes('taxonomySkills'), false);
 assert.equal(jobDetail.includes("|| 'None'"), false);
 assert.equal(jobDetail.includes("|| 'N/A'"), false);

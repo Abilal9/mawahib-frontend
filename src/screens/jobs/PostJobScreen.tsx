@@ -258,7 +258,7 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
                   onPress={() => setType(jobType)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.typeText, type === jobType && styles.typeTextSelected]}>
+                  <Text style={[styles.jobTypeText, type === jobType && styles.typeTextSelected]}>
                     {jobTypeLabel(jobType)}
                   </Text>
                 </TouchableOpacity>
@@ -435,6 +435,7 @@ const styles = StyleSheet.create({
   },
   typeChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   typeText: { ...typography.bodySmall, color: colors.text, textTransform: 'capitalize' },
+  jobTypeText: { ...typography.bodySmall, color: colors.text },
   typeTextSelected: { color: colors.white },
   hint: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.lg },
   descriptionInput: { minHeight: 160, textAlignVertical: 'top' },

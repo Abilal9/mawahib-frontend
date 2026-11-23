@@ -22,6 +22,7 @@ import Button from '../../components/ui/Button';
 import CurrencyIcon from '../../components/ui/CurrencyIcon';
 import ReorderableMediaGrid from '../../components/ui/ReorderableMediaGrid';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { useMyProfile } from '../../context/ProfileContext';
 import { ServicePackage } from '../../data/types';
 import { ScreenProps } from '../../navigation/types';
@@ -60,6 +61,19 @@ type PackageDraft = { price: string; delivery: string; features: string[] };
 const EMPTY_PACKAGE: PackageDraft = { price: '', delivery: '', features: [] };
 
 const PACKAGE_TABS: PackageName[] = ['Basic', 'Standard', 'Premium'];
+
+function packageLabel(name: PackageName): string {
+  if (name === 'Basic') return t('work.packageBasic');
+  if (name === 'Standard') return t('work.packageStandard');
+  return t('work.packagePremium');
+}
+
+function categoryProblemLabel(problem: string): string {
+  if (problem === 'Invalid category description') return t('work.invalidCategory');
+  if (problem === 'Describe this category') return t('work.describeCategory');
+  if (problem === 'Use 60 characters or fewer') return t('work.categoryTooLong');
+  return problem;
+}
 
 function hasPositivePrice(value: string): boolean {
   const amount = parseMoneyInput(value);
@@ -244,8 +258,8 @@ export default function AddProfileServiceScreen({
       ]);
     } catch (err) {
       Alert.alert(
-        'Upload failed',
-        err instanceof Error ? err.message : 'Could not upload image',
+        t('work.uploadFailed'),
+        err instanceof Error ? err.message : t('work.uploadFailedBody'),
       );
     } finally {
       setUploading(false);
@@ -291,7 +305,7 @@ export default function AddProfileServiceScreen({
   const goNext = () => {
     if (savingRef.current) return;
     if (step === 1 && !isEditing && !categoryId) {
-      Alert.alert('Choose a category', 'Select a category before continuing.');
+      Alert.alert(t('work.chooseCategory'), t('work.selectCategoryContinue'));
       return;
     }
     if (step === 1) {
@@ -300,7 +314,7 @@ export default function AddProfileServiceScreen({
         customCategory,
       });
       if (problem) {
-        setCustomError(problem);
+        setCustomError(categoryProblemLabel(problem));
         return;
       }
     }
@@ -389,10 +403,10 @@ export default function AddProfileServiceScreen({
           err.code === 'CUSTOM_CATEGORY_MATCHES_CATEGORY' &&
           err.categoryId
         ) {
-          Alert.alert('Choose a category', err.message, [
-            { text: 'Keep editing', style: 'cancel' },
+          Alert.alert(t('work.chooseCategory'), err.message, [
+            { text: t('work.keepEditing'), style: 'cancel' },
             {
-              text: err.nameEn ? `Use ${err.nameEn}` : 'Use that category',
+              text: err.nameEn ? t('work.useCategory', { name: err.nameEn }) : t('work.useThatCategory'),
               onPress: () => {
                 setCategoryId(err.categoryId ?? null);
                 setCategoryName(err.nameEn ?? null);
@@ -405,8 +419,8 @@ export default function AddProfileServiceScreen({
           return;
         }
         Alert.alert(
-          'Save failed',
-          err instanceof Error ? err.message : 'Could not save service',
+          t('editor.saveProjectFailed'),
+          err instanceof Error ? err.message : t('work.saveServiceFailed'),
         );
       } finally {
         savingRef.current = false;
@@ -482,7 +496,7 @@ export default function AddProfileServiceScreen({
         >
           {step === 1 ? (
             <>
-              <Text style={styles.pageTitle}>Service Details</Text>
+              <Text style={styles.pageTitle}>{t('work.serviceDetails')}</Text>
 
               <Text style={styles.label}>
                 Service Name <Text style={styles.required}>*</Text>
@@ -491,7 +505,7 @@ export default function AddProfileServiceScreen({
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="e.g. Professional Logo Design"
+                placeholder={t('work.serviceTitlePlaceholder')}
                 placeholderTextColor={colors.textSecondary}
               />
 
@@ -515,24 +529,24 @@ export default function AddProfileServiceScreen({
                   setCustomCategory(value);
                   setCustomError(null);
                 }}
-                customLabel="What type of service is this?"
+                customLabel={t('work.serviceKind')}
                 customError={customError}
                 onAllowsCustomCategoryChange={setAllowsCustom}
               />
 
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>{t('work.description')}</Text>
               <TextInput
                 style={[styles.input, styles.multiline]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Describe your service"
+                placeholder={t('work.serviceDescriptionPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 multiline
                 textAlignVertical="top"
               />
 
               <View style={styles.mediaHeader}>
-                <Text style={styles.labelInline}>Media Items</Text>
+                <Text style={styles.labelInline}>{t('work.mediaItems')}</Text>
                 <Text style={styles.mediaCount}>
                   {media.length}/{MAX_MEDIA}
                 </Text>
@@ -561,25 +575,22 @@ export default function AddProfileServiceScreen({
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
                   <ActivityIndicator size="small" color={colors.primary} />
                   <Text style={styles.mediaHint}>
-                    Uploading
                     {uploadProgress != null
-                      ? ` ${Math.round(uploadProgress * 100)}%`
-                      : '…'}
+                      ? t('work.uploadingPercent', { percent: Math.round(uploadProgress * 100) })
+                      : t('work.uploading')}
                   </Text>
                 </View>
               )}
               {saving ? (
-                <Text style={styles.mediaHint}>Saving service…</Text>
+                <Text style={styles.mediaHint}>{t('work.savingService')}</Text>
               ) : null}
             </>
           ) : null}
 
           {step === 2 ? (
             <>
-              <Text style={styles.pageTitle}>Service Packages</Text>
-              <Text style={styles.subtitle}>
-                Basic is required. Standard & Premium are optional.
-              </Text>
+              <Text style={styles.pageTitle}>{t('work.servicePackages')}</Text>
+              <Text style={styles.subtitle}>{t('work.packageHint')}</Text>
 
               <View style={styles.packageTabs}>
                 {PACKAGE_TABS.map((tab) => {
@@ -597,14 +608,14 @@ export default function AddProfileServiceScreen({
                       <Text
                         style={[styles.packageTabText, active && styles.packageTabTextActive]}
                       >
-                        {tab}
+                        {packageLabel(tab)}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              <Text style={styles.label}>Price</Text>
+              <Text style={styles.label}>{t('work.price')}</Text>
               <View style={styles.priceRow}>
                 <CurrencyIcon size={18} color={colors.primary} currency={serviceCurrency} location={serviceCurrency ? null : undefined} style={styles.currencyIcon} />
                 <TextInput
@@ -618,17 +629,17 @@ export default function AddProfileServiceScreen({
                 />
               </View>
 
-              <Text style={styles.label}>Delivery time</Text>
+              <Text style={styles.label}>{t('work.deliveryTime')}</Text>
               <TextInput
                 style={styles.input}
                 value={currentPkg.delivery}
                 onChangeText={(text) => updatePackage({ delivery: text })}
-                placeholder="e.g. 10 days"
+                placeholder={t('work.deliveryPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
               />
 
               <View style={styles.featuresHeader}>
-                <Text style={styles.labelInline}>Features</Text>
+                <Text style={styles.labelInline}>{t('work.features')}</Text>
                 {currentPkg.features.length > 0 ? (
                   <View style={styles.countBadge}>
                     <Text style={styles.countBadgeText}>{currentPkg.features.length}</Text>
@@ -640,7 +651,7 @@ export default function AddProfileServiceScreen({
                   style={[styles.input, styles.featureInput]}
                   value={featureDraft}
                   onChangeText={setFeatureDraft}
-                  placeholder="What's included in this package?"
+                  placeholder={t('work.featurePlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                 />
                 <TouchableOpacity
@@ -666,7 +677,7 @@ export default function AddProfileServiceScreen({
 
           {step === 3 ? (
             <>
-              <Text style={styles.pageTitle}>Add-Ons</Text>
+              <Text style={styles.pageTitle}>{t('work.addonsTitlePage')}</Text>
               <Text style={styles.subtitle}>
                 Add optional extras to increase your service value.
               </Text>
@@ -677,15 +688,15 @@ export default function AddProfileServiceScreen({
                     <Text style={styles.countBadgeText}>{addons.length}</Text>
                   </View>
                 ) : null}
-                <Text style={styles.label}>Add-on Title</Text>
+                <Text style={styles.label}>{t('work.addonTitle')}</Text>
                 <TextInput
                   style={styles.input}
                   value={addonTitle}
                   onChangeText={setAddonTitle}
-                  placeholder="e.g. 2 revisions included"
+                  placeholder={t('work.addonPlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                 />
-                <Text style={styles.label}>Add-On Price</Text>
+                <Text style={styles.label}>{t('work.addonPrice')}</Text>
                 <View style={styles.priceRow}>
                   <CurrencyIcon size={18} color={colors.primary} currency={serviceCurrency} location={serviceCurrency ? null : undefined} style={styles.currencyIcon} />
                   <TextInput
@@ -730,11 +741,11 @@ export default function AddProfileServiceScreen({
 
           {step === 4 ? (
             <>
-              <Text style={styles.pageTitle}>Review & Send</Text>
+              <Text style={styles.pageTitle}>{t('work.reviewSend')}</Text>
 
               <View style={styles.reviewSection}>
                 <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewTitle}>Service Details</Text>
+                  <Text style={styles.reviewTitle}>{t('work.serviceDetails')}</Text>
                   <TouchableOpacity onPress={() => setStep(1)} hitSlop={8}>
                     <Ionicons name="create-outline" size={18} color={colors.text} />
                   </TouchableOpacity>
@@ -765,7 +776,7 @@ export default function AddProfileServiceScreen({
 
               <View style={styles.reviewSection}>
                 <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewTitle}>Service Packages</Text>
+                  <Text style={styles.reviewTitle}>{t('work.servicePackages')}</Text>
                   <TouchableOpacity onPress={() => setStep(2)} hitSlop={8}>
                     <Ionicons name="create-outline" size={18} color={colors.text} />
                   </TouchableOpacity>
@@ -785,13 +796,13 @@ export default function AddProfileServiceScreen({
 
               <View style={styles.reviewSection}>
                 <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewTitle}>Add-Ons</Text>
+                  <Text style={styles.reviewTitle}>{t('work.addonsTitlePage')}</Text>
                   <TouchableOpacity onPress={() => setStep(3)} hitSlop={8}>
                     <Ionicons name="create-outline" size={18} color={colors.text} />
                   </TouchableOpacity>
                 </View>
                 {addons.length === 0 ? (
-                  <Text style={styles.reviewDesc}>No add-ons</Text>
+                  <Text style={styles.reviewDesc}>{t('work.noAddons')}</Text>
                 ) : (
                   addons.map((a) => (
                     <View key={a.id} style={styles.reviewLineRow}>
@@ -813,13 +824,13 @@ export default function AddProfileServiceScreen({
           {step === 1 ? (
             <View style={styles.footerStack}>
               <Button
-                title="Next"
+                title={t('work.next')}
                 fullWidth
                 disabled={footerPrimaryDisabled}
                 onPress={goNext}
               />
               <Button
-                title="Save"
+                title={t('common.save')}
                 variant="outline"
                 fullWidth
                 disabled={!canSave || saving}
@@ -837,7 +848,7 @@ export default function AddProfileServiceScreen({
             <View style={styles.footerStack}>
               <View style={styles.footerRow}>
                 <Button
-                  title="Skip"
+                  title={t('work.skip')}
                   variant="outline"
                   style={styles.skipBtn}
                   textStyle={{ color: colors.textSecondary }}
@@ -845,14 +856,14 @@ export default function AddProfileServiceScreen({
                   onPress={goNext}
                 />
                 <Button
-                  title="Next"
+                  title={t('work.next')}
                   style={styles.footerHalf}
                   disabled={footerPrimaryDisabled}
                   onPress={goNext}
                 />
               </View>
               <Button
-                title="Save"
+                title={t('common.save')}
                 variant="ghost"
                 fullWidth
                 disabled={!canSave || saving}

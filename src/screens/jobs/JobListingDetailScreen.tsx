@@ -21,6 +21,8 @@ import UserAvatar from '../../components/ui/UserAvatar';
 import { toImageSource } from '../../utils/image';
 import { openUserProfile } from '../../utils/openUserProfile';
 import { colors, spacing, radius, typography } from '../../theme';
+import { formatUiDateTime } from '../../i18n/format';
+import { t } from '../../i18n/runtime';
 import { MarketplaceSuccessKey } from '../../utils/marketplaceSuccess';
 import { jobService } from '../../services';
 import {
@@ -159,10 +161,10 @@ export default function JobListingDetailScreen({
         <View style={styles.missingWrap}>
           <Text style={styles.missingText}>{error || 'Job not found'}</Text>
           <TouchableOpacity onPress={() => void load()} style={styles.missingBack}>
-            <Text style={styles.missingBackText}>Retry</Text>
+            <Text style={styles.missingBackText}>{t('common.retry')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.missingBackText}>Go back</Text>
+            <Text style={styles.missingBackText}>{t('profile.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </ScreenContainer>
@@ -290,36 +292,36 @@ export default function JobListingDetailScreen({
     const name = application.applicant.displayName;
     if (status === 'accepted') {
       setConfirm({
-        title: 'Select Applicant?',
-        message: `${name} will be asked to accept this job. Work and payment start only after they accept.`,
-        confirmLabel: 'Select Applicant',
+        title: t('work.selectApplicantTitle'),
+        message: t('work.selectApplicantBody', { name }),
+        confirmLabel: t('work.selectApplicant'),
         run: () => reviewApplicant(application, 'accepted'),
       });
     } else if (status === 'rejected') {
       setConfirm({
-        title: 'Reject Applicant?',
-        message: `${name}'s application will be rejected and closed.`,
-        confirmLabel: 'Reject',
+        title: t('work.rejectApplicantTitle'),
+        message: t('work.rejectApplicantBody', { name }),
+        confirmLabel: t('work.reject'),
         danger: true,
         run: () => reviewApplicant(application, 'rejected'),
       });
     } else {
       setConfirm({
-        title: 'Mark Under Review?',
-        message: `${name} will see that you are reviewing their application.`,
-        confirmLabel: 'Under Review',
+        title: t('work.underReviewTitle'),
+        message: t('work.underReviewBody', { name }),
+        confirmLabel: t('status.underReview'),
         run: () => reviewApplicant(application, 'under_review'),
       });
     }
   };
 
   const deleteAction = {
-    title: 'Delete',
+    title: t('common.delete'),
     onPress: () =>
       askOwnerAction(
-        'Delete Listing?',
-        'This removes the listing and closes any open negotiations on it. Accepted work already in progress is not cancelled.',
-        'Delete Listing',
+        t('work.deleteListingTitle'),
+        t('work.deleteListingBody'),
+        t('work.deleteListing'),
         () => deleteListing(listingId),
         'listingDeleted',
         true,
@@ -330,23 +332,23 @@ export default function JobListingDetailScreen({
     ? apiListing?.status === 'open'
       ? [
           {
-            title: 'Archive',
+            title: t('work.archive'),
             onPress: () =>
               askOwnerAction(
-                'Archive Listing?',
-                'The listing will be hidden from Explore and open negotiations will be closed. You can reopen later for new applicants.',
-                'Archive',
+                t('work.archiveTitle'),
+                t('work.archiveBody'),
+                t('work.archive'),
                 () => archiveListing(listingId),
                 'listingArchived',
               ),
           },
           {
-            title: 'Close',
+            title: t('work.close'),
             onPress: () =>
               askOwnerAction(
-                'Close Listing?',
-                'Closing ends open applications and negotiations on this listing.',
-                'Close Listing',
+                t('work.closeListingTitle'),
+                t('work.closeListingBody'),
+                t('work.closeListing'),
                 () => closeListing(listingId),
                 'listingClosed',
                 true,
@@ -357,23 +359,23 @@ export default function JobListingDetailScreen({
       : apiListing?.status === 'archived'
         ? [
             {
-              title: 'Reopen',
+              title: t('work.reopen'),
               onPress: () =>
                 askOwnerAction(
-                  'Reopen Listing?',
-                  'The listing will become visible again for new applicants.',
-                  'Reopen',
+                  t('work.reopenTitle'),
+                  t('work.reopenBody'),
+                  t('work.reopen'),
                   () => reopenListing(listingId),
                   'listingReopened',
                 ),
             },
             {
-              title: 'Close',
+              title: t('work.close'),
               onPress: () =>
                 askOwnerAction(
-                  'Close Listing?',
-                  'Closing ends open applications and negotiations on this listing.',
-                  'Close Listing',
+                  t('work.closeListingTitle'),
+                  t('work.closeListingBody'),
+                  t('work.closeListing'),
                   () => closeListing(listingId),
                   'listingClosed',
                   true,
@@ -384,12 +386,12 @@ export default function JobListingDetailScreen({
         : apiListing?.status === 'closed'
           ? [
               {
-                title: 'Reopen',
+                title: t('work.reopen'),
                 onPress: () =>
                   askOwnerAction(
-                    'Reopen Listing?',
-                    'The listing will become visible again for new applicants.',
-                    'Reopen',
+                    t('work.reopenTitle'),
+                    t('work.reopenBody'),
+                    t('work.reopen'),
                     () => reopenListing(listingId),
                     'listingReopened',
                   ),
@@ -406,12 +408,12 @@ export default function JobListingDetailScreen({
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Job Details</Text>
+        <Text style={styles.headerTitle}>{t('work.jobDetailsHeader')}</Text>
         {apiListing && !isOwner ? (
           <TouchableOpacity
             onPress={() => setReportOpen(true)}
             style={styles.headerButton}
-            accessibilityLabel="Report job"
+            accessibilityLabel={t('work.reportJob')}
           >
             <Ionicons name="flag-outline" size={22} color={colors.text} />
           </TouchableOpacity>
@@ -482,14 +484,14 @@ export default function JobListingDetailScreen({
 
         {job.description?.trim() ? (
           <>
-            <Text style={styles.sectionTitle}>About this job</Text>
+            <Text style={styles.sectionTitle}>{t('work.aboutJob')}</Text>
             <Text style={styles.description}>{job.description}</Text>
           </>
         ) : null}
 
         {skillLabels.length > 0 ? (
           <>
-            <Text style={styles.sectionTitle}>Skills</Text>
+            <Text style={styles.sectionTitle}>{t('work.skills')}</Text>
             <View style={styles.skills}>
               {skillLabels.map((skill) => (
                 <View key={skill} style={styles.skillTag}>
@@ -514,13 +516,13 @@ export default function JobListingDetailScreen({
               <View style={styles.applicantEmpty}>
                 <Text style={styles.applyHint}>{applicationsError}</Text>
                 <Button
-                  title="Retry"
+                  title={t('common.retry')}
                   variant="secondary"
                   onPress={() => void loadApplications()}
                 />
               </View>
             ) : applications.length === 0 ? (
-              <Text style={styles.applyHint}>No applicants yet.</Text>
+              <Text style={styles.applyHint}>{t('work.noApplicants')}</Text>
             ) : (
               applications.map((application) => {
                 const requestId =
@@ -606,15 +608,14 @@ export default function JobListingDetailScreen({
           </>
         ) : canApply ? (
           <Button
-            title={applying ? 'Applying…' : 'Apply'}
+            title={applying ? t('work.applying') : t('work.apply')}
             fullWidth
             disabled={applying}
             onPress={() =>
               setConfirm({
-                title: 'Apply?',
-                message:
-                  'Your application will be sent to the listing owner as a work request.',
-                confirmLabel: 'Apply',
+                title: t('work.applyTitle'),
+                message: t('work.applyBody'),
+                confirmLabel: t('work.apply'),
                 run: () => {
                   void (async () => {
                     setApplying(true);
@@ -624,7 +625,7 @@ export default function JobListingDetailScreen({
                       showSuccess('applicationSent');
                     } catch (e) {
                       setApplyError(
-                        e instanceof ApiError ? e.message : 'Could not apply',
+                        e instanceof ApiError ? e.message : t('work.applyFailed'),
                       );
                     } finally {
                       setApplying(false);
@@ -659,7 +660,7 @@ export default function JobListingDetailScreen({
 
       <ContentReportSheet
         visible={reportOpen}
-        title="Report job"
+        title={t('work.reportJob')}
         targetType="job_listing"
         targetId={listingId}
         onClose={() => setReportOpen(false)}
@@ -682,13 +683,13 @@ export default function JobListingDetailScreen({
   );
 }
 
-const APPLICATION_STATUS_LABEL: Record<ApiApplicationStatus, string> = {
-  submitted: 'New',
-  under_review: 'Under Review',
-  accepted: 'Selected',
-  rejected: 'Rejected',
-  withdrawn: 'Withdrawn',
-};
+function applicationStatusLabel(status: ApiApplicationStatus): string {
+  if (status === 'submitted') return t('work.applicationNew');
+  if (status === 'under_review') return t('status.underReview');
+  if (status === 'accepted') return t('status.selected');
+  if (status === 'rejected') return t('status.rejected');
+  return t('work.withdrawn');
+}
 
 const APPLICATION_STATUS_TONE: Record<
   ApiApplicationStatus,
@@ -704,7 +705,7 @@ const APPLICATION_STATUS_TONE: Record<
 function formatApplicationDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-US', {
+  return formatUiDateTime(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -748,12 +749,12 @@ function ApplicantCard({
             </Text>
           ) : null}
           <Text style={styles.applicantDate}>
-            Applied {formatApplicationDate(application.createdAt)}
+            {t('work.appliedOn', { date: formatApplicationDate(application.createdAt) })}
           </Text>
         </View>
         <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
           <Text style={[styles.statusPillText, { color: tone.text }]}>
-            {APPLICATION_STATUS_LABEL[application.status]}
+            {applicationStatusLabel(application.status)}
           </Text>
         </View>
       </TouchableOpacity>
@@ -766,7 +767,7 @@ function ApplicantCard({
         <View style={styles.applicantActions}>
           {onUnderReview ? (
             <Button
-              title="Under Review"
+              title={t('status.underReview')}
               size="sm"
               variant="secondary"
               style={styles.applicantActionBtn}
@@ -777,7 +778,7 @@ function ApplicantCard({
           ) : null}
           {onReject ? (
             <Button
-              title="Reject"
+              title={t('work.reject')}
               size="sm"
               variant="secondary"
               style={styles.applicantActionBtn}
@@ -788,7 +789,7 @@ function ApplicantCard({
           ) : null}
           {onSelect ? (
             <Button
-              title="Select Applicant"
+              title={t('work.selectApplicant')}
               size="sm"
               style={styles.applicantActionBtn}
               numberOfLines={1}
@@ -798,7 +799,7 @@ function ApplicantCard({
           ) : null}
           {onViewRequest ? (
             <Button
-              title="View Request"
+              title={t('work.viewRequest')}
               size="sm"
               style={styles.applicantActionBtn}
               numberOfLines={1}

@@ -1,12 +1,35 @@
 import { useCallback, useState } from 'react';
 import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { t } from '../i18n/runtime';
+import type { MessageKey } from '../i18n/messages';
 import {
   JobsLanding,
   MARKETPLACE_SUCCESS,
   MarketplaceSuccessKey,
   resetToJobs,
 } from '../utils/marketplaceSuccess';
+
+const SUCCESS_COPY: Record<MarketplaceSuccessKey, { title: MessageKey; message: MessageKey }> = {
+  jobPosted: { title: 'work.successJobPostedTitle', message: 'work.successJobPostedBody' },
+  applicationSent: { title: 'work.successApplicationTitle', message: 'work.successApplicationBody' },
+  serviceRequestSent: { title: 'work.successServiceTitle', message: 'work.successServiceBody' },
+  directRequestSent: { title: 'work.successDirectTitle', message: 'work.successDirectBody' },
+  requestAccepted: { title: 'work.successAcceptedTitle', message: 'work.successAcceptedBody' },
+  requestRejected: { title: 'work.successRejectedTitle', message: 'work.successRejectedBody' },
+  requestCancelled: { title: 'work.successCancelledTitle', message: 'work.successCancelledBody' },
+  changesRequested: { title: 'work.successChangesTitle', message: 'work.successChangesBody' },
+  changesAccepted: { title: 'work.successChangesAcceptedTitle', message: 'work.successChangesAcceptedBody' },
+  changesDeclined: { title: 'work.successChangesDeclinedTitle', message: 'work.successChangesDeclinedBody' },
+  changesWithdrawn: { title: 'work.successChangesWithdrawnTitle', message: 'work.successChangesWithdrawnBody' },
+  jobDelivered: { title: 'work.successDeliveredTitle', message: 'work.successDeliveredBody' },
+  jobDisputed: { title: 'work.successDeclinedTitle', message: 'work.successDeclinedBody' },
+  jobChangesRequested: { title: 'work.successJobChangesTitle', message: 'work.successJobChangesBody' },
+  jobCompleted: { title: 'work.successCompletedTitle', message: 'work.successCompletedBody' },
+  listingArchived: { title: 'work.successArchivedTitle', message: 'work.successArchivedBody' },
+  listingReopened: { title: 'work.successReopenedTitle', message: 'work.successReopenedBody' },
+  listingClosed: { title: 'work.successClosedTitle', message: 'work.successClosedBody' },
+  listingDeleted: { title: 'work.successDeletedTitle', message: 'work.successDeletedBody' },
+};
 
 interface SuccessState {
   key: MarketplaceSuccessKey;
@@ -28,20 +51,11 @@ export function useMarketplaceSuccess(
   const showSuccess = useCallback(
     (key: MarketplaceSuccessKey, landingOverride?: Partial<JobsLanding>) => {
       const copy = MARKETPLACE_SUCCESS[key];
-      const localized =
-        key === 'jobPosted'
-          ? { title: t('work.successJobPostedTitle'), message: t('work.successJobPostedBody') }
-          : key === 'applicationSent'
-            ? { title: t('work.successApplicationTitle'), message: t('work.successApplicationBody') }
-            : key === 'serviceRequestSent'
-              ? { title: t('work.successServiceTitle'), message: t('work.successServiceBody') }
-              : key === 'directRequestSent'
-                ? { title: t('work.successDirectTitle'), message: t('work.successDirectBody') }
-                : { title: copy.title, message: copy.message };
+      const localized = SUCCESS_COPY[key];
       setSuccess({
         key,
-        title: localized.title,
-        message: localized.message,
+        title: t(localized.title),
+        message: t(localized.message),
         landing: { ...copy.landing, ...landingOverride },
       });
     },
