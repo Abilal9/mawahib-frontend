@@ -14,10 +14,10 @@ import Button from '../../components/ui/Button';
 import PasswordRequirements from '../../components/auth/PasswordRequirements';
 import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { isPasswordValid } from '../../lib/passwordRules';
-import { recoveryCleanupMessage } from '../../lib/authSessionMutation';
 import {
   loadRecoveryState,
   PasswordFlowError,
@@ -53,10 +53,7 @@ export default function ResetPasswordScreen({
     try {
       const ok = await discardInterruptedRecovery();
       if (!ok) {
-        Alert.alert(
-          'Password changed',
-          recoveryCleanupMessage('sign-out-failed'),
-        );
+        Alert.alert(t('auth.passwordChanged'), t('auth.cleanupNotSignedOut'));
         return;
       }
       navigation.reset({
@@ -80,10 +77,7 @@ export default function ResetPasswordScreen({
     if (saveRef.current || signOutRef.current) return;
     const ok = await discardInterruptedRecovery();
     if (!ok) {
-      Alert.alert(
-        'Still locked',
-        'Could not sign this device out. You are not signed in to Mawahib.',
-      );
+      Alert.alert(t('auth.stillLocked'), t('auth.couldNotSignOutNotSignedIn'));
       return;
     }
     navigation.reset({ index: 0, routes: [{ name: 'SignIn' }] });
@@ -92,14 +86,11 @@ export default function ResetPasswordScreen({
   const submit = async () => {
     if (saveRef.current || needsSignOut) return;
     if (!passwordOk) {
-      Alert.alert(
-        'Weak password',
-        'Meet all password requirements before continuing.',
-      );
+      Alert.alert(t('auth.weakPassword'), t('auth.meetPasswordRules'));
       return;
     }
     if (!passwordsMatch) {
-      Alert.alert('Passwords do not match', 'Confirm password must match.');
+      Alert.alert(t('auth.passwordsMismatch'), t('auth.confirmMustMatch'));
       return;
     }
     saveRef.current = true;
@@ -108,10 +99,7 @@ export default function ResetPasswordScreen({
     try {
       const result = await completePasswordReset(password);
       if (result.status === 'local-signed-out') {
-        Alert.alert(
-          'Password changed',
-          recoveryCleanupMessage('local-signed-out'),
-        );
+        Alert.alert(t('auth.passwordChanged'), t('auth.cleanupSignedOut'));
         navigation.reset({
           index: 0,
           routes: [
@@ -127,17 +115,11 @@ export default function ResetPasswordScreen({
       }
       if (result.status === 'sign-out-failed') {
         setNeedsSignOut(true);
-        Alert.alert(
-          'Password changed',
-          recoveryCleanupMessage('sign-out-failed'),
-        );
+        Alert.alert(t('auth.passwordChanged'), t('auth.cleanupNotSignedOut'));
         return;
       }
       if (result.status === 'rejected') {
-        Alert.alert(
-          'Could not reset this password',
-          'Request a new code and try again.',
-        );
+        Alert.alert(t('auth.couldNotReset'), t('auth.requestNewCode'));
         navigation.reset({ index: 0, routes: [{ name: 'SignIn' }] });
         return;
       }
@@ -157,11 +139,11 @@ export default function ResetPasswordScreen({
       const message =
         err instanceof PasswordFlowError
           ? err.message
-          : 'Could not update your password. Please try again.';
+          : t('auth.couldNotUpdatePassword');
       const title =
         err instanceof PasswordFlowError && err.code === 'network'
-          ? 'Password status unknown'
-          : 'Could not update password';
+          ? t('auth.passwordStatusUnknown')
+          : t('auth.couldNotUpdate');
       Alert.alert(title, message);
     } finally {
       saveRef.current = false;
@@ -180,16 +162,14 @@ export default function ResetPasswordScreen({
           <AuthBrandHeader />
         </View>
         <View style={styles.content}>
-          <Text style={styles.title}>Choose a new password</Text>
+          <Text style={styles.title}>{t('auth.chooseNewPassword')}</Text>
           <Text style={styles.subtitle}>
-            {needsSignOut
-              ? 'Your password was changed. Sign this device out, then log in with the new password.'
-              : 'This reset does not open Mawahib. You will sign in afterward.'}
+            {needsSignOut ? t('auth.resetSignOutBody') : t('auth.resetDoesNotOpen')}
           </Text>
 
           {needsSignOut ? (
             <Button
-              title="Sign out and continue"
+              title={t('auth.signOutContinue')}
               onPress={() => {
                 void finishSignOut();
               }}
@@ -199,8 +179,8 @@ export default function ResetPasswordScreen({
           ) : (
             <>
               <TextInput
-                label="New password"
-                placeholder="Create a new password"
+                label={t('auth.newPassword')}
+                placeholder={t('auth.createPassword')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -210,24 +190,24 @@ export default function ResetPasswordScreen({
               />
               <PasswordRequirements password={password} />
               <TextInput
-                label="Confirm password"
-                placeholder="Confirm your new password"
+                label={t('auth.confirmPasswordLabel')}
+                placeholder={t('auth.confirmYourPassword')}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
                 enableVisibilityToggle
                 visibilityToggleLabels={{
-                  show: 'Show confirm password',
-                  hide: 'Hide confirm password',
+                  show: t('auth.showConfirm'),
+                  hide: t('auth.hideConfirm'),
                 }}
                 textContentType="newPassword"
                 editable={!saving}
               />
               {confirmPassword.length > 0 && !passwordsMatch ? (
-                <Text style={styles.errorText}>Passwords do not match</Text>
+                <Text style={styles.errorText}>{t('auth.passwordsMismatch')}</Text>
               ) : null}
               <Button
-                title="Update password"
+                title={t('auth.updatePassword')}
                 onPress={() => {
                   void submit();
                 }}
@@ -235,7 +215,7 @@ export default function ResetPasswordScreen({
                 disabled={saving || !passwordOk || !passwordsMatch}
               />
               <Button
-                title="Cancel"
+                title={t('common.cancel')}
                 variant="ghost"
                 onPress={() => {
                   void cancel();

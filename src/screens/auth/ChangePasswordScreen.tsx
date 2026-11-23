@@ -16,17 +16,12 @@ import TextInput from '../../components/ui/TextInput';
 import Button from '../../components/ui/Button';
 import PasswordRequirements from '../../components/auth/PasswordRequirements';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { isPasswordValid } from '../../lib/passwordRules';
 import { offersAnotherOtherDeviceRetry } from '../../lib/authSessionMutation';
 import { PasswordFlowError } from '../../lib/recoveryState';
-
-const PASSWORD_CHANGED_TITLE = 'Password changed';
-const OTHER_DEVICES_SIGNED_OUT =
-  'This device stays signed in. Other devices may keep access for up to an hour before they need to sign in again.';
-const OTHER_DEVICES_UNCONFIRMED =
-  'Your password was changed, but we could not confirm that your other devices were signed out.';
 
 export default function ChangePasswordScreen({
   navigation,
@@ -47,14 +42,14 @@ export default function ChangePasswordScreen({
     generation: number;
   }) => {
     if (!offersAnotherOtherDeviceRetry('initial-failure')) return;
-    Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_UNCONFIRMED, [
+    Alert.alert(t('auth.passwordChanged'), t('auth.otherDevicesUnconfirmed'), [
       {
-        text: 'Not now',
+        text: t('auth.notNow'),
         style: 'cancel',
         onPress: () => navigation.goBack(),
       },
       {
-        text: 'Try again',
+        text: t('common.tryAgain'),
         onPress: () => {
           void retryOtherDevices(operation);
         },
@@ -73,37 +68,28 @@ export default function ChangePasswordScreen({
       const outcome = await retryOtherDeviceSignOut(operation);
       if (outcome === 'in-flight') return;
       if (outcome === 'revoked') {
-        Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_SIGNED_OUT, [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t('auth.passwordChanged'), t('auth.passwordChangedKept'), [
+          { text: t('auth.ok'), onPress: () => navigation.goBack() },
         ]);
         return;
       }
       if (outcome === 'account-changed' || outcome === 'superseded') {
-        Alert.alert(
-          'Could not sign out other devices',
-          'This sign-in changed, so other devices were not signed out.',
-        );
+        Alert.alert(t('auth.couldNotSignOutOthers'), t('auth.signInChangedOthers'));
         return;
       }
       if (outcome === 'unavailable') {
-        Alert.alert(
-          'Could not sign out other devices',
-          'Password reset is in progress, so other devices were not signed out.',
-        );
+        Alert.alert(t('auth.couldNotSignOutOthers'), t('auth.resetInProgressOthers'));
         return;
       }
       if (outcome === 'session-missing') {
-        Alert.alert(
-          'Could not sign out other devices',
-          'This device is no longer signed in, so other devices could not be signed out from here.',
-        );
+        Alert.alert(t('auth.couldNotSignOutOthers'), t('auth.deviceSignedOutOthers'));
         return;
       }
       if (offersAnotherOtherDeviceRetry('retry-finished')) {
         promptOtherDeviceRetry(operation);
         return;
       }
-      Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_UNCONFIRMED);
+      Alert.alert(t('auth.passwordChanged'), t('auth.otherDevicesUnconfirmed'));
     } finally {
       retryRef.current = false;
     }
@@ -112,18 +98,15 @@ export default function ChangePasswordScreen({
   const submit = async () => {
     if (saveRef.current) return;
     if (!currentPassword) {
-      Alert.alert('Current password required', 'Enter your current password.');
+      Alert.alert(t('auth.currentPasswordRequiredTitle'), t('auth.enterCurrentPassword'));
       return;
     }
     if (!passwordOk) {
-      Alert.alert(
-        'Weak password',
-        'Meet all password requirements before continuing.',
-      );
+      Alert.alert(t('auth.weakPassword'), t('auth.meetPasswordRules'));
       return;
     }
     if (!passwordsMatch) {
-      Alert.alert('Passwords do not match', 'Confirm password must match.');
+      Alert.alert(t('auth.passwordsMismatch'), t('auth.confirmMustMatch'));
       return;
     }
     saveRef.current = true;
@@ -141,20 +124,20 @@ export default function ChangePasswordScreen({
         });
         return;
       }
-      Alert.alert(PASSWORD_CHANGED_TITLE, OTHER_DEVICES_SIGNED_OUT, [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert(t('auth.passwordChanged'), t('auth.passwordChangedKept'), [
+        { text: t('auth.ok'), onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
       const message =
         err instanceof PasswordFlowError
           ? err.message
-          : 'Could not change your password. Please try again.';
+          : t('auth.couldNotChangePassword');
       const title =
         err instanceof PasswordFlowError && err.code === 'current-password'
-          ? 'Current password'
+          ? t('auth.currentPassword')
           : err instanceof PasswordFlowError && err.code === 'network'
-            ? 'Password status unknown'
-            : 'Could not change password';
+            ? t('auth.passwordStatusUnknown')
+            : t('auth.couldNotChange');
       Alert.alert(title, message);
       // A mismatched reauthentication is removed only when it is still the
       // session this attempt stored. A newer session is left in place.
@@ -175,7 +158,7 @@ export default function ChangePasswordScreen({
         >
           <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Change Password</Text>
+        <Text style={styles.headerTitle}>{t('auth.changePasswordTitle')}</Text>
         <View style={styles.backButton} />
       </View>
       <KeyboardAvoidingView
@@ -184,11 +167,11 @@ export default function ChangePasswordScreen({
       >
         <View style={styles.content}>
           <Text style={styles.subtitle}>
-            Enter your current password, then choose a new one. This device stays signed in.
+            {t('auth.changePasswordIntro')}
           </Text>
           <TextInput
-            label="Current password"
-            placeholder="Current password"
+            label={t('auth.currentPassword')}
+            placeholder={t('auth.currentPassword')}
             value={currentPassword}
             onChangeText={setCurrentPassword}
             secureTextEntry
@@ -197,39 +180,39 @@ export default function ChangePasswordScreen({
             editable={!saving}
           />
           <TextInput
-            label="New password"
-            placeholder="New password"
+            label={t('auth.newPassword')}
+            placeholder={t('auth.newPassword')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             enableVisibilityToggle
             visibilityToggleLabels={{
-              show: 'Show new password',
-              hide: 'Hide new password',
+              show: t('auth.showNewPassword'),
+              hide: t('auth.hideNewPassword'),
             }}
             textContentType="newPassword"
             editable={!saving}
           />
           <PasswordRequirements password={password} />
           <TextInput
-            label="Confirm new password"
-            placeholder="Confirm new password"
+            label={t('auth.confirmPassword')}
+            placeholder={t('auth.confirmPassword')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
             enableVisibilityToggle
             visibilityToggleLabels={{
-              show: 'Show confirm password',
-              hide: 'Hide confirm password',
+              show: t('auth.showConfirm'),
+              hide: t('auth.hideConfirm'),
             }}
             textContentType="newPassword"
             editable={!saving}
           />
           {confirmPassword.length > 0 && !passwordsMatch ? (
-            <Text style={styles.errorText}>Passwords do not match</Text>
+            <Text style={styles.errorText}>{t('auth.passwordsMismatch')}</Text>
           ) : null}
           <Button
-            title="Change password"
+            title={t('auth.changePassword')}
             onPress={() => {
               void submit();
             }}

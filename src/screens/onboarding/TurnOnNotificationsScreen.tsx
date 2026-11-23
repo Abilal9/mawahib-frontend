@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import { colors, spacing, typography, fontFamily } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { ScreenProps } from '../../navigation/types';
 
 export default function TurnOnNotificationsScreen({
@@ -23,26 +24,22 @@ export default function TurnOnNotificationsScreen({
           </View>
         </View>
 
-        <Text style={styles.title}>Stay in the Loop</Text>
-        <Text style={styles.subtitle}>
-          Get notified about new job matches, messages, likes, and opportunities tailored to your skills.
-        </Text>
+        <Text style={styles.title}>{t('auth.stayInLoop')}</Text>
+        <Text style={styles.subtitle}>{t('auth.notifyBody')}</Text>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.betaCaption}>
-          <Text style={styles.betaMark}>BETA</Text>
-          {
-            ' — notifications are not turned on from this screen yet. Updates still appear in the app’s Notifications inbox.'
-          }
+          <Text style={styles.betaMark}>{t('auth.beta')}</Text>
+          {t('auth.betaBody')}
         </Text>
         <Button
-          title="Enable Notifications"
+          title={t('auth.enableNotifications')}
           onPress={() => navigation.navigate('SignupSuccess')}
           fullWidth
         />
         <Button
-          title="Maybe Later"
+          title={t('auth.maybeLater')}
           variant="ghost"
           onPress={() => navigation.navigate('SignupSuccess')}
           style={styles.laterButton}

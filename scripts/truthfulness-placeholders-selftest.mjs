@@ -13,6 +13,7 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 const workRequest = read('src/screens/jobs/WorkRequestDetailScreen.tsx');
 const postDetail = read('src/screens/home/PostDetailScreen.tsx');
 const notifications = read('src/screens/onboarding/TurnOnNotificationsScreen.tsx');
+const catalog = read('src/i18n/catalogs/authFlow.ts');
 const successModal = read('src/components/ui/SuccessConfirmationModal.tsx');
 
 const PRE_SUBMIT = 'sending this does not file a report yet.';
@@ -78,19 +79,19 @@ assert.equal(submitComment.includes('postsApi'), false);
 assert.equal(submitComment.includes('reportBusyRef'), true);
 assert.equal(submitComment.includes('/comments/:commentId/report'), true);
 
-assert.equal(notifications.includes('Stay in the Loop'), true);
-assert.equal(notifications.includes('Enable Notifications'), true);
-assert.equal(notifications.includes('Maybe Later'), true);
-assert.equal(notifications.includes(NOTIFICATIONS_COPY), true);
-assert.equal(notifications.includes('>BETA<'), true);
+assert.equal(notifications.includes("t('auth.stayInLoop')"), true);
+assert.equal(notifications.includes("t('auth.enableNotifications')"), true);
+assert.equal(notifications.includes("t('auth.maybeLater')"), true);
+assert.equal(catalog.includes(NOTIFICATIONS_COPY), true);
+assert.equal(notifications.includes("t('auth.beta')"), true);
 assert.equal(notifications.includes('>3<'), true);
 assert.equal(
   notifications.split("navigation.navigate('SignupSuccess')").length - 1,
   2,
 );
 assert.ok(
-  notifications.indexOf(NOTIFICATIONS_COPY) <
-    notifications.indexOf('Enable Notifications'),
+  notifications.indexOf("t('auth.betaBody')") <
+    notifications.indexOf("t('auth.enableNotifications')"),
 );
 assert.equal(notifications.includes('expo-notifications'), false);
 assert.equal(notifications.includes('requestPermissions'), false);

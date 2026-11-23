@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { isAccountSuspendedFailure } from '../../lib/authFailure';
@@ -38,10 +39,7 @@ export default function SignupSuccessScreen({ navigation }: ScreenProps<'SignupS
         phoneE164: signUpBasics?.phoneE164,
       });
       if (!apiUser.emailVerified) {
-        Alert.alert(
-          'Verify your email',
-          'Confirm your email before entering Mawahib.',
-        );
+        Alert.alert(t('auth.verifyEmailTitle'), t('auth.verifyEmailBody'));
         navigation.navigate('ConfirmCode', {
           email: apiUser.email || signUpBasics?.email || '',
         });
@@ -60,7 +58,7 @@ export default function SignupSuccessScreen({ navigation }: ScreenProps<'SignupS
       enterAuthenticatedProduct([{ name: 'MainTabs' }]);
     } catch (e) {
       if (isAccountSuspendedFailure(e)) return;
-      Alert.alert('Could not finish signup', (e as Error).message);
+      Alert.alert(t('auth.couldNotFinishSignup'), (e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -78,21 +76,18 @@ export default function SignupSuccessScreen({ navigation }: ScreenProps<'SignupS
             <Ionicons name="checkmark" size={28} color={colors.white} />
           </View>
         </View>
-        <Text style={styles.title}>You&apos;re all set!</Text>
-        <Text style={styles.subtitle}>
-          Your account was created successfully. You can explore Mawahib now and finish your
-          profile whenever you&apos;re ready.
-        </Text>
+        <Text style={styles.title}>{t('auth.allSet')}</Text>
+        <Text style={styles.subtitle}>{t('auth.allSetBody')}</Text>
       </View>
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         <Button
-          title="Get Started"
+          title={t('welcome.start')}
           fullWidth
           onPress={() => finish(false)}
           disabled={loading}
         />
         <Button
-          title="Go to Profile"
+          title={t('auth.goToProfile')}
           variant="ghost"
           fullWidth
           onPress={() => finish(true)}

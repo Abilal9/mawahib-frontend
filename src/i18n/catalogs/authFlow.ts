@@ -175,6 +175,14 @@ export const authFlowCatalog = {
     'auth.uaeMobile': 'Enter a valid UAE mobile number',
     'auth.phoneForCountry': 'Enter a valid phone number for the selected country',
     'auth.phoneNumberHint': 'Phone number',
+    'auth.notNow': 'Not now',
+    'auth.changePasswordTitle': 'Change Password',
+    'auth.changePasswordIntro':
+      'Enter your current password, then choose a new one. This device stays signed in.',
+    'auth.showNewPassword': 'Show new password',
+    'auth.hideNewPassword': 'Hide new password',
+    'auth.recoveryRequest':
+      "If an account exists for that email, we'll send a reset code. You can request another in 60 seconds.",
   },
   ar: {
     'auth.createTalent': 'أنشئ حساب موهبة للبدء.',
@@ -346,5 +354,13 @@ export const authFlowCatalog = {
     'auth.uaeMobile': 'أدخل رقم جوال إماراتيًا صحيحًا',
     'auth.phoneForCountry': 'أدخل رقم هاتف صحيحًا للدولة المختارة',
     'auth.phoneNumberHint': 'رقم الهاتف',
+    'auth.notNow': 'ليس الآن',
+    'auth.changePasswordTitle': 'تغيير كلمة المرور',
+    'auth.changePasswordIntro':
+      'أدخل كلمة المرور الحالية، ثم اختر كلمة جديدة. يبقى هذا الجهاز مسجّل الدخول.',
+    'auth.showNewPassword': 'إظهار كلمة المرور الجديدة',
+    'auth.hideNewPassword': 'إخفاء كلمة المرور الجديدة',
+    'auth.recoveryRequest':
+      'إذا وُجد حساب لهذا البريد فسنرسل رمز إعادة التعيين. يمكنك طلب رمز آخر بعد 60 ثانية.',
   },
 } as const;

@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { resolvePostAuthDestination } from '../../lib/postAuthGate';
 import { applyPostAuthDestination } from '../../lib/postAuthNavigation';
 import { consumeProcessStart, hasConsumedProcessStart } from '../../lib/processStart';
+import { t } from '../../i18n/runtime';
 import { enterSignedOutAt } from '../../lib/productTree';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -62,12 +63,9 @@ export default function AuthDeepLinkListener() {
       try {
         const result = await handleAuthDeepLink(url);
         if (result.type === 'recovery-rejected') {
-          Alert.alert(
-            'Use the reset code',
-            'This password reset link cannot sign you in. Enter the code from the email on the Forgot Password screen.',
-            [
+          Alert.alert(t('auth.useResetCode'), t('auth.resetLinkBody'), [
               {
-                text: 'OK',
+                text: t('auth.ok'),
                 onPress: () => {
                   if (apiUserRef.current) return;
                   if (!hasConsumedProcessStart()) {
@@ -82,26 +80,20 @@ export default function AuthDeepLinkListener() {
           return;
         }
         if (result.type === 'link-rejected') {
-          Alert.alert(
-            'Link not used',
-            'This link cannot sign you in. Continue in the app, or enter the code from your email.',
-          );
+          Alert.alert(t('auth.linkNotUsed'), t('auth.linkNotUsedBody'));
           return;
         }
         if (result.type === 'stale-callback-session') {
           // The queued callback already removed only the session it wrote.
           // A session that is still stored belongs to a later operation.
           endCallbackSessionCommit();
-          Alert.alert(
-            'Link not used',
-            'This link cannot sign you in. Continue in the app, or enter the code from your email.',
-          );
+          Alert.alert(t('auth.linkNotUsed'), t('auth.linkNotUsedBody'));
           return;
         }
         if (result.type === 'error') {
-          Alert.alert('Verification failed', result.message, [
+          Alert.alert(t('auth.verificationFailed'), result.message, [
             {
-              text: 'OK',
+              text: t('auth.ok'),
               onPress: () => {
                 if (!hasConsumedProcessStart()) {
                   enterSignedOutAt({ name: 'SignIn' });
@@ -137,10 +129,8 @@ export default function AuthDeepLinkListener() {
               return;
             }
             Alert.alert(
-              'Signed in, but profile failed',
-              e instanceof Error
-                ? e.message
-                : 'Could not load your Mawahib profile. Your session is kept — retry when the backend is available.',
+              t('auth.signedInProfileFailed'),
+              e instanceof Error ? e.message : t('auth.profileKept'),
             );
             navigationRef.current.navigate('SignIn');
           }

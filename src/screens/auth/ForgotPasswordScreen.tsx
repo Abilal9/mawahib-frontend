@@ -14,6 +14,7 @@ import Button from '../../components/ui/Button';
 import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import OtpCodeInput, { OTP_LENGTH } from '../../components/auth/OtpCodeInput';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { enqueueAuthMutation } from '../../lib/authMutationQueue';
@@ -23,7 +24,6 @@ import { isAuthNetworkError, isAuthRateLimitError } from '../../lib/authErrors';
 import {
   loadRecoveryState,
   normalizeRecoveryEmail,
-  RECOVERY_REQUEST_COPY,
 } from '../../lib/recoveryState';
 import { enterSignedOutAt } from '../../lib/productTree';
 import { invalidateReturnIntents } from '../../lib/returnIntent';
@@ -132,7 +132,7 @@ export default function ForgotPasswordScreen({
     if (sendRef.current || verifyRef.current || cooldown > 0) return;
     const normalized = normalizeRecoveryEmail(email);
     if (!EMAIL_PATTERN.test(normalized)) {
-      Alert.alert('Check your email', 'Enter a valid email address.');
+      Alert.alert(t('auth.checkEmail'), t('auth.enterValidEmail'));
       return;
     }
     sendRef.current = true;
@@ -140,7 +140,7 @@ export default function ForgotPasswordScreen({
     try {
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) {
-        Alert.alert('Could not start password reset', 'Check your connection and try again.');
+        Alert.alert(t('auth.couldNotStartReset'), t('auth.checkConnection'));
         return;
       }
       const captured = loadRecoveryState();
@@ -155,10 +155,7 @@ export default function ForgotPasswordScreen({
           : null;
       if ((data.session && !stamp) || captured || stamp) {
         if (data.session && !stamp) {
-          Alert.alert(
-            'Could not start password reset',
-            'This session could not be confirmed. Try again.',
-          );
+          Alert.alert(t('auth.couldNotStartReset'), t('auth.sessionNotConfirmed'));
           return;
         }
         await signOut('sessionClearForRecovery', {
@@ -192,7 +189,7 @@ export default function ForgotPasswordScreen({
       }
       const { error } = await supabase.auth.resetPasswordForEmail(normalized);
       if (error && isAuthNetworkError(error)) {
-        Alert.alert('Network error', 'Check your connection and try again.');
+        Alert.alert(t('auth.networkError'), t('auth.checkConnection'));
         return;
       }
       if (
@@ -202,25 +199,25 @@ export default function ForgotPasswordScreen({
       ) {
         const lower = error.message.toLowerCase();
         if (lower.includes('invalid') && lower.includes('email')) {
-          Alert.alert('Check your email', 'Enter a valid email address.');
+          Alert.alert(t('auth.checkEmail'), t('auth.enterValidEmail'));
           return;
         }
-        Alert.alert('Could not send a reset code', 'Please try again.');
+        Alert.alert(t('auth.couldNotSendReset'), t('auth.pleaseTryAgain'));
         return;
       }
       setStep('code');
       setCooldown(RESEND_COOLDOWN_SEC);
-      Alert.alert('Check your email', RECOVERY_REQUEST_COPY);
+      Alert.alert(t('auth.checkEmail'), t('auth.recoveryRequest'));
     } catch (err) {
       const superseded =
         err instanceof Error && err.message === 'SESSION_SUPERSEDED';
       Alert.alert(
-        'Could not start password reset',
+        t('auth.couldNotStartReset'),
         isAuthNetworkError(err)
-          ? 'Check your connection and try again.'
+          ? t('auth.checkConnection')
           : superseded
-            ? 'The session changed before sign-out finished. Try again.'
-            : 'Please try again.',
+            ? t('auth.sessionChanged')
+            : t('auth.pleaseTryAgain'),
       );
     } finally {
       sendRef.current = false;
@@ -235,7 +232,7 @@ export default function ForgotPasswordScreen({
     const normalized = normalizeRecoveryEmail(email);
     const token = code.join('').replace(/\D/g, '');
     if (token.length !== 6) {
-      Alert.alert('Enter the code', 'The reset code is 6 digits.');
+      Alert.alert(t('auth.enterTheCode'), t('auth.codeSixDigits'));
       return;
     }
     verifyRef.current = true;
@@ -243,10 +240,7 @@ export default function ForgotPasswordScreen({
     if (!armRecoveryVerification(normalized)) {
       verifyRef.current = false;
       setVerifying(false);
-      Alert.alert(
-        'Could not start password reset',
-        'Please try again.',
-      );
+      Alert.alert(t('auth.couldNotStartReset'), t('auth.pleaseTryAgain'));
       return;
     }
     try {
@@ -262,20 +256,14 @@ export default function ForgotPasswordScreen({
       );
       if (error || !data.session?.user) {
         await releaseVerifyingLock();
-        Alert.alert(
-          'Code not accepted',
-          'That code is incorrect or has expired.',
-        );
+        Alert.alert(t('auth.codeNotAccepted'), t('auth.codeIncorrect'));
         return;
       }
       const gotEmail = normalizeRecoveryEmail(data.session.user.email ?? '');
       const userId = data.session.user.id;
       if (gotEmail !== normalized || !commitRecoverySession(normalized, userId)) {
         await releaseVerifyingLock();
-        Alert.alert(
-          'Could not reset this password',
-          'Request a new code and try again.',
-        );
+        Alert.alert(t('auth.couldNotReset'), t('auth.requestNewCode'));
         return;
       }
       setCode(Array(OTP_LENGTH).fill(''));
@@ -285,10 +273,7 @@ export default function ForgotPasswordScreen({
       });
     } catch {
       await releaseVerifyingLock();
-      Alert.alert(
-        'Code not accepted',
-        'That code is incorrect or has expired.',
-      );
+      Alert.alert(t('auth.codeNotAccepted'), t('auth.codeIncorrect'));
     } finally {
       verifyRef.current = false;
       setVerifying(false);
@@ -306,17 +291,17 @@ export default function ForgotPasswordScreen({
           <AuthBrandHeader />
         </View>
         <View style={styles.content}>
-          <Text style={styles.title}>Reset password</Text>
+          <Text style={styles.title}>{t('auth.resetTitle')}</Text>
           <Text style={styles.subtitle}>
             {step === 'email'
-              ? 'Enter the email on your Mawahib account.'
-              : `Enter the 6-digit code for ${normalizeRecoveryEmail(email)}.`}
+              ? t('auth.resetEmailPrompt')
+              : t('auth.resetCodeFor', { email: normalizeRecoveryEmail(email) })}
           </Text>
 
           {step === 'email' ? (
             <TextInput
-              label="Email"
-              placeholder="Enter your email"
+              label={t('auth.email')}
+              placeholder={t('auth.enterEmail')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -334,7 +319,7 @@ export default function ForgotPasswordScreen({
 
           {step === 'email' ? (
             <Button
-              title="Send reset code"
+              title={t('auth.sendReset')}
               onPress={() => {
                 void requestCode();
               }}
@@ -344,7 +329,7 @@ export default function ForgotPasswordScreen({
           ) : (
             <>
               <Button
-                title="Continue"
+                title={t('common.continue')}
                 onPress={() => {
                   void verifyCode();
                 }}
@@ -357,7 +342,9 @@ export default function ForgotPasswordScreen({
               />
               <Button
                 title={
-                  cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'
+                  cooldown > 0
+                    ? t('auth.resendIn', { time: `${cooldown}s` })
+                    : t('auth.resend')
                 }
                 variant="outline"
                 onPress={() => {
@@ -371,7 +358,7 @@ export default function ForgotPasswordScreen({
           )}
 
           <Button
-            title="Back to log in"
+            title={t('auth.backToLogin')}
             variant="ghost"
             onPress={() => navigation.navigate('SignIn')}
             disabled={sending || verifying}
