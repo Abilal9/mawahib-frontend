@@ -92,14 +92,15 @@ function knownOrStored(body: string, table: Record<string, MessageKey>): string 
   const key = table[body] ?? table[body.toLowerCase()];
   if (key) return t(key);
   const trimmed = body.trim();
-  if (trimmed.length > 0 && trimmed.length <= 120 && !trimmed.includes('\n')) return trimmed;
+  if (trimmed.length > 0) return trimmed;
   return t('notice.generic');
 }
 
 /**
  * Display copy from notification type and payload. Stored titles that are
  * people's names, job titles, and comment previews are not rewritten.
- * A short unknown body stays as stored instead of being guessed.
+ * An unknown stored sentence stays as written, including long or multi-line text.
+ * Chat notices never use that sentence; they use the message type instead.
  */
 export function notificationDisplayCopy(input: NoticeInput): {
   title: string;

@@ -129,14 +129,25 @@ assert.equal(
   }).message,
   'هذا العمل جاهز لمراجعة التسليم مرة أخرى.',
 );
+const longNote = `${'Please review the stairs. '.repeat(12)}\nSecond line`;
 assert.equal(
   notificationDisplayCopy({
     type: 'engagement_status',
     title: 'Work update',
-    body: 'A private note from the client',
+    body: longNote,
     params: { status: 'delivered', jobTitle: title },
   }).message,
-  'A private note from the client',
+  longNote.trim(),
+);
+assert.equal(
+  notificationDisplayCopy({
+    type: 'message_received',
+    title: 'Ada',
+    body: longNote,
+    actorName: 'Ada',
+    params: {},
+  }).message,
+  'أرسل لك رسالة',
 );
 const { categoryCardLabel } = await import('../src/i18n/catalogLabel.ts');
 assert.equal(
