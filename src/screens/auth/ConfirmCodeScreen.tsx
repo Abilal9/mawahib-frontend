@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import OtpCodeInput, {
   OTP_LENGTH,
   type OtpCodeInputHandle,
@@ -81,7 +82,7 @@ export default function ConfirmCodeScreen({
   const handleVerify = async () => {
     if (!isComplete) return;
     if (!email && !phone) {
-      Alert.alert('Missing destination', 'Go back and start signup again.');
+      Alert.alert(t('auth.missingDestination'), t('auth.restartSignup'));
       return;
     }
     clearAuthError();
@@ -113,7 +114,7 @@ export default function ConfirmCodeScreen({
       if (isAccountSuspendedFailure(e)) return;
       const title = authFailureTitle(e);
       const message = isAuthFailure(e) && e.kind === 'email_otp'
-        ? 'The code you entered is incorrect or has expired. Try again or request a new code.'
+        ? t('error.codeExpired')
         : mapAuthError(e);
       Alert.alert(title, message);
       if (isAuthFailure(e) && e.kind === 'email_otp') {
@@ -136,9 +137,9 @@ export default function ConfirmCodeScreen({
         await resendSignupOtp(email);
       }
       setTimer(RESEND_COOLDOWN_SEC);
-      Alert.alert('Code sent', 'Check for a new verification code.');
+      Alert.alert(t('auth.codeSent'), t('auth.checkNewCode'));
     } catch (e) {
-      Alert.alert('Could not resend code', mapAuthError(e));
+      Alert.alert(t('auth.couldNotResend'), mapAuthError(e));
     } finally {
       setResending(false);
     }
@@ -148,20 +149,20 @@ export default function ConfirmCodeScreen({
     <ScreenContainer>
       <StatusBar style="dark" />
       <View style={styles.content}>
-        <Text style={styles.title}>Verify Your Account</Text>
-        <Text style={styles.subtitle}>Enter the 6-digit code sent to</Text>
+        <Text style={styles.title}>{t('auth.verifyTitle')}</Text>
+        <Text style={styles.subtitle}>{t('auth.codeSentTo')}</Text>
 
         {isPhone ? (
           <Text style={[styles.destination, styles.phoneDestination]}>{phone}</Text>
         ) : (
           <View style={styles.emailRow}>
             <Text style={styles.destination} numberOfLines={1}>
-              {email || 'your email'}
+              {email || t('auth.yourEmail')}
             </Text>
             <TouchableOpacity
               onPress={handleChangeEmail}
               accessibilityRole="button"
-              accessibilityLabel="Change email address"
+              accessibilityLabel={t('auth.changeEmailAddress')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.editHit}
               activeOpacity={0.7}
@@ -173,8 +174,8 @@ export default function ConfirmCodeScreen({
 
         <Text style={styles.hint}>
           {isPhone
-            ? 'Enter the code from your SMS below.'
-            : 'Enter the code from your email below.'}
+            ? t('auth.codeFromSms')
+            : t('auth.codeFromEmail')}
         </Text>
 
         <OtpCodeInput
@@ -185,16 +186,16 @@ export default function ConfirmCodeScreen({
         />
 
         <View style={styles.resendRow}>
-          <Text style={styles.didntReceive}>Didn&apos;t receive the code?</Text>
+          <Text style={styles.didntReceive}>{t('auth.noCode')}</Text>
           {timer > 0 ? (
             <Text style={styles.timerText}>
-              Resend code in {formatCountdown(timer)}
+              {t('auth.resendIn', { time: formatCountdown(timer) })}
             </Text>
           ) : resending ? (
             <ActivityIndicator color={colors.primary} />
           ) : (
             <TouchableOpacity onPress={handleResend} activeOpacity={0.8}>
-              <Text style={styles.resendLink}>Resend code</Text>
+              <Text style={styles.resendLink}>{t('auth.resend')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -204,13 +205,13 @@ export default function ConfirmCodeScreen({
           onPress={() => navigation.navigate('SignIn')}
           activeOpacity={0.8}
         >
-          <Text style={styles.otherAccountText}>Use a different account</Text>
+          <Text style={styles.otherAccountText}>{t('auth.otherAccount')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.footer}>
         <Button
-          title={loading ? 'Verifying…' : 'Verify'}
+          title={loading ? t('auth.verifying') : t('auth.verify')}
           onPress={handleVerify}
           fullWidth
           disabled={!isComplete || loading}

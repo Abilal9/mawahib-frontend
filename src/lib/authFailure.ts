@@ -1,3 +1,5 @@
+import { t } from '../i18n/runtime';
+
 /**
  * Distinguish Supabase Auth failures from Nest hydration/bootstrap failures.
  */
@@ -32,18 +34,18 @@ export function isAccountSuspendedFailure(error: unknown): boolean {
 export function authFailureTitle(error: unknown): string {
   if (isAuthFailure(error)) {
     if (error.kind === 'account_suspended') {
-      return 'Account suspended';
+      return t('auth.suspendedTitle');
     }
     if (error.kind === 'backend_hydration') {
-      return 'Signed in, but profile failed';
+      return t('auth.signedInProfileFailed');
     }
     if (error.kind === 'superseded') {
-      return 'Sign-in interrupted';
+      return t('auth.signInInterrupted');
     }
     if (error.kind === 'phone_otp') {
-      return 'Phone verification failed';
+      return t('auth.phoneVerifyFailed');
     }
-    return 'Verification code not valid';
+    return t('auth.codeNotValid');
   }
-  return 'Verification failed';
+  return t('auth.verificationFailed');
 }

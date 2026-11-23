@@ -1,3 +1,4 @@
+import { authFlowCatalog } from './catalogs/authFlow';
 import { entryCatalog } from './catalogs/entry';
 
 export const messages = {
@@ -158,6 +159,7 @@ export const messages = {
     'chat.noMessagesYet': 'No messages yet',
     'chat.unknownPerson': 'Unknown',
     ...entryCatalog.en,
+    ...authFlowCatalog.en,
   },
   ar: {
     'language.title': 'تغيير اللغة',
@@ -319,6 +321,7 @@ export const messages = {
     'chat.noMessagesYet': 'لا توجد رسائل بعد',
     'chat.unknownPerson': 'غير معروف',
     ...entryCatalog.ar,
+    ...authFlowCatalog.ar,
   },
 } as const;
 

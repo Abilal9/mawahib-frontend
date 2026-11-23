@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import { clearDeletionProcessing } from '../../lib/deletionProcessing';
 import { enterSignedOutAt } from '../../lib/productTree';
 import type { SignedOutStackParamList } from '../../navigation/types';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, typography } from '../../theme';
 
 type LeaveTarget = {
@@ -22,27 +23,23 @@ export default function DeletionProcessingScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="dark" />
-      <Text style={styles.title}>Deletion processing</Text>
-      <Text style={styles.body}>
-        This account is closed. Profile details are removed, and this device is signed out. Cleanup of the original sign-in and personal files continues separately.
-      </Text>
-      <Text style={styles.body}>
-        Retained messages, images, invoices, and records can still contain historical personal information. This screen does not mean a completion email was sent or read.
-      </Text>
+      <Text style={styles.title}>{t('auth.deletionTitle')}</Text>
+      <Text style={styles.body}>{t('auth.deletionBody')}</Text>
+      <Text style={styles.body}>{t('auth.deletionRetained')}</Text>
       <View style={styles.actions}>
         <Button
-          title="Home"
+          title={t('tab.home')}
           fullWidth
           onPress={() => leaveDeletionProcessing({ name: 'GuestTabs' })}
         />
         <Button
-          title="Sign In"
+          title={t('auth.signIn')}
           variant="outline"
           fullWidth
           onPress={() => leaveDeletionProcessing({ name: 'SignIn' })}
         />
         <Button
-          title="Create Account"
+          title={t('auth.createAccount')}
           variant="outline"
           fullWidth
           onPress={() => leaveDeletionProcessing({ name: 'Welcome', params: { step: 1 } })}

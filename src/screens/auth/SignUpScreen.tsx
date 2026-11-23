@@ -19,6 +19,7 @@ import PasswordRequirements from '../../components/auth/PasswordRequirements';
 import PhoneInputField from '../../components/auth/PhoneInputField';
 import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import LocationSelectors from '../../components/ui/LocationSelectors';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
@@ -96,7 +97,7 @@ export default function SignUpScreen({
   }, [email]);
   const [submitted, setSubmitted] = useState(false);
 
-  const accountLabel = accountType === 'business' ? 'Business' : 'Talent';
+  const accountKind = accountType === 'business' ? 'business' : 'talent';
   const passwordOk = isPasswordValid(password);
   const passwordsMatch = password.length > 0 && password === confirmPassword;
   const showMismatch =
@@ -153,9 +154,7 @@ export default function SignUpScreen({
     recoveryEmail: string,
   ) => {
     const message =
-      mode === 'already_verified'
-        ? 'This email may already be associated with an account. Try logging in instead, or use a different email address.'
-        : 'This email may already be associated with an account. Try logging in, continue verification if you previously started signing up, or use a different email.';
+      mode === 'already_verified' ? t('auth.emailTakenLogin') : t('auth.emailTakenAmbiguous');
 
     const buttons: Array<{
       text: string;
@@ -163,14 +162,14 @@ export default function SignUpScreen({
       onPress?: () => void;
     }> = [
       {
-        text: 'Log In',
+        text: t('auth.login'),
         onPress: () => navigation.navigate('SignIn'),
       },
     ];
 
     if (mode === 'ambiguous') {
       buttons.push({
-        text: 'Continue Verification',
+        text: t('auth.continueVerification'),
         onPress: () => {
           void (async () => {
             try {
@@ -178,31 +177,28 @@ export default function SignUpScreen({
               navigation.navigate('ConfirmCode', { email: recoveryEmail });
             } catch (e) {
               if (hasResumablePendingVerification(recoveryEmail)) {
-                Alert.alert(
-                  'Verification still pending',
-                  'A new code could not be sent yet. If you still have a recent code, you can enter it now.',
-                  [
+                Alert.alert(t('auth.verifyPending'), t('auth.verifyPendingShort'), [
                     {
-                      text: 'Enter code',
+                      text: t('auth.enterCode'),
                       onPress: () =>
                         navigation.navigate('ConfirmCode', {
                           email: recoveryEmail,
                         }),
                     },
-                    { text: 'OK', style: 'cancel' },
+                    { text: t('auth.ok'), style: 'cancel' },
                   ],
                 );
                 return;
               }
               Alert.alert(
-                'Unable to continue signup',
-                `${mapAuthError(e)}\n\nNo new code was sent. Try logging in later, wait and retry Continue Verification, or use a different email.`,
+                t('auth.unableContinue'),
+                `${mapAuthError(e)}\n\n${t('auth.noNewCode')}`,
                 [
                   {
-                    text: 'Log In',
+                    text: t('auth.login'),
                     onPress: () => navigation.navigate('SignIn'),
                   },
-                  { text: 'OK', style: 'cancel' },
+                  { text: t('auth.ok'), style: 'cancel' },
                 ],
               );
             }
@@ -211,29 +207,26 @@ export default function SignUpScreen({
       });
     }
 
-    buttons.push({ text: 'Change Email', style: 'cancel' });
+    buttons.push({ text: t('auth.changeEmail'), style: 'cancel' });
 
-    Alert.alert('Unable to continue signup', message, buttons);
+    Alert.alert(t('auth.unableContinue'), message, buttons);
   };
 
   const handleSignUp = async () => {
     setSubmitted(true);
     if (!passwordOk) {
-      Alert.alert(
-        'Weak password',
-        'Meet all password requirements before continuing.',
-      );
+      Alert.alert(t('auth.weakPassword'), t('auth.meetPasswordRules'));
       return;
     }
     if (!passwordsMatch) {
-      Alert.alert('Passwords do not match', 'Confirm password must match.');
+      Alert.alert(t('auth.passwordsMismatch'), t('auth.confirmMustMatch'));
       return;
     }
     if (!phoneE164) {
       Alert.alert(
-        'Invalid phone',
+        t('auth.invalidPhone'),
         getPhoneValidationMessage(nationalNumber, country) ||
-          'Enter a valid international phone number.',
+          t('auth.phoneInvalidInternational'),
       );
       return;
     }
@@ -288,7 +281,7 @@ export default function SignUpScreen({
       }
     } catch (e) {
       if (isAccountSuspendedFailure(e)) return;
-      Alert.alert('Sign up failed', mapAuthError(e));
+      Alert.alert(t('auth.signUpFailed'), mapAuthError(e));
     } finally {
       setLoading(false);
     }
@@ -310,30 +303,30 @@ export default function SignUpScreen({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scroll}
         >
-          <Text style={styles.title}>Sign Up</Text>
+          <Text style={styles.title}>{t('auth.signUp')}</Text>
           <Text style={styles.subtitle}>
-            Create your {accountLabel.toLowerCase()} account to get started.
+            {accountKind === 'business' ? t('auth.createBusiness') : t('auth.createTalent')}
           </Text>
 
           <TextInput
-            label="First Name"
-            placeholder="First name"
+            label={t('auth.firstName')}
+            placeholder={t('auth.firstNamePlaceholder')}
             value={firstName}
             onChangeText={setFirstName}
             autoCapitalize="words"
           />
 
           <TextInput
-            label="Last Name"
-            placeholder="Last name (optional)"
+            label={t('auth.lastName')}
+            placeholder={t('auth.lastNamePlaceholder')}
             value={lastName}
             onChangeText={setLastName}
             autoCapitalize="words"
           />
 
           <TextInput
-            label="Email"
-            placeholder="Enter your email"
+            label={t('auth.email')}
+            placeholder={t('auth.enterEmail')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -361,15 +354,15 @@ export default function SignUpScreen({
           />
 
           <TextInput
-            label="Password"
-            placeholder="Create a password"
+            label={t('auth.password')}
+            placeholder={t('auth.createPassword')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             enableVisibilityToggle
             visibilityToggleLabels={{
-              show: 'Show password',
-              hide: 'Hide password',
+              show: t('auth.showPassword'),
+              hide: t('auth.hidePassword'),
             }}
             autoCapitalize="none"
             autoCorrect={false}
@@ -378,22 +371,22 @@ export default function SignUpScreen({
           <PasswordRequirements password={password} />
 
           <TextInput
-            label="Confirm Password"
-            placeholder="Confirm your password"
+            label={t('auth.confirmPassword')}
+            placeholder={t('auth.confirmYourPassword')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
             enableVisibilityToggle
             visibilityToggleLabels={{
-              show: 'Show confirm password',
-              hide: 'Hide confirm password',
+              show: t('auth.showConfirm'),
+              hide: t('auth.hideConfirm'),
             }}
             autoCapitalize="none"
             autoCorrect={false}
             textContentType="newPassword"
           />
           {showMismatch ? (
-            <Text style={styles.errorText}>Passwords do not match</Text>
+            <Text style={styles.errorText}>{t('auth.passwordsMismatch')}</Text>
           ) : null}
 
           <TouchableOpacity
@@ -403,13 +396,15 @@ export default function SignUpScreen({
           >
             <Checkbox checked={agreed} onPress={() => setAgreed(!agreed)} />
             <Text style={styles.termsText}>
-              I agree to the <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
+              {t('auth.agreeTerms')}
+              <Text style={styles.termsLink}>{t('auth.terms')}</Text>
+              {t('auth.and')}
+              <Text style={styles.termsLink}>{t('auth.privacy')}</Text>
             </Text>
           </TouchableOpacity>
 
           <Button
-            title="Sign Up"
+            title={t('auth.signUp')}
             onPress={() => {
               void handleSignUp();
             }}
@@ -419,9 +414,9 @@ export default function SignUpScreen({
           />
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t('auth.haveAccount')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
-              <Text style={styles.footerLink}>Log In</Text>
+              <Text style={styles.footerLink}>{t('auth.login')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

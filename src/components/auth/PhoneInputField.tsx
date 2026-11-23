@@ -9,6 +9,8 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { t } from '../../i18n/runtime';
+import { placeLabel } from '../../i18n/places';
 import { colors, spacing, radius, typography } from '../../theme';
 import {
   DIAL_COUNTRIES,
@@ -55,7 +57,7 @@ export default function PhoneInputField({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>Phone Number</Text>
+      <Text style={styles.label}>{t('auth.phoneNumber')}</Text>
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.countryBtn}
@@ -82,7 +84,7 @@ export default function PhoneInputField({
       <Modal visible={open} animationType="slide" transparent>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
           <Pressable style={styles.sheet} onPress={() => undefined}>
-            <Text style={styles.sheetTitle}>Select country</Text>
+            <Text style={styles.sheetTitle}>{t('place.selectCountry')}</Text>
             <FlatList
               data={DIAL_COUNTRIES}
               keyExtractor={(item) => item.code}
@@ -92,7 +94,7 @@ export default function PhoneInputField({
                   onPress={() => handleCountryChange(item.code)}
                 >
                   <Text style={styles.flag}>{item.flag}</Text>
-                  <Text style={styles.countryName}>{item.name}</Text>
+                  <Text style={styles.countryName}>{placeLabel(item.name)}</Text>
                   <Text style={styles.dial}>{item.dial}</Text>
                 </TouchableOpacity>
               )}

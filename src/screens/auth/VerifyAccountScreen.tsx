@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, radius, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
 import { appEnv } from '../../config/env';
@@ -40,13 +41,9 @@ export default function VerifyAccountScreen({
   const phoneVerified = Boolean(apiUser?.phoneVerified);
 
   const phoneSubtitle = useMemo(() => {
-    if (phoneVerified) return 'Verified';
-    if (!phoneEnabled) {
-      return 'Optional — available once SMS verification is enabled';
-    }
-    if (!emailVerified || !session) {
-      return 'Verify email first, then you can verify phone';
-    }
+    if (phoneVerified) return t('auth.verified');
+    if (!phoneEnabled) return t('auth.phoneOptionalLater');
+    if (!emailVerified || !session) return t('auth.verifyEmailThenPhone');
     return phoneE164;
   }, [phoneEnabled, session, phoneE164, phoneVerified, emailVerified]);
 
@@ -67,17 +64,11 @@ export default function VerifyAccountScreen({
 
   const onPhone = async () => {
     if (!phoneEnabled) {
-      Alert.alert(
-        'SMS not enabled',
-        'Phone verification activates once an SMS provider is configured in Supabase. You can skip for now.',
-      );
+      Alert.alert(t('auth.smsUnavailableTitle'), t('auth.smsUnavailableBody'));
       return;
     }
     if (!emailVerified || !session) {
-      Alert.alert(
-        'Verify email first',
-        'Confirm your email, then return here to verify your phone on the same account.',
-      );
+      Alert.alert(t('auth.verifyEmailFirst'), t('auth.verifyEmailFirstBody'));
       return;
     }
     clearAuthError();
@@ -86,7 +77,7 @@ export default function VerifyAccountScreen({
       await sendPhoneOtp(phoneE164);
       navigation.navigate('ConfirmCode', { phone: phoneE164 });
     } catch (e) {
-      Alert.alert('Could not send SMS', mapAuthError(e));
+      Alert.alert(t('auth.couldNotSendSms'), mapAuthError(e));
     } finally {
       setSending(false);
     }
@@ -100,12 +91,10 @@ export default function VerifyAccountScreen({
       </TouchableOpacity>
 
       <Text style={styles.title}>
-        {emailVerified ? 'Almost done' : 'Verify your account'}
+        {emailVerified ? t('auth.almostDone') : t('auth.verifyAccount')}
       </Text>
       <Text style={styles.subtitle}>
-        {emailVerified
-          ? 'Email is verified. Phone verification is optional.'
-          : 'Email verification is required to continue.'}
+        {emailVerified ? t('auth.emailVerifiedOptional') : t('auth.emailRequiredContinue')}
       </Text>
 
       <View style={styles.option}>
@@ -113,17 +102,17 @@ export default function VerifyAccountScreen({
           <Ionicons name="mail-outline" size={22} color={colors.primary} />
         </View>
         <View style={styles.optionBody}>
-          <Text style={styles.optionTitle}>Email</Text>
+          <Text style={styles.optionTitle}>{t('auth.email')}</Text>
           <Text style={styles.optionMeta}>{email}</Text>
         </View>
         {emailVerified ? (
           <View style={styles.verifiedBadge}>
             <Ionicons name="checkmark" size={14} color={colors.white} />
-            <Text style={styles.verifiedText}>Verified</Text>
+            <Text style={styles.verifiedText}>{t('auth.verified')}</Text>
           </View>
         ) : (
           <TouchableOpacity onPress={onEmail} activeOpacity={0.85}>
-            <Text style={styles.actionLink}>Verify</Text>
+            <Text style={styles.actionLink}>{t('auth.verify')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -143,14 +132,14 @@ export default function VerifyAccountScreen({
               !phoneEnabled && styles.optionTitleMuted,
             ]}
           >
-            Phone
+            {t('auth.phone')}
           </Text>
           <Text style={styles.optionMeta}>{phoneSubtitle}</Text>
         </View>
         {phoneVerified ? (
           <View style={styles.verifiedBadge}>
             <Ionicons name="checkmark" size={14} color={colors.white} />
-            <Text style={styles.verifiedText}>Verified</Text>
+            <Text style={styles.verifiedText}>{t('auth.verified')}</Text>
           </View>
         ) : phoneEnabled && emailVerified ? (
           sending ? (
@@ -162,7 +151,7 @@ export default function VerifyAccountScreen({
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.actionLink}>Verify</Text>
+              <Text style={styles.actionLink}>{t('auth.verify')}</Text>
             </TouchableOpacity>
           )
         ) : (
@@ -177,13 +166,13 @@ export default function VerifyAccountScreen({
       {emailVerified ? (
         <View style={styles.footerActions}>
           <Button
-            title="Skip for now"
+            title={t('auth.skipForNow')}
             variant="ghost"
             fullWidth
             onPress={continueAfterPhoneChoice}
           />
           <Button
-            title="Continue"
+            title={t('common.continue')}
             fullWidth
             onPress={continueAfterPhoneChoice}
           />
@@ -191,8 +180,7 @@ export default function VerifyAccountScreen({
       ) : null}
 
       <Text style={styles.hint}>
-        Email verification is required before entering Mawahib. Phone verification
-        is optional and may be required later for payouts.
+        {t('auth.phoneOptionalHint')}
       </Text>
     </ScreenContainer>
   );

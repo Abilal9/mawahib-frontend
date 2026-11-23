@@ -7,6 +7,7 @@ import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import Button from '../../components/ui/Button';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import { useAuth } from '../../context/AuthContext';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, typography } from '../../theme';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -16,9 +17,7 @@ async function openSupportEmail() {
   try {
     await Linking.openURL(SUPPORT_MAILTO);
   } catch {
-    Alert.alert(
-      'Unable to open your email app. You can contact us at support@mawahib.io.',
-    );
+    Alert.alert(t('auth.mailUnavailable'));
   }
 }
 
@@ -53,7 +52,7 @@ export default function AccountSuspendedScreen() {
       setLogoutError(
         error instanceof Error
           ? error.message
-          : 'Could not log out. You are still signed in on this device.',
+          : t('auth.logoutFailed'),
       );
     } finally {
       setLoggingOut(false);
@@ -67,30 +66,29 @@ export default function AccountSuspendedScreen() {
         <AuthBrandHeader />
       </View>
       <View style={styles.content}>
-        <Text style={styles.title}>Account suspended</Text>
+        <Text style={styles.title}>{t('auth.suspendedTitle')}</Text>
         <Text style={styles.body}>
-          Your access to Mawahib has been suspended. If you believe this is an
-          error,{' '}
+          {t('auth.suspendedBody')}
           <Text
             style={styles.supportLink}
             accessibilityRole="link"
-            accessibilityLabel="Reach out to support"
+            accessibilityLabel={t('auth.reachSupportLabel')}
             onPress={() => {
               void openSupportEmail();
             }}
           >
-            reach out to support
+            {t('auth.reachSupport')}
           </Text>
           .
         </Text>
         {authError ? (
           <Text style={styles.error}>
-            Mawahib could not check your account just now. Try again.
+            {t('auth.suspendedCheckFailed')}
           </Text>
         ) : null}
         {logoutError ? <Text style={styles.error}>{logoutError}</Text> : null}
         <Button
-          title="Check again"
+          title={t('auth.checkAgain')}
           onPress={() => {
             void checkAgain();
           }}
@@ -98,13 +96,13 @@ export default function AccountSuspendedScreen() {
           disabled={checking || loggingOut}
         />
         <Button
-          title="Request account deletion"
+          title={t('auth.requestDeletion')}
           variant="outline"
           onPress={() => navigation.navigate('DeleteAccount')}
           disabled={checking || loggingOut}
         />
         <Button
-          title="Log out"
+          title={t('auth.logOut')}
           variant="outline"
           onPress={() => {
             void logOut();

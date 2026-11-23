@@ -2,6 +2,7 @@ import {
   parsePhoneNumberFromString,
   type CountryCode,
 } from 'libphonenumber-js';
+import { t } from '../i18n/runtime';
 
 export type DialCountry = {
   code: CountryCode;
@@ -85,29 +86,29 @@ export function getPhoneValidationMessage(
 
   if (country === 'SA') {
     if (digits[0] !== '5') {
-      return 'Saudi mobile numbers must start with 5';
+      return t('auth.saMustStart5');
     }
     if (digits.length < 9) {
-      return 'Enter a 9-digit mobile number';
+      return t('auth.nineDigits');
     }
     return null;
   }
 
   if (country === 'AE') {
     if (digits[0] !== '5') {
-      return 'Enter a valid UAE mobile number';
+      return t('auth.uaeMobile');
     }
     if (digits.length < 9) {
-      return 'Enter a 9-digit mobile number';
+      return t('auth.nineDigits');
     }
     if (!toE164(digits, 'AE')) {
-      return 'Enter a valid UAE mobile number';
+      return t('auth.uaeMobile');
     }
     return null;
   }
 
   if (!toE164(digits, country)) {
-    return 'Enter a valid phone number for the selected country';
+    return t('auth.phoneForCountry');
   }
   return null;
 }
@@ -118,6 +119,6 @@ export function formatNationalHint(country: CountryCode): string {
     case 'AE':
       return '5XXXXXXXX';
     default:
-      return 'Phone number';
+      return t('auth.phoneNumberHint');
   }
 }
