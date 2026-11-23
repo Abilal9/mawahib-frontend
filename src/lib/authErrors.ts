@@ -1,9 +1,12 @@
+import { t } from '../i18n/runtime';
+
 /**
  * Map Supabase / network auth failures to short, user-facing messages.
  * Never surface tokens, stack traces, or internal paths.
+ * A short unrecognized server message is returned as written.
  */
-export function mapAuthError(error: unknown, fallback = 'Something went wrong. Please try again.'): string {
-  if (!error) return fallback;
+export function mapAuthError(error: unknown, fallback = ''): string {
+  if (!error) return fallback || t('error.tryAgain');
 
   const raw =
     typeof error === 'string'
@@ -33,7 +36,7 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('token has expired') ||
     lower.includes('email link is invalid or has expired')
   ) {
-    return 'The code you entered is incorrect or has expired. Try again or request a new code.';
+    return t('error.codeExpired');
   }
 
   if (
@@ -41,19 +44,19 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('access_denied') ||
     lower.includes('email link is invalid')
   ) {
-    return 'The code you entered is incorrect or has expired. Try again or request a new code.';
+    return t('error.codeExpired');
   }
 
   if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
-    return 'Incorrect email or password.';
+    return t('error.badCredentials');
   }
 
   if (code === 'current_password_required') {
-    return 'Enter your current password and try again.';
+    return t('error.currentPasswordRequired');
   }
 
   if (code === 'current_password_invalid' || lower.includes('current password')) {
-    return 'Current password is incorrect.';
+    return t('error.currentPasswordInvalid');
   }
 
   if (
@@ -61,7 +64,7 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     code === 'reauthentication_not_valid' ||
     lower.includes('reauthentication')
   ) {
-    return 'Sign in again, then change your password.';
+    return t('error.reauth');
   }
 
   if (
@@ -69,14 +72,14 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('already been registered') ||
     lower.includes('email address is already')
   ) {
-    return 'An account with this email already exists. Try logging in instead.';
+    return t('error.emailTaken');
   }
 
   if (
     lower.includes('phone') &&
     (lower.includes('already') || lower.includes('registered') || lower.includes('exists'))
   ) {
-    return 'This phone number is already registered. Try signing in or use a different number.';
+    return t('error.phoneTaken');
   }
 
   if (
@@ -84,7 +87,7 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('phone number') && lower.includes('invalid') ||
     code === 'validation_failed' && lower.includes('phone')
   ) {
-    return 'Enter a valid phone number including country code (e.g. +9665…).';
+    return t('error.phoneInvalid');
   }
 
   if (
@@ -93,7 +96,7 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('phone provider') ||
     lower.includes('unsupported phone provider')
   ) {
-    return 'SMS verification is not available yet. Please use email, or try again later.';
+    return t('error.smsUnavailable');
   }
 
   if (
@@ -102,7 +105,7 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('otp has expired') ||
     code === 'otp_disabled'
   ) {
-    return 'The code you entered is incorrect or has expired. Try again or request a new code.';
+    return t('error.codeExpired');
   }
 
   if (
@@ -112,11 +115,11 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
       lower.includes('characters') ||
       lower.includes('strength'))
   ) {
-    return 'Password is too weak. Use at least 8 characters with upper, lower, number, and special character.';
+    return t('error.passwordWeak');
   }
 
   if (lower.includes('unable to validate email') || lower.includes('invalid email')) {
-    return 'Enter a valid email address.';
+    return t('error.emailInvalid');
   }
 
   if (
@@ -125,11 +128,11 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('network request failed') ||
     lower.includes('timeout')
   ) {
-    return 'Network error. Check your connection and try again.';
+    return t('error.network');
   }
 
   if (lower.includes('email not confirmed') || lower.includes('email_not_confirmed')) {
-    return 'Please verify your email before signing in. Check your inbox for the code.';
+    return t('error.emailUnconfirmed');
   }
 
   if (
@@ -140,7 +143,7 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     code === 'over_email_send_rate_limit' ||
     code === 'over_sms_send_rate_limit'
   ) {
-    return 'Too many requests. Wait a minute, then try resending the code.';
+    return t('error.rateLimit');
   }
 
   if (
@@ -150,11 +153,11 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     lower.includes('nest /users/me') ||
     lower.includes('failed to bootstrap')
   ) {
-    return 'Your account was verified, but we could not load your Mawahib profile. Check that the API is running, then try again.';
+    return t('error.profileLoad');
   }
 
   if (lower.includes('signup is disabled')) {
-    return 'New signups are temporarily unavailable. Please try again later.';
+    return t('error.signupDisabled');
   }
 
   // Prefer a short generic message over leaking provider internals.
@@ -162,7 +165,7 @@ export function mapAuthError(error: unknown, fallback = 'Something went wrong. P
     return message;
   }
 
-  return fallback;
+  return fallback || t('error.tryAgain');
 }
 
 export function isAuthNetworkError(error: unknown): boolean {

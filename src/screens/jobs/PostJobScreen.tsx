@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -196,7 +197,7 @@ export default function PostJobScreen({ route, navigation }: ScreenProps<'PostJo
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => (step > 1 ? navigation.navigate('PostJob', { step: step - 1 }) : navigation.goBack())}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Post a Job</Text>
         <Text style={styles.stepIndicator}>{step}/{TOTAL_STEPS}</Text>

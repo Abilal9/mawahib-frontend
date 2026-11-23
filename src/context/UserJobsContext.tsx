@@ -17,6 +17,7 @@ import {
   UserJobStatus,
 } from '../data/types/userJobs';
 import { ApiError } from '../lib/apiClient';
+import { formatUiDateTime } from '../i18n/format';
 import { t } from '../i18n/runtime';
 import { INBOX_POLL_MS } from '../config/messaging';
 import { usePolling } from '../hooks/usePolling';
@@ -266,7 +267,7 @@ function detailsFromTerms(
     attachmentSize: '',
     packagePrice: terms.money?.amount ?? 0,
     currencySymbol: terms.money?.currency ?? '',
-    requestedAt: new Date(request.createdAt).toLocaleString('en-US', {
+    requestedAt: formatUiDateTime(request.createdAt, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',

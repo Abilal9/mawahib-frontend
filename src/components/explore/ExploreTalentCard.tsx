@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   compactCard: {
     width: 280,
     marginBottom: 0,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   talentRow: { flexDirection: 'row', gap: spacing.sm },
   talentBody: { flex: 1, minWidth: 0, gap: 2 },

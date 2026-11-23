@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -187,7 +188,7 @@ function SectionHeader({
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <TouchableOpacity activeOpacity={0.8} onPress={onPress} hitSlop={8}>
-        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        <Ionicons name={chevronForwardIcon()} size={20} color={colors.textSecondary} />
       </TouchableOpacity>
     </View>
   );
@@ -1057,7 +1058,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     marginBottom: spacing.md,
-    paddingRight: 20,
+    paddingEnd: 20,
   },
   jobLogo: { width: 48, height: 48, borderRadius: 8 },
   talentAvatar: { width: 48, height: 48, borderRadius: 24 },

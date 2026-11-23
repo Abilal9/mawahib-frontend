@@ -1,4 +1,5 @@
 import React from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,7 +96,7 @@ export function GuestSectionHeader({
       <Text style={styles.sectionTitle}>{title}</Text>
       {onPress ? (
         <TouchableOpacity onPress={onPress} hitSlop={8} accessibilityRole="button">
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          <Ionicons name={chevronForwardIcon()} size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
   compactCard: {
     width: 260,
     marginHorizontal: 0,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   cardBody: { flex: 1, minWidth: 0, gap: 2 },
   cardTitle: { ...typography.label, color: colors.text },
@@ -430,7 +431,7 @@ const styles = StyleSheet.create({
   compactServiceCard: {
     width: 260,
     marginHorizontal: 0,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   serviceBody: { padding: spacing.md, gap: 4 },
   providerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

@@ -1,4 +1,5 @@
 import React from 'react';
+import { backIcon } from '../../i18n/direction';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +16,7 @@ export default function GuestScreenHeader({
   return (
     <View style={[styles.bar, { paddingTop: insets.top + spacing.sm }]}>
       <TouchableOpacity onPress={onBack} hitSlop={8} style={styles.side} accessibilityRole="button">
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
+        <Ionicons name={backIcon()} size={24} color={colors.text} />
       </TouchableOpacity>
       <Text style={styles.title} numberOfLines={1}>
         {title ?? ''}

@@ -1,5 +1,7 @@
+import { t } from '../i18n/runtime';
 import { ApiError, isStaleIdentityError } from './identityFences';
 
+/** English rate-limit sentinel. A missing page is unavailable content. */
 export const PUBLIC_RATE_LIMIT_MESSAGE = 'Too many requests. Try again shortly.';
 
 export function isPublicNotFound(error: unknown): boolean {
@@ -13,10 +15,10 @@ export function isPublicRateLimit(error: unknown): boolean {
 export function publicErrorMessage(error: unknown): string {
   if (isStaleIdentityError(error)) return '';
   if (error instanceof ApiError) {
-    if (error.status === 404) return 'This content is unavailable.';
-    if (error.status === 429) return PUBLIC_RATE_LIMIT_MESSAGE;
-    if (error.status >= 500) return 'Something went wrong. Try again.';
-    return error.message || 'Unable to load.';
+    if (error.status === 404) return t('error.contentUnavailable');
+    if (error.status === 429) return t('error.rateLimitShort');
+    if (error.status >= 500) return t('error.server');
+    return error.message || t('error.unableToLoad');
   }
-  return 'Unable to load. Check your connection.';
+  return t('error.offline');
 }

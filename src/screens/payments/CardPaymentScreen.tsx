@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -119,7 +120,7 @@ export default function CardPaymentScreen({
           style={styles.backButton}
           disabled={payment.paying}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Card Payment</Text>
         <View style={styles.backButton} />

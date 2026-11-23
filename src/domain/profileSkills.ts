@@ -9,6 +9,7 @@ export interface ProfileSkillSelection {
 export interface CanonicalSkillSuggestion {
   id: string;
   nameEn: string;
+  nameAr?: string | null;
   matchedTerm: string;
   categoryId?: string;
 }

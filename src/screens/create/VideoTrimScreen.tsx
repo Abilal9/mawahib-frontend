@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -16,7 +17,7 @@ export default function VideoTrimScreen({ navigation }: ScreenProps<'VideoTrim'>
       <StatusBar style="light" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+          <Ionicons name={backIcon()} size={24} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trim Video</Text>
         <Button title="Done" size="sm" onPress={() => navigation.navigate('PostCreate')} />

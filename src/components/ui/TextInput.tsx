@@ -145,16 +145,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   inputWithLeft: {
-    paddingLeft: spacing.sm,
+    paddingStart: spacing.sm,
   },
   inputWithRight: {
-    paddingRight: spacing.sm,
+    paddingEnd: spacing.sm,
   },
   iconLeft: {
-    paddingLeft: spacing.lg,
+    paddingStart: spacing.lg,
   },
   iconRight: {
-    paddingRight: spacing.md,
+    paddingEnd: spacing.md,
     justifyContent: 'center',
     alignItems: 'center',
   },

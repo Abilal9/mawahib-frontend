@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { chevronBackIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -15,6 +16,8 @@ import ScreenContainer from '../../components/ui/ScreenContainer';
 import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
 import ConfirmActionModal from '../../components/ui/ConfirmActionModal';
 import SuccessConfirmationModal from '../../components/ui/SuccessConfirmationModal';
+import { notificationTabLabel } from '../../i18n/noticeCopy';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, radius, typography } from '../../theme';
 import {
   NOTIFICATION_TABS,
@@ -452,17 +455,17 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
       <View style={styles.stickyTop}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
+            <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Notifications</Text>
           <TouchableOpacity
             onPress={clearAll}
             hitSlop={8}
             disabled={markAllDisabled}
-            accessibilityLabel="Mark all categories read"
+            accessibilityLabel={t('notice.markAll')}
           >
             <Text style={[styles.clearAll, markAllDisabled && styles.clearAllDisabled]}>
-              Mark all categories read
+              {t('notice.markAll')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -482,7 +485,7 @@ export default function NotificationsScreen({ navigation }: ScreenProps<'Notific
                 onPress={() => onTabPress(tab)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab}</Text>
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>{notificationTabLabel(tab)}</Text>
                 <View style={[styles.tabUnderline, !active && styles.tabUnderlineHidden]} />
               </TouchableOpacity>
             );
@@ -761,7 +764,7 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: colors.borderLight,
-    marginLeft: spacing.screen + 40 + spacing.md,
+    marginStart: spacing.screen + 40 + spacing.md,
   },
   empty: {
     ...typography.body,

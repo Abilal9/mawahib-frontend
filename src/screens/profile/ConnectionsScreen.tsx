@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { backIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -223,7 +224,7 @@ export default function ConnectionsScreen({
         {item.title ? <Text style={styles.subtitle}>{item.title}</Text> : null}
         {item.location ? <Text style={styles.location}>{item.location}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      <Ionicons name={chevronForwardIcon()} size={18} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 
@@ -278,7 +279,7 @@ export default function ConnectionsScreen({
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {title}

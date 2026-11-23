@@ -1,4 +1,5 @@
 import React from 'react';
+import { chevronBackIcon } from '../../i18n/direction';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,7 +75,7 @@ export default function ProfileHeaderChrome({
           </View>
         ) : null}
         <TouchableOpacity style={styles.navBtn} onPress={onBack} activeOpacity={0.85}>
-          <Ionicons name="chevron-back" size={20} color={colors.white} />
+          <Ionicons name={chevronBackIcon()} size={20} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.navSpacer} />
         <View style={styles.rightActions}>

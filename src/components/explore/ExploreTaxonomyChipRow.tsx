@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { catalogLabel } from '../../i18n/catalogLabel';
+import { t } from '../../i18n/runtime';
 import { colors, radius, spacing, typography } from '../../theme';
 
 export type ExploreChipCategory = {
   id: string;
   nameEn: string;
+  nameAr?: string | null;
 };
 
 /**
@@ -42,7 +45,7 @@ export default function ExploreTaxonomyChipRow({
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
       {failed ? (
         <TouchableOpacity onPress={onRetry} disabled={!onRetry}>
-          <Text style={styles.retry}>Couldn’t load categories. Tap to retry.</Text>
+          <Text style={styles.retry}>{t('explore.categoriesFailed')}</Text>
         </TouchableOpacity>
       ) : (
         <ScrollView
@@ -52,6 +55,7 @@ export default function ExploreTaxonomyChipRow({
         >
           {categories.map((category) => {
             const selected = selectedIds.includes(category.id);
+            const label = catalogLabel(category);
             return (
               <TouchableOpacity
                 key={category.id}
@@ -59,10 +63,10 @@ export default function ExploreTaxonomyChipRow({
                 onPress={() => onToggle(category.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                accessibilityLabel={category.nameEn}
+                accessibilityLabel={label}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextOn]}>
-                  {category.nameEn}
+                  {label}
                 </Text>
               </TouchableOpacity>
             );
@@ -71,13 +75,13 @@ export default function ExploreTaxonomyChipRow({
       )}
       {filterCount > 0 && onClear ? (
         <View style={styles.actions}>
-          <Text style={styles.count}>Filters {filterCount}</Text>
+          <Text style={styles.count}>{t('explore.filterCount', { count: filterCount })}</Text>
           <TouchableOpacity
             onPress={onClear}
             accessibilityRole="button"
-            accessibilityLabel="Clear filters"
+            accessibilityLabel={t('explore.clearFilters')}
           >
-            <Text style={styles.clear}>Clear</Text>
+            <Text style={styles.clear}>{t('common.clear')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -92,7 +96,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
     gap: spacing.xs,
   },
-  loader: { alignSelf: 'flex-start', marginLeft: spacing.screen },
+  loader: { alignSelf: 'flex-start', marginStart: spacing.screen },
   retry: {
     ...typography.caption,
     color: colors.primary,

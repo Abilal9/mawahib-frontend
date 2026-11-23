@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -201,7 +202,7 @@ export default function DeleteAccountScreen() {
           accessibilityLabel="Back"
           accessibilityState={{ disabled: confirming }}
         >
-          <Ionicons name="arrow-back" size={24} color={confirming ? colors.textSecondary : colors.text} />
+          <Ionicons name={backIcon()} size={24} color={confirming ? colors.textSecondary : colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Delete account</Text>
         <View style={styles.backButton} />

@@ -308,13 +308,13 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.text,
     fontWeight: '600',
-    marginLeft: 4,
+    marginStart: 4,
   },
   reviewsLink: {
     ...typography.caption,
     color: colors.textSecondary,
     textDecorationLine: 'underline',
-    marginLeft: 2,
+    marginStart: 2,
   },
   connections: {
     ...typography.caption,

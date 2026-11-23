@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { backIcon, chevronBackIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -67,7 +68,7 @@ export default function CalendarScreen({ navigation }: ScreenProps<'Calendar'>) 
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Calendar</Text>
         <View style={styles.backButton} />
@@ -85,11 +86,11 @@ export default function CalendarScreen({ navigation }: ScreenProps<'Calendar'>) 
       >
         <View style={styles.monthHeader}>
           <TouchableOpacity onPress={() => calendar.shiftMonth(-1)} hitSlop={8}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
+            <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.monthName}>{monthTitle}</Text>
           <TouchableOpacity onPress={() => calendar.shiftMonth(1)} hitSlop={8}>
-            <Ionicons name="chevron-forward" size={24} color={colors.text} />
+            <Ionicons name={chevronForwardIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 

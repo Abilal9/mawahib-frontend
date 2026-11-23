@@ -1,4 +1,5 @@
 import React from 'react';
+import { backIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -56,7 +57,7 @@ export default function PortfolioProjectDetailScreen({
         <StatusBar style="dark" />
         <View style={[styles.missingTop, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name={backIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
         <Text style={styles.missing}>Project not found</Text>
@@ -103,7 +104,7 @@ export default function PortfolioProjectDetailScreen({
             style={[styles.backButton, { top: insets.top + spacing.sm }]}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={22} color={colors.white} />
+            <Ionicons name={backIcon()} size={22} color={colors.white} />
           </TouchableOpacity>
           {!isVisitorView ? (
             <View style={[styles.ownerActions, { top: insets.top + spacing.sm }]}>

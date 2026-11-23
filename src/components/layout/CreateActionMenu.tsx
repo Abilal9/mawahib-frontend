@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.full,
     paddingVertical: spacing.sm,
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.lg,
+    paddingStart: spacing.sm,
+    paddingEnd: spacing.lg,
     gap: spacing.sm,
     ...Platform.select({
       ios: {

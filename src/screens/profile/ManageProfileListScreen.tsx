@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { chevronBackIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -469,7 +470,7 @@ export default function ManageProfileListScreen({
       <StatusBar style="dark" />
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity onPress={requestLeave} style={styles.headerIcon} hitSlop={8}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
+          <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.headerIcon} />
@@ -554,8 +555,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
     paddingVertical: spacing.md,
-    paddingRight: spacing.md,
-    paddingLeft: spacing.xs,
+    paddingEnd: spacing.md,
+    paddingStart: spacing.xs,
     gap: spacing.sm,
     marginBottom: spacing.md,
   },

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { backIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -134,7 +135,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
             style={styles.skeletonBack}
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name={backIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
         {visitorUser.loading ? (
@@ -592,7 +593,7 @@ export default function UserProfileScreen({ route, navigation }: ScreenProps<'Us
                       activeOpacity={0.85}
                     >
                       <Text style={styles.viewMoreText}>View more</Text>
-                      <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+                      <Ionicons name={chevronForwardIcon()} size={18} color={colors.primary} />
                     </TouchableOpacity>
                   ) : null}
                 </>

@@ -1,4 +1,5 @@
 import { Notification } from '../data/types';
+import { notificationDisplayCopy } from '../i18n/noticeCopy';
 import { uiTypeForApiType } from '../lib/notificationCategories';
 import {
   notificationsApi,
@@ -31,24 +32,6 @@ export function parseNotificationPayload(
   return { screen, params };
 }
 
-const KNOWN_EVENT_SUMMARIES = new Set([
-  'sent you a message',
-  'started a chat with you',
-  'started a conversation with you',
-  'a work chat was started',
-  'a work chat has started',
-  'wants to connect with you',
-  'accepted your connection request',
-  'sent you a work request',
-  'accepted your work request',
-  'rejected your work request',
-  'requested changes',
-  'started the job',
-  'marked the job as delivered',
-  'declined the delivery',
-  'completed the job',
-]);
-
 /**
  * Build compact event-summary copy. Never surface raw message / attachment
  * contents — including for legacy rows that stored the chat body.
@@ -60,90 +43,13 @@ function eventCopy(api: ApiNotification): {
 } {
   const deep = parseNotificationPayload(api.payload);
   const params = deep.params ?? {};
-  const actorName = api.actor?.displayName?.trim();
-  const jobTitle =
-    typeof params.jobTitle === 'string' && params.jobTitle.trim()
-      ? params.jobTitle.trim()
-      : undefined;
-  const event =
-    typeof params.event === 'string' ? params.event : undefined;
-
-  switch (api.type) {
-    case 'message_received': {
-      if (event === 'work_chat_started') {
-        return {
-          title: 'A work chat has started',
-          message: jobTitle
-            ? jobTitle
-            : actorName
-              ? `with ${actorName}`
-              : 'Work conversation is ready',
-          context: actorName && jobTitle ? `with ${actorName}` : undefined,
-        };
-      }
-      const started =
-        event === 'conversation_started' ||
-        /started a (chat|conversation)/i.test(api.body);
-      // Legacy per-message rows may still exist; show a neutral summary and
-      // never the message body. New sends no longer create those rows.
-      return {
-        title: actorName || api.title || 'Messages',
-        message: started
-          ? 'started a conversation with you'
-          : 'sent you a message',
-        context: jobTitle,
-      };
-    }
-    case 'connection_request':
-      return {
-        title: actorName || api.title || 'Connection request',
-        message: 'wants to connect with you',
-      };
-    case 'connection_accepted':
-      return {
-        title: actorName || api.title || 'Connection',
-        message: 'accepted your connection request',
-      };
-    case 'post_liked':
-      return {
-        title: actorName || api.title || 'Someone',
-        message: 'liked your post',
-      };
-    case 'post_commented': {
-      const preview =
-        typeof params.commentPreview === 'string' && params.commentPreview.trim()
-          ? params.commentPreview.trim()
-          : undefined;
-      return {
-        title: actorName || api.title || 'Someone',
-        message: 'commented on your post',
-        context: preview,
-      };
-    }
-    case 'engagement_status':
-    case 'work_request_event': {
-      const body = api.body.trim();
-      const safeBody = KNOWN_EVENT_SUMMARIES.has(body.toLowerCase())
-        ? body
-        : body.length <= 80 && !body.includes('\n')
-          ? body
-          : 'updated a work request';
-      return {
-        title: actorName || api.title || 'Work update',
-        message: safeBody,
-        context: jobTitle,
-      };
-    }
-    default:
-      return {
-        title: actorName || api.title || 'Notification',
-        message:
-          api.body.trim().length > 120
-            ? 'You have a new notification'
-            : api.body.trim() || 'You have a new notification',
-        context: jobTitle,
-      };
-  }
+  return notificationDisplayCopy({
+    type: api.type,
+    title: api.title,
+    body: api.body,
+    actorName: api.actor?.displayName?.trim(),
+    params,
+  });
 }
 
 export function mapApiNotification(api: ApiNotification): Notification {

@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.borderLight,
     overflow: 'hidden',
-    marginLeft: 2,
+    marginStart: 2,
   },
   barFill: {
     height: '100%',

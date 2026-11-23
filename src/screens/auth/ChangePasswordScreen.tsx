@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -172,7 +173,7 @@ export default function ChangePasswordScreen({
           style={styles.backButton}
           disabled={saving}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Change Password</Text>
         <View style={styles.backButton} />

@@ -1,4 +1,5 @@
 import React from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -128,7 +129,7 @@ export default function JobOverviewSheet({
                     </Text>
                   </View>
                   <Ionicons
-                    name="chevron-forward"
+                    name={chevronForwardIcon()}
                     size={18}
                     color={colors.textSecondary}
                   />

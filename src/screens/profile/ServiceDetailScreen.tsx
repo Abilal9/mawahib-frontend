@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { backIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -73,7 +74,7 @@ function ServiceHero({
         </TouchableOpacity>
       )}
       <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <Ionicons name="arrow-back" size={24} color={colors.white} />
+        <Ionicons name={backIcon()} size={24} color={colors.white} />
       </TouchableOpacity>
       {page ? (
         <View style={styles.heroCount}>
@@ -484,7 +485,7 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
                 )}
               </TouchableOpacity>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} style={{ marginLeft: 'auto' }} />
+            <Ionicons name={chevronForwardIcon()} size={18} color={colors.textSecondary} style={{ marginLeft: 'auto' }} />
           </TouchableOpacity>
 
           {service.price != null || service.duration.trim() ? (

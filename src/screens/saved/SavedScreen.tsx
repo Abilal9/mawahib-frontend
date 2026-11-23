@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -57,7 +58,7 @@ export default function SavedScreen({ navigation }: ScreenProps<'Saved'>) {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Saved</Text>
         <View style={styles.headerButton} />

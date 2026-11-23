@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { chevronBackIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -453,7 +454,7 @@ export default function AddProfileServiceScreen({
 
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity onPress={goBack} style={styles.iconBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
+          <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.progressRow}>
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (

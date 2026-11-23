@@ -9,6 +9,8 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { placeLabel } from '../../i18n/places';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, radius, typography } from '../../theme';
 import {
   COUNTRY_CATALOG,
@@ -36,8 +38,8 @@ export default function LocationSelectors({
   onCountryChange,
   onLocationChange,
   disabled,
-  countryLabel = 'Country',
-  locationLabel = 'City / Emirate',
+  countryLabel = t('place.country'),
+  locationLabel = t('place.city'),
   compact = false,
 }: Props) {
   const [countryOpen, setCountryOpen] = useState(false);
@@ -80,7 +82,7 @@ export default function LocationSelectors({
             !country && styles.placeholder,
           ]}
         >
-          {country?.label ?? 'Select country'}
+          {country ? placeLabel(country.label) : t('place.selectCountry')}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
       </TouchableOpacity>
@@ -111,8 +113,11 @@ export default function LocationSelectors({
             !selectedLocation && styles.placeholder,
           ]}
         >
-          {selectedLocation?.label ??
-            (countryCode ? 'Select city / emirate' : 'Select a country first')}
+          {selectedLocation
+            ? placeLabel(selectedLocation.label)
+            : countryCode
+              ? t('place.selectCity')
+              : t('place.selectCountryFirst')}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
       </TouchableOpacity>
@@ -120,7 +125,7 @@ export default function LocationSelectors({
       <Modal visible={countryOpen} animationType="slide" transparent>
         <Pressable style={styles.backdrop} onPress={() => setCountryOpen(false)}>
           <Pressable style={styles.sheet} onPress={() => undefined}>
-            <Text style={styles.sheetTitle}>Select country</Text>
+            <Text style={styles.sheetTitle}>{t('place.selectCountry')}</Text>
             <FlatList
               data={SUPPORTED_COUNTRY_CODES}
               keyExtractor={(item) => item}
@@ -131,7 +136,7 @@ export default function LocationSelectors({
                     style={styles.optionRow}
                     onPress={() => handleCountryChange(item)}
                   >
-                    <Text style={styles.optionName}>{entry.label}</Text>
+                    <Text style={styles.optionName}>{placeLabel(entry.label)}</Text>
                     {countryCode === item ? (
                       <Ionicons
                         name="checkmark"
@@ -153,7 +158,7 @@ export default function LocationSelectors({
           onPress={() => setLocationOpen(false)}
         >
           <Pressable style={styles.sheet} onPress={() => undefined}>
-            <Text style={styles.sheetTitle}>Select city / emirate</Text>
+            <Text style={styles.sheetTitle}>{t('place.selectCity')}</Text>
             <FlatList
               data={locations}
               keyExtractor={(item) => item.code}
@@ -165,7 +170,7 @@ export default function LocationSelectors({
                     setLocationOpen(false);
                   }}
                 >
-                  <Text style={styles.optionName}>{item.label}</Text>
+                  <Text style={styles.optionName}>{placeLabel(item.label)}</Text>
                   {locationCode === item.code ? (
                     <Ionicons
                       name="checkmark"
@@ -222,7 +227,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text,
     flex: 1,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   placeholder: {
     color: colors.textSecondary,

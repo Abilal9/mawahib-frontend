@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -43,7 +44,7 @@ export default function PremiumScreen({ navigation }: ScreenProps<'Premium'>) {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mawahib Premium</Text>
         <View style={styles.backButton} />
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   planName: { ...typography.h3, color: colors.text },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.xs },
   planPrice: { ...typography.h1, color: colors.primary, fontSize: 28 },
-  planPeriod: { ...typography.body, color: colors.textSecondary, marginLeft: spacing.xs },
+  planPeriod: { ...typography.body, color: colors.textSecondary, marginStart: spacing.xs },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   featureText: { ...typography.bodySmall, color: colors.text },
   selectedIndicator: { position: 'absolute', top: spacing.lg, right: spacing.lg },

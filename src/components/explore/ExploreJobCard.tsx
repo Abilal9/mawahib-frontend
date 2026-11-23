@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   compactCard: {
     width: 300,
     marginBottom: 0,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   jobLogoWrap: {
     width: 44,

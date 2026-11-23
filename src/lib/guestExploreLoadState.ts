@@ -1,3 +1,4 @@
+import { t } from '../i18n/runtime';
 import {
   isPublicRateLimit,
   PUBLIC_RATE_LIMIT_MESSAGE,
@@ -32,7 +33,7 @@ export function exploreLoadMoreBlocked(input: {
     input.loadingMore ||
     !input.hasMore ||
     input.itemCount > input.maxSkip ||
-    input.error === PUBLIC_RATE_LIMIT_MESSAGE
+    (input.error === PUBLIC_RATE_LIMIT_MESSAGE || input.error === t('error.rateLimitShort'))
   );
 }
 

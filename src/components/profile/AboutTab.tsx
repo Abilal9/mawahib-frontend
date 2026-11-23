@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -145,7 +146,7 @@ export default function AboutTab({
                   <Text style={styles.langLevel}>{languageSubtitle(lang)}</Text>
                 </View>
                 {isOwn ? (
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                  <Ionicons name={chevronForwardIcon()} size={16} color={colors.textSecondary} />
                 ) : null}
               </TouchableOpacity>
             </View>
@@ -216,7 +217,7 @@ export default function AboutTab({
                   ) : null}
                 </View>
                 {isOwn ? (
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                  <Ionicons name={chevronForwardIcon()} size={16} color={colors.textSecondary} />
                 ) : null}
               </TouchableOpacity>
             </View>
@@ -268,7 +269,7 @@ export default function AboutTab({
                   ) : null}
                 </View>
                 {isOwn ? (
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                  <Ionicons name={chevronForwardIcon()} size={16} color={colors.textSecondary} />
                 ) : null}
               </TouchableOpacity>
             </View>
@@ -320,7 +321,7 @@ export default function AboutTab({
                   ) : null}
                 </View>
                 {isOwn ? (
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                  <Ionicons name={chevronForwardIcon()} size={16} color={colors.textSecondary} />
                 ) : null}
               </TouchableOpacity>
             </View>

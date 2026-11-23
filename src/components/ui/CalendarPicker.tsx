@@ -174,6 +174,7 @@ export default function CalendarPicker({
 
 const styles = StyleSheet.create({
   card: {
+    direction: 'ltr',
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderRadius: radius.card,

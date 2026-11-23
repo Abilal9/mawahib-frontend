@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { useCreateMenu } from '../../context/CreateMenuContext';
 import { useMessagingUnread } from '../../context/MessagingUnreadContext';
 import { useUserJobs } from '../../context/UserJobsContext';
@@ -155,7 +156,7 @@ function TabBarBody({
                   key={route.key}
                   accessibilityRole="button"
                   accessibilityState={isCreateMenuOpen ? { selected: true } : {}}
-                  accessibilityLabel="Create"
+                  accessibilityLabel={t('tab.create')}
                   onPress={onPress}
                   style={styles.tab}
                   activeOpacity={0.85}

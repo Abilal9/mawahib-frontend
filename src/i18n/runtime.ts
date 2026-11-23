@@ -1,5 +1,6 @@
-import { AppLocale } from './locale';
-import { MessageKey, pluralPhrase, translate } from './messages';
+import type { AppLocale } from './locale';
+import type { MessageKey } from './messages';
+import { pluralPhrase, translate } from './messages';
 
 let applied: AppLocale = 'en';
 

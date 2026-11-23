@@ -1,4 +1,5 @@
 import React from 'react';
+import { backIcon } from '../../i18n/direction';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,7 +48,7 @@ export default function ProfileHero({
       />
       <View style={[styles.headerBar, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.headerButton} onPress={onBack}>
-          <Ionicons name="arrow-back" size={22} color={colors.white} />
+          <Ionicons name={backIcon()} size={22} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{title}</Text>
         <TouchableOpacity
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   ratingText: {
     ...typography.caption,
     color: colors.text,
-    marginLeft: 4,
+    marginStart: 4,
     fontWeight: '600',
   },
   reviewsLink: {

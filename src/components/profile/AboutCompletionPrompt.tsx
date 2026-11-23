@@ -1,4 +1,5 @@
 import React from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import {
   Modal,
   View,
@@ -67,7 +68,7 @@ export default function AboutCompletionPrompt({
                 />
               </View>
               <Text style={styles.rowLabel}>{ABOUT_SECTION_LABELS[key]}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+              <Ionicons name={chevronForwardIcon()} size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           );
         })}

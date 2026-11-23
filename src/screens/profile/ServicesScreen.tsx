@@ -1,4 +1,5 @@
 import React from 'react';
+import { backIcon } from '../../i18n/direction';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { toImageSource } from '../../utils/image';
@@ -29,7 +30,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {user ? `${user.name.split(' ')[0]}'s Services` : 'Services'}

@@ -9,6 +9,8 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { catalogLabel } from '../../i18n/catalogLabel';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, radius, typography } from '../../theme';
 import { TALENT_CHIP_STYLES } from '../../data/types';
 import {
@@ -179,7 +181,7 @@ export default function TalentChipsEditor({ value, onChange, disabled }: Props) 
                 name="reorder-three"
                 size={14}
                 color={tone.text}
-                style={{ marginRight: 4 }}
+                style={{ marginEnd: 4 }}
               />
               <Text style={[styles.chipText, { color: tone.text }]}>{talent.name}</Text>
               <TouchableOpacity
@@ -221,7 +223,7 @@ export default function TalentChipsEditor({ value, onChange, disabled }: Props) 
       {draft.trim() ? (
         <View style={styles.suggestBox}>
           {lookupPending || suggesting ? (
-            <Text style={styles.hint}>Looking up skills…</Text>
+            <Text style={styles.hint}>{t('taxonomy.looking')}</Text>
           ) : null}
           {visibleSuggestions.map((suggestion) => (
             <TouchableOpacity
@@ -230,7 +232,7 @@ export default function TalentChipsEditor({ value, onChange, disabled }: Props) 
               onPress={() => selectCanonical(suggestion)}
               disabled={disabled}
             >
-              <Text style={styles.suggestName}>{suggestion.nameEn}</Text>
+              <Text style={styles.suggestName}>{catalogLabel(suggestion)}</Text>
             </TouchableOpacity>
           ))}
           {!lookupPending && !exactSuggestion(visibleSuggestions, draft) ? (

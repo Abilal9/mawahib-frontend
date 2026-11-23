@@ -7,6 +7,8 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
+import { catalogLabel } from '../../i18n/catalogLabel';
+import { t } from '../../i18n/runtime';
 import { colors, radius, spacing, typography } from '../../theme';
 import {
   MAX_OFFERING_SKILLS,
@@ -51,7 +53,7 @@ export function TaxonomyFields({
   const [attempt, setAttempt] = useState(0);
   const [draft, setDraft] = useState('');
   const [suggestions, setSuggestions] = useState<
-    Array<{ id: string; nameEn: string; categoryId?: string }>
+    Array<{ id: string; nameEn: string; nameAr?: string | null; categoryId?: string }>
   >([]);
   const [looking, setLooking] = useState(false);
 
@@ -112,24 +114,24 @@ export function TaxonomyFields({
     onAllowsCustomCategoryChange?.(allowsCustom);
   }, [allowsCustom, loading, onAllowsCustomCategoryChange]);
 
-  const selectedName =
-    categories.find((category) => category.id === categoryId)?.nameEn ??
-    categoryName;
+  const selectedCategory = categories.find((category) => category.id === categoryId);
+  const selectedName = selectedCategory ? catalogLabel(selectedCategory) : categoryName;
 
   return (
     <View>
       <Text style={styles.label}>
-        Category{categoryRequired ? <Text style={styles.required}> *</Text> : null}
+        {t('taxonomy.category')}{categoryRequired ? <Text style={styles.required}> *</Text> : null}
       </Text>
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? (
         <TouchableOpacity onPress={() => setAttempt((value) => value + 1)}>
-          <Text style={styles.error}>Couldn’t load categories. Tap to retry.</Text>
+          <Text style={styles.error}>{t('explore.categoriesFailed')}</Text>
         </TouchableOpacity>
       ) : null}
       <View style={styles.categoryList}>
         {categories.map((category) => {
           const selected = category.id === categoryId;
+          const label = catalogLabel(category);
           return (
             <TouchableOpacity
               key={category.id}
@@ -143,16 +145,17 @@ export function TaxonomyFields({
               }
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              accessibilityLabel={label}
             >
               <Text style={[styles.categoryText, selected && styles.categoryTextOn]}>
-                {category.nameEn}
+                {label}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
       {categoryId && !categories.some((category) => category.id === categoryId) && selectedName ? (
-        <Text style={styles.hint}>Selected: {selectedName}</Text>
+        <Text style={styles.hint}>{t('taxonomy.selected', { name: selectedName })}</Text>
       ) : null}
       {allowsCustom ? (
         <>
@@ -164,14 +167,14 @@ export function TaxonomyFields({
             style={styles.input}
             value={customCategory}
             onChangeText={onCustomCategoryChange}
-            placeholder="e.g. Calligraphy"
+            placeholder={t('taxonomy.customExample')}
             placeholderTextColor={colors.textSecondary}
           />
           {customError ? <Text style={styles.error}>{customError}</Text> : null}
         </>
       ) : null}
 
-      <Text style={styles.label}>Skills</Text>
+      <Text style={styles.label}>{t('taxonomy.skills')}</Text>
       <View style={styles.chips}>
         {skills.map((skill, index) => (
           <View key={skill.id} style={styles.skillChip}>
@@ -180,7 +183,7 @@ export function TaxonomyFields({
               onPress={() =>
                 onSkillsChange(skills.filter((item) => item.id !== skill.id))
               }
-              accessibilityLabel={`Remove ${skill.name}`}
+              accessibilityLabel={t('taxonomy.removeSkill', { name: skill.name })}
             >
               <Text style={styles.remove}>×</Text>
             </TouchableOpacity>
@@ -192,7 +195,7 @@ export function TaxonomyFields({
                   next.splice(index - 1, 0, item);
                   onSkillsChange(next);
                 }}
-                accessibilityLabel={`Move ${skill.name} earlier`}
+                accessibilityLabel={t('taxonomy.moveSkill', { name: skill.name })}
               >
                 <Text style={styles.move}>↑</Text>
               </TouchableOpacity>
@@ -204,11 +207,11 @@ export function TaxonomyFields({
         style={styles.input}
         value={draft}
         onChangeText={setDraft}
-        placeholder="Search skills"
+        placeholder={t('taxonomy.searchSkills')}
         placeholderTextColor={colors.textSecondary}
         editable={skills.length < MAX_OFFERING_SKILLS}
       />
-      {looking ? <Text style={styles.hint}>Looking up skills…</Text> : null}
+      {looking ? <Text style={styles.hint}>{t('taxonomy.looking')}</Text> : null}
       {suggestions.map((suggestion) => (
         <TouchableOpacity
           key={suggestion.id}
@@ -224,7 +227,7 @@ export function TaxonomyFields({
             setSuggestions([]);
           }}
         >
-          <Text style={styles.suggestionText}>{suggestion.nameEn}</Text>
+          <Text style={styles.suggestionText}>{catalogLabel(suggestion)}</Text>
         </TouchableOpacity>
       ))}
     </View>

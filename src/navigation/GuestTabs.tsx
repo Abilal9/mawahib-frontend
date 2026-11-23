@@ -9,6 +9,7 @@ import GuestCreateMenu from '../components/layout/GuestCreateMenu';
 import { CreateMenuProvider } from '../context/CreateMenuContext';
 import { useAuthGate } from '../context/AuthGateContext';
 import { GuestTabParamList } from './types';
+import { t } from '../i18n/runtime';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator<GuestTabParamList>();
@@ -55,25 +56,25 @@ export default function GuestTabs() {
           <Tab.Screen
             name="HomeTab"
             component={GuestHomeScreen}
-            options={{ title: 'Home' }}
+            options={{ title: t('tab.home'), tabBarAccessibilityLabel: t('tab.home') }}
           />
           <Tab.Screen
             name="SearchTab"
             component={GuestExploreScreen}
-            options={{ title: 'Explore' }}
+            options={{ title: t('tab.explore'), tabBarAccessibilityLabel: t('tab.explore') }}
           />
           <Tab.Screen
             name="CreateTab"
             component={CreateTabPlaceholder}
-            options={{ title: 'Create' }}
+            options={{ title: t('tab.create'), tabBarAccessibilityLabel: t('tab.create') }}
             listeners={preventTabPress}
           />
           <Tab.Screen
             name="MessagesTab"
             component={CreateTabPlaceholder}
             options={{
-              title: 'Messages',
-              tabBarAccessibilityLabel: 'Messages, sign in required',
+              title: t('tab.messages'),
+              tabBarAccessibilityLabel: t('guest.messagesLocked'),
             }}
             listeners={preventTabPress}
           />
@@ -81,8 +82,8 @@ export default function GuestTabs() {
             name="JobsTab"
             component={CreateTabPlaceholder}
             options={{
-              title: 'Jobs',
-              tabBarAccessibilityLabel: 'Jobs, sign in required',
+              title: t('tab.jobs'),
+              tabBarAccessibilityLabel: t('guest.jobsLocked'),
             }}
             listeners={preventTabPress}
           />

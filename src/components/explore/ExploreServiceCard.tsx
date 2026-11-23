@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   compactCard: {
     width: 280,
     marginBottom: 0,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   serviceBody: { padding: spacing.md, gap: 4 },
   serviceTitleRow: {

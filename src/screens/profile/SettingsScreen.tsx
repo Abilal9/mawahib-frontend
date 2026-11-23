@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { backIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -148,7 +149,7 @@ export default function SettingsScreen({ navigation }: ScreenProps<'Settings'>) 
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={styles.backButton} />
@@ -226,7 +227,7 @@ function Section({
                 </View>
               ) : null}
               {row.onPress ? (
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                <Ionicons name={chevronForwardIcon()} size={20} color={colors.textSecondary} />
               ) : null}
             </>
           );

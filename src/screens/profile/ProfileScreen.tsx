@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -186,7 +187,7 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
                       Add your bio, languages, and talents so clients can understand your work.
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                  <Ionicons name={chevronForwardIcon()} size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               ) : null}
               <AboutTab
@@ -441,7 +442,7 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
                     activeOpacity={0.85}
                   >
                     <Text style={styles.viewMoreText}>View more</Text>
-                    <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+                    <Ionicons name={chevronForwardIcon()} size={18} color={colors.primary} />
                   </TouchableOpacity>
                 ) : null}
               </View>

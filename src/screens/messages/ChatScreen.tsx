@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { backIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -54,6 +55,8 @@ import { shouldRenewChatPushViewing } from '../../lib/chatPush';
 import { clearChatPushViewing, renewChatPushViewing } from '../../lib/chatPushRuntime';
 import { mergeChatMessages } from '../../lib/mergeChatMessages';
 import { createClientId } from '../../lib/clientId';
+import { systemChatText } from '../../i18n/noticeCopy';
+import { t } from '../../i18n/runtime';
 import { ApiError } from '../../lib/apiClient';
 import {
   pickLocalDocument,
@@ -1023,7 +1026,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.headerPerson}
@@ -1116,7 +1119,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
             </Text>
           </View>
           <Ionicons
-            name="chevron-forward"
+            name={chevronForwardIcon()}
             size={18}
             color={colors.textSecondary}
           />
@@ -1232,10 +1235,10 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
                   const systemBody = (
                     <>
                       {message.body ? (
-                        <Text style={styles.systemText}>{message.body}</Text>
+                        <Text style={styles.systemText}>{systemChatText(message)}</Text>
                       ) : null}
                       {canOpenJob ? (
-                        <Text style={styles.systemLink}>View details</Text>
+                        <Text style={styles.systemLink}>{t('common.viewDetails')}</Text>
                       ) : null}
                     </>
                   );
@@ -1246,7 +1249,7 @@ export default function ChatScreen({ route, navigation }: ScreenProps<'Chat'>) {
                         onPress={viewJobDetails}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel="Delivery was declined. View job details"
+                        accessibilityLabel={`${systemChatText(message)}. ${t('common.viewDetails')}`}
                       >
                         {systemBody}
                       </TouchableOpacity>
@@ -1577,7 +1580,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   attachMenu: {
-    marginLeft: spacing.screen,
+    marginStart: spacing.screen,
     marginBottom: Platform.OS === 'ios' ? 88 : 72,
     alignSelf: 'flex-start',
     minWidth: 200,

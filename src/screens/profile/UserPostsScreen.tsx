@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -74,7 +75,7 @@ export default function UserPostsScreen({
       <StatusBar style="dark" />
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {title}

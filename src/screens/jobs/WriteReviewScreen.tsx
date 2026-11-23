@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { backIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -221,7 +222,7 @@ export default function WriteReviewScreen({
             style={styles.backButton}
             hitSlop={8}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name={backIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Write your review</Text>
           <View style={styles.backButton} />

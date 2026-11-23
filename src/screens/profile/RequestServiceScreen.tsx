@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { chevronBackIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -450,7 +451,7 @@ export default function RequestServiceScreen({
 
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity onPress={goBack} style={styles.iconBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
+          <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.progressRow}>
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -701,7 +702,7 @@ export default function RequestServiceScreen({
                   hitSlop={8}
                 >
                   <Ionicons
-                    name="chevron-back"
+                    name={chevronBackIcon()}
                     size={22}
                     color={
                       isCurrentLocalMonth(calendarMonth) ||
@@ -716,7 +717,7 @@ export default function RequestServiceScreen({
                   onPress={() => setCalendarMonth(new Date(year, month + 1, 1))}
                   hitSlop={8}
                 >
-                  <Ionicons name="chevron-forward" size={22} color={colors.text} />
+                  <Ionicons name={chevronForwardIcon()} size={22} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -1428,7 +1429,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   clearableInput: {
-    paddingRight: 40,
+    paddingEnd: 40,
   },
   clearBtn: {
     position: 'absolute',

@@ -73,6 +73,7 @@ export default function SidebarCalendarPreview({ onPress }: SidebarCalendarPrevi
 
 const styles = StyleSheet.create({
   card: {
+    direction: 'ltr',
     backgroundColor: colors.white,
     marginBottom: 0,
   },

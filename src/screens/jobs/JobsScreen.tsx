@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -228,7 +229,7 @@ function JobFlowCard({
               </Text>
             </View>
           ) : null}
-          <Ionicons name="chevron-forward" size={16} color={colors.border} />
+          <Ionicons name={chevronForwardIcon()} size={16} color={colors.border} />
         </View>
       </View>
 
@@ -675,7 +676,7 @@ const styles = StyleSheet.create({
   },
   pager: {
     paddingHorizontal: spacing.screen,
-    paddingRight: spacing.screen,
+    paddingEnd: spacing.screen,
     gap: spacing.md,
   },
   panel: {

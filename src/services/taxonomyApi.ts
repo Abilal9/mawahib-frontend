@@ -63,6 +63,7 @@ export function suggestSkills(query: string): Promise<CanonicalSkillSuggestion[]
         rows.map((row) => ({
           id: row.id,
           nameEn: row.nameEn,
+          nameAr: row.nameAr,
           matchedTerm: row.matchedTerm,
           categoryId: row.categoryId,
         })),

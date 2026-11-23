@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { backIcon, chevronForwardIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -103,6 +104,7 @@ import {
   type ApiWorkRequestAttachment,
   marketplaceApi,
 } from '../../services/marketplaceApi';
+import { formatUiDateTime } from '../../i18n/format';
 import { messageService } from '../../services/messageService';
 
 const EVENT_LABEL: Record<WorkRequestEvent['type'], string> = {
@@ -127,7 +129,7 @@ const DEADLINE_MODES: { id: DeadlineType; label: string }[] = [
 ];
 
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
+  return formatUiDateTime(iso, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -1314,7 +1316,7 @@ export default function WorkRequestDetailScreen({
           style={styles.backButton}
           hitSlop={8}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {terms.title || request.title}
@@ -1417,7 +1419,7 @@ export default function WorkRequestDetailScreen({
           >
             <Ionicons name="briefcase-outline" size={18} color={colors.primary} />
             <Text style={styles.listingLinkText}>View job posting</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            <Ionicons name={chevronForwardIcon()} size={16} color={colors.primary} />
           </TouchableOpacity>
         ) : null}
 

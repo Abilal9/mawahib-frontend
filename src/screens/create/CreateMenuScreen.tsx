@@ -1,4 +1,5 @@
 import React from 'react';
+import { chevronForwardIcon } from '../../i18n/direction';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -64,7 +65,7 @@ export default function CreateMenuScreen({ navigation }: TabScreenProps<'CreateT
             <Text style={styles.menuLabel}>{item.label}</Text>
             <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          <Ionicons name={chevronForwardIcon()} size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       ))}
     </ScreenContainer>

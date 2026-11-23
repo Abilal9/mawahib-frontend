@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { chevronBackIcon } from '../../i18n/direction';
 import {
   View,
   Text,
@@ -234,7 +235,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-              <Ionicons name="chevron-back" size={24} color={colors.text} />
+              <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Reviews</Text>
           </View>
@@ -253,7 +254,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
+            <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
             {summaryTotal === 0 ? 'No reviews yet' : reviewCountLabel(summaryTotal)}
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.borderLight,
     overflow: 'hidden',
-    marginLeft: 2,
+    marginStart: 2,
   },
   barFill: {
     height: '100%',

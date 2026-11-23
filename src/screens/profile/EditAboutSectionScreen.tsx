@@ -969,7 +969,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.xs,
   },
-  toggleLabel: { ...typography.bodyMedium, color: colors.text, flex: 1, paddingRight: spacing.md },
+  toggleLabel: { ...typography.bodyMedium, color: colors.text, flex: 1, paddingEnd: spacing.md },
   footer: {
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.md,

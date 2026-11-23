@@ -13,6 +13,7 @@ import CreateActionMenu from '../components/layout/CreateActionMenu';
 import CreateTabPlaceholder from '../screens/create/CreateTabPlaceholder';
 import { MainTabParamList } from './types';
 import { colors } from '../theme';
+import { t } from '../i18n/runtime';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -32,12 +33,12 @@ export default function MainTabs() {
         },
       }}
     >
-      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="SearchTab" component={SearchScreen} options={{ title: 'Explore' }} />
+      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: t('tab.home'), tabBarAccessibilityLabel: t('tab.home') }} />
+      <Tab.Screen name="SearchTab" component={SearchScreen} options={{ title: t('tab.explore'), tabBarAccessibilityLabel: t('tab.explore') }} />
       <Tab.Screen
         name="CreateTab"
         component={CreateTabPlaceholder}
-        options={{ title: 'Create' }}
+        options={{ title: t('tab.create'), tabBarAccessibilityLabel: t('tab.create') }}
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
@@ -47,12 +48,12 @@ export default function MainTabs() {
       <Tab.Screen
         name="MessagesTab"
         component={MessagesInboxScreen}
-        options={{ title: 'Messages' }}
+        options={{ title: t('tab.messages'), tabBarAccessibilityLabel: t('tab.messages') }}
       />
       <Tab.Screen
         name="JobsTab"
         component={JobsScreen}
-        options={{ title: 'Jobs' }}
+        options={{ title: t('tab.jobs'), tabBarAccessibilityLabel: t('tab.jobs') }}
       />
     </Tab.Navigator>
     <AppSidebar />
