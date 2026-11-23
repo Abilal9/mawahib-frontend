@@ -11,6 +11,7 @@ import { useGuestJob } from '../../hooks/useGuestJob';
 import { useAuthGate } from '../../context/AuthGateContext';
 import BookmarkButton from '../../components/ui/BookmarkButton';
 import { displayProfileTitle } from '../../constants/profile';
+import { categoryCardLabel } from '../../i18n/catalogLabel';
 import { colors, spacing, radius, typography } from '../../theme';
 import type { SignedOutScreenProps } from '../../navigation/types';
 
@@ -90,8 +91,8 @@ export default function GuestJobListingDetailScreen({
               Posted {publicTimeAgo(job.postedAt || job.createdAt)}
             </Text>
           ) : null}
-          {job.categoryName ? (
-            <Text style={styles.meta}>{job.categoryName}</Text>
+          {categoryCardLabel(job) ? (
+            <Text style={styles.meta}>{categoryCardLabel(job)}</Text>
           ) : null}
           {job.description ? (
             <Text style={styles.description}>{job.description}</Text>

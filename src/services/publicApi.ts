@@ -113,6 +113,7 @@ export type GuestJob = {
   salaryLabel: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  categoryNameAr: string | null;
   customCategory: string | null;
   skills: string[];
   taxonomySkills: Array<{ id: string; name: string }>;
@@ -151,6 +152,7 @@ export type GuestService = {
   category: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  categoryNameAr: string | null;
   customCategory: string | null;
   taxonomySkills: Array<{ id: string; name: string }>;
   currency: string;

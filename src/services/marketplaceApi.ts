@@ -69,6 +69,7 @@ export interface ApiJobListing {
   exploreTag: string | null;
   categoryId?: string | null;
   categoryName?: string | null;
+  categoryNameAr?: string | null;
   customCategory?: string | null;
   taxonomySkills?: { id: string; name: string }[];
   status: ApiJobListingStatus;
@@ -342,6 +343,7 @@ export function mapApiListingToJob(api: ApiJobListing): JobListing {
     skills: api.skills ?? [],
     categoryId: api.categoryId ?? null,
     categoryName: api.categoryName ?? null,
+    categoryNameAr: api.categoryNameAr ?? null,
     customCategory: api.customCategory ?? null,
     taxonomySkills: api.taxonomySkills ?? [],
     postedAt: api.postedAt || api.createdAt,

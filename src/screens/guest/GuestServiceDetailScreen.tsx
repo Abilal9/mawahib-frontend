@@ -16,6 +16,7 @@ import { useGuestService } from '../../hooks/useGuestService';
 import { useAuthGate } from '../../context/AuthGateContext';
 import BookmarkButton from '../../components/ui/BookmarkButton';
 import { displayProfileTitle } from '../../constants/profile';
+import { categoryCardLabel } from '../../i18n/catalogLabel';
 import { colors, spacing, radius, typography } from '../../theme';
 import type { SignedOutScreenProps } from '../../navigation/types';
 import { TouchableOpacity } from 'react-native';
@@ -68,10 +69,8 @@ export default function GuestServiceDetailScreen({
                 }
               />
             </View>
-            {service.categoryName || service.category ? (
-              <Text style={styles.meta}>
-                {service.categoryName || service.category}
-              </Text>
+            {categoryCardLabel(service) ? (
+              <Text style={styles.meta}>{categoryCardLabel(service)}</Text>
             ) : null}
             <GuestRating summary={service.reviewSummary} />
             <TouchableOpacity

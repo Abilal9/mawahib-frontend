@@ -115,6 +115,7 @@ export interface Job {
   /** Canonical category when the listing was linked. Absent on older payloads. */
   categoryId?: string | null;
   categoryName?: string | null;
+  categoryNameAr?: string | null;
   customCategory?: string | null;
   taxonomySkills?: { id: string; name: string }[];
   postedAt: string;

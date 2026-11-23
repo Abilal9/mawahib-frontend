@@ -11,6 +11,7 @@ import { useAuth } from './AuthContext';
 import { savedApi } from '../services/savedApi';
 import { mapFeedPost } from '../services/postsApi';
 import { mapApiListingToJob } from '../services/marketplaceApi';
+import { categoryCardLabel } from '../i18n/catalogLabel';
 import { Job, Post, Service } from '../data/types';
 import { SavedServiceItem } from '../services/savedApi';
 
@@ -71,7 +72,7 @@ function mapSavedService(row: SavedServiceItem): Service & { ownerUserId?: strin
     price: typeof basic?.price === 'number' ? basic.price : null,
     currency: basic?.currency || row.currency,
     duration: basic?.delivery || '',
-    category: row.categoryName || row.category,
+    category: categoryCardLabel(row),
     provider: {
       id: row.userId || '',
       name: row.ownerDisplayName || '',

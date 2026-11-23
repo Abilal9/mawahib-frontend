@@ -38,6 +38,27 @@ const ENGAGEMENT_BODIES: Record<string, MessageKey> = {
   'mawahib cancelled this unpaid work. no refund is issued.': 'notice.cancelledUnpaid',
 };
 
+const SYSTEM_EVENTS: Record<string, MessageKey> = {
+  hid_review: 'notice.hidReview',
+  hid_post: 'notice.hidPost',
+  hid_comment: 'notice.hidComment',
+  hid_job: 'notice.hidJob',
+  hid_service: 'notice.hidService',
+};
+
+function staffEventMessage(params: Record<string, unknown>): string | null {
+  const event = textParam(params, 'event');
+  const audience = textParam(params, 'audience');
+  if (event === 'returned_for_client_review' && audience === 'client') return t('notice.reviewAgainClient');
+  if (event === 'returned_for_client_review' && audience === 'provider') return t('notice.reviewAgainProvider');
+  if (event === 'further_work_agreed' && audience === 'client') return t('notice.furtherWorkClient');
+  if (event === 'further_work_agreed' && audience === 'provider') return t('notice.furtherWorkProvider');
+  if (event === 'closed_by_mawahib') return t('notice.closedByMawahib');
+  if (event === 'cancelled_unpaid') return t('notice.cancelledUnpaid');
+  const hidden = event ? SYSTEM_EVENTS[event] : undefined;
+  return hidden ? t(hidden) : null;
+}
+
 const SYSTEM_BODIES: Record<string, MessageKey> = {
   'Mawahib hid one of your reviews.': 'notice.hidReview',
   'Mawahib hid one of your posts.': 'notice.hidPost',
@@ -60,9 +81,11 @@ function systemTitle(actorName: string | undefined, storedTitle: string, fallbac
 }
 
 function engagementMessage(params: Record<string, unknown>, body: string): string {
-  if (params.closedByMawahib === true) return t('notice.closedByMawahib');
-  if (params.cancelledByMawahib === true) return t('notice.cancelledUnpaid');
-  return knownOrStored(body.trim(), ENGAGEMENT_BODIES);
+  return staffEventMessage(params) ?? (params.closedByMawahib === true
+    ? t('notice.closedByMawahib')
+    : params.cancelledByMawahib === true
+      ? t('notice.cancelledUnpaid')
+      : knownOrStored(body.trim(), ENGAGEMENT_BODIES));
 }
 
 function knownOrStored(body: string, table: Record<string, MessageKey>): string {
@@ -141,10 +164,11 @@ export function notificationDisplayCopy(input: NoticeInput): {
         context: jobTitle,
       };
     case 'system': {
+      const structured = staffEventMessage(input.params);
       const exact = SYSTEM_BODIES[input.body.trim()];
       return {
         title: input.title.trim() === 'Mawahib' ? 'Mawahib' : systemTitle(actorName, input.title, 'notice.titleNotification'),
-        message: exact ? t(exact) : knownOrStored(input.body, {}),
+        message: structured ?? (exact ? t(exact) : knownOrStored(input.body, {})),
         context: jobTitle,
       };
     }

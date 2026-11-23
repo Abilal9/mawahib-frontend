@@ -124,6 +124,31 @@ assert.equal(
   notificationDisplayCopy({
     type: 'engagement_status',
     title: 'Work update',
+    body: 'This work is ready for your review again.',
+    params: { event: 'returned_for_client_review', audience: 'client', jobTitle: title },
+  }).message,
+  'هذا العمل جاهز لمراجعة التسليم مرة أخرى.',
+);
+assert.equal(
+  notificationDisplayCopy({
+    type: 'engagement_status',
+    title: 'Work update',
+    body: 'A private note from the client',
+    params: { status: 'delivered', jobTitle: title },
+  }).message,
+  'A private note from the client',
+);
+const { categoryCardLabel } = await import('../src/i18n/catalogLabel.ts');
+assert.equal(
+  categoryCardLabel({ customCategory: 'Home Building', categoryName: 'Design', categoryNameAr: 'تصميم' }),
+  'Home Building',
+);
+assert.equal(categoryCardLabel({ categoryName: 'Design', categoryNameAr: null }), 'Design');
+assert.equal(categoryCardLabel({ categoryName: 'Design', categoryNameAr: 'تصميم' }), 'تصميم');
+assert.equal(
+  notificationDisplayCopy({
+    type: 'engagement_status',
+    title: 'Work update',
     body: 'Further work was agreed. The work is in progress.',
     params: { status: 'in_progress', jobTitle: title },
   }).message,

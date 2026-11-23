@@ -20,6 +20,7 @@ import CurrencyIcon from '../../components/ui/CurrencyIcon';
 import { toImageSource } from '../../utils/image';
 import UserAvatar from '../../components/ui/UserAvatar';
 import ContentReportSheet from '../../components/report/ContentReportSheet';
+import { categoryCardLabel } from '../../i18n/catalogLabel';
 import { colors, spacing, radius, typography } from '../../theme';
 import {
   servicesApi,
@@ -433,8 +434,8 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
         <ServiceHero images={service.images} onBack={() => navigation.goBack()} />
 
         <View style={styles.content}>
-          {service.category ? (
-            <Text style={styles.category}>{service.category}</Text>
+          {categoryCardLabel(service) ? (
+            <Text style={styles.category}>{categoryCardLabel(service)}</Text>
           ) : null}
           <View style={styles.titleRow}>
             <Text style={styles.title}>{service.title}</Text>

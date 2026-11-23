@@ -5,6 +5,7 @@ import {
   type ReviewAggregate,
   type ReviewSummaryPair,
 } from '../utils/reviewSummary';
+import { categoryCardLabel } from '../i18n/catalogLabel';
 import { displayCategory, displayPrice } from '../domain/truthfulFacts';
 import { apiRequest } from '../lib/apiClient';
 
@@ -32,6 +33,9 @@ export interface ExploreServiceRow {
   title: string;
   description: string;
   category: string | null;
+  categoryName?: string | null;
+  categoryNameAr?: string | null;
+  customCategory?: string | null;
   price: number | null;
   currency: string;
   duration: string;
@@ -88,7 +92,14 @@ export function mapExploreService(row: ExploreServiceRow): Service {
     price: displayPrice(row.price),
     currency: row.currency,
     duration: row.duration,
-    category: displayCategory(row.category),
+    category: displayCategory(
+      categoryCardLabel({
+        customCategory: row.customCategory,
+        categoryName: row.categoryName,
+        categoryNameAr: row.categoryNameAr,
+        category: row.category,
+      }),
+    ),
     provider: profileToUser(row.provider),
     ...ratingFields(row.reviewSummary),
     images: row.images,
