@@ -23,6 +23,9 @@ import SearchableSelectModal, {
 import TalentChipsEditor from '../../components/profile/TalentChipsEditor';
 import { aboutSectionLabel } from '../../i18n/profileLabels';
 import { colors, spacing, radius, typography } from '../../theme';
+import { getAppliedLocale, t } from '../../i18n/runtime';
+import { employmentChoiceLabel, locationTypeChoiceLabel } from '../../i18n/profileLabels';
+import { gregorianMonthName } from '../../utils/gregorianCivilDate';
 import { useMyProfile } from '../../context/ProfileContext';
 import {
   AboutSectionKey,
@@ -34,7 +37,6 @@ import {
 import { ScreenProps } from '../../navigation/types';
 import {
   LANGUAGE_LEVELS,
-  LANGUAGE_LEVEL_LABELS,
   LanguageLevelCode,
   displayLanguageLevel,
   isLanguageLevelCode,
@@ -193,13 +195,13 @@ export default function EditAboutSectionScreen({
 
   // Cleaner titles
   const titleText = (() => {
-    if (section === 'bio') return profile.content.bio.trim() ? 'Edit Bio' : 'Add Bio';
-    if (section === 'talents') return 'Edit Talents';
-    if (section === 'languages') return isEdit ? 'Edit Language' : 'Add Language';
-    if (section === 'education') return isEdit ? 'Edit Education' : 'Add Education';
-    if (section === 'experience') return isEdit ? 'Edit Experience' : 'Add Experience';
+    if (section === 'bio') return profile.content.bio.trim() ? t('editor.editBio') : t('editor.addBio');
+    if (section === 'talents') return t('editor.editTalents');
+    if (section === 'languages') return isEdit ? t('editor.editLanguage') : t('editor.addLanguage');
+    if (section === 'education') return isEdit ? t('editor.editEducation') : t('editor.addEducation');
+    if (section === 'experience') return isEdit ? t('editor.editExperience') : t('editor.addExperience');
     if (section === 'certifications') {
-      return isEdit ? 'Edit Certification' : 'Add Certification';
+      return isEdit ? t('editor.editCertification') : t('editor.addCertification');
     }
     return screenTitle;
   })();
@@ -215,19 +217,25 @@ export default function EditAboutSectionScreen({
       case 'level':
         return LANGUAGE_LEVELS.map((code) => ({
           value: code,
-          label: LANGUAGE_LEVEL_LABELS[code],
+          label: displayLanguageLevel(code),
         }));
       case 'employment':
-        return EMPLOYMENT_TYPES.map((t) => ({ value: t, label: t }));
+        return EMPLOYMENT_TYPES.map((value) => ({
+          value,
+          label: employmentChoiceLabel(value),
+        }));
       case 'locationType':
-        return LOCATION_TYPES.map((t) => ({ value: t, label: t }));
+        return LOCATION_TYPES.map((value) => ({
+          value,
+          label: locationTypeChoiceLabel(value),
+        }));
       case 'startMonth':
       case 'endMonth':
       case 'issueMonth':
       case 'expMonth':
-        return MONTH_OPTIONS.map((m) => ({
-          value: String(m.value),
-          label: m.label,
+        return MONTH_OPTIONS.map((month) => ({
+          value: String(month.value),
+          label: gregorianMonthName(month.value - 1, getAppliedLocale()),
         }));
       case 'startYear':
       case 'endYear':
@@ -315,7 +323,7 @@ export default function EditAboutSectionScreen({
           break;
         case 'languages': {
           if (!langName.trim() || !langLevel) {
-            Alert.alert('Missing fields', 'Choose a language and proficiency.');
+            Alert.alert(t('editor.missingFields'), t('editor.chooseLanguage'));
             return;
           }
           const duplicate = profile.content.languages.some((l) => {
@@ -326,7 +334,7 @@ export default function EditAboutSectionScreen({
             return l.name.trim().toLowerCase() === langName.trim().toLowerCase();
           });
           if (duplicate) {
-            Alert.alert('Already added', 'That language is already on your profile.');
+            Alert.alert(t('editor.alreadyAdded'), t('editor.languageExists'));
             return;
           }
           const nextItem: ProfileLanguage = {
@@ -344,11 +352,11 @@ export default function EditAboutSectionScreen({
         }
         case 'education': {
           if (!eduSchool.trim()) {
-            Alert.alert('School required', 'Enter a school or institution.');
+            Alert.alert(t('editor.schoolRequired'), t('editor.enterSchool'));
             return;
           }
           if (!datesOk(eduStartYear, eduStartMonth, eduEndYear, eduEndMonth, eduStudying)) {
-            Alert.alert('Invalid dates', 'End date must be on or after start date.');
+            Alert.alert(t('editor.invalidDates'), t('editor.endAfterStart'));
             return;
           }
           const nextItem: ProfileEducation = {
@@ -372,11 +380,11 @@ export default function EditAboutSectionScreen({
         }
         case 'experience': {
           if (!expTitle.trim() || !expCompany.trim()) {
-            Alert.alert('Missing fields', 'Title and company are required.');
+            Alert.alert(t('editor.missingFields'), t('editor.titleCompanyRequired'));
             return;
           }
           if (!datesOk(expStartYear, expStartMonth, expEndYear, expEndMonth, expWorking)) {
-            Alert.alert('Invalid dates', 'End date must be on or after start date.');
+            Alert.alert(t('editor.invalidDates'), t('editor.endAfterStart'));
             return;
           }
           const nextItem: ProfileExperience = {
@@ -401,7 +409,7 @@ export default function EditAboutSectionScreen({
         }
         case 'certifications': {
           if (!certName.trim() || !certOrg.trim()) {
-            Alert.alert('Missing fields', 'Name and issuing organization are required.');
+            Alert.alert(t('editor.missingFields'), t('editor.certRequired'));
             return;
           }
           if (certUrl.trim()) {
@@ -409,7 +417,7 @@ export default function EditAboutSectionScreen({
               // eslint-disable-next-line no-new
               new URL(certUrl.trim());
             } catch {
-              Alert.alert('Invalid URL', 'Enter a valid credential URL or leave it blank.');
+              Alert.alert(t('editor.invalidUrl'), t('editor.enterUrl'));
               return;
             }
           }
@@ -439,12 +447,12 @@ export default function EditAboutSectionScreen({
           ? err.nameEn
           : null;
       Alert.alert(
-        'Could not save',
+        t('editor.saveFailed'),
         canonical
-          ? `Choose ${canonical} from the suggestions.`
+          ? t('editor.chooseCanonical', { name: canonical })
           : err instanceof Error
             ? err.message
-            : 'Please try again',
+            : t('editor.pleaseTryAgain'),
       );
     } finally {
       setSaving(false);
@@ -477,8 +485,8 @@ export default function EditAboutSectionScreen({
       navigation.goBack();
     } catch (err) {
       Alert.alert(
-        'Could not delete',
-        err instanceof Error ? err.message : 'Please try again',
+        t('editor.deleteFailed'),
+        err instanceof Error ? err.message : t('editor.pleaseTryAgain'),
       );
     } finally {
       setSaving(false);
@@ -486,7 +494,7 @@ export default function EditAboutSectionScreen({
   };
 
   const monthLabel = (m: number | null) =>
-    m ? MONTH_OPTIONS.find((x) => x.value === m)?.label ?? String(m) : 'Month';
+    m ? gregorianMonthName(m - 1, getAppliedLocale()) || String(m) : t('editor.month');
 
   return (
     <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.white}>
@@ -510,11 +518,11 @@ export default function EditAboutSectionScreen({
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {section === 'bio' && (
             <Field
-              label="Bio"
+              label={t('editor.bio')}
               value={bio}
               onChangeText={setBio}
               multiline
-              placeholder="Tell people about yourself"
+              placeholder={t('editor.bioPlaceholder')}
               maxLength={BIO_MAX_LENGTH}
               showCount
             />
@@ -527,14 +535,14 @@ export default function EditAboutSectionScreen({
           {section === 'languages' && (
             <>
               <SelectField
-                label="Language"
-                value={langName || 'Select language'}
+                label={t('editor.language')}
+                value={langName || t('editor.selectLanguage')}
                 placeholder={!langName}
                 onPress={() => setSelectKind('language')}
               />
               <SelectField
-                label="Proficiency"
-                value={langLevel ? displayLanguageLevel(langLevel) : 'Select level'}
+                label={t('editor.proficiency')}
+                value={langLevel ? displayLanguageLevel(langLevel) : t('editor.selectLevel')}
                 placeholder={!langLevel}
                 onPress={() => setSelectKind('level')}
               />
@@ -543,45 +551,45 @@ export default function EditAboutSectionScreen({
 
           {section === 'education' && (
             <>
-              <Field label="School / Institution *" value={eduSchool} onChangeText={setEduSchool} />
-              <Field label="Degree" value={eduDegree} onChangeText={setEduDegree} />
-              <Field label="Field of Study" value={eduField} onChangeText={setEduField} />
-              <Text style={styles.groupLabel}>Start</Text>
+              <Field label={t('editor.school')} value={eduSchool} onChangeText={setEduSchool} />
+              <Field label={t('editor.degree')} value={eduDegree} onChangeText={setEduDegree} />
+              <Field label={t('editor.fieldOfStudy')} value={eduField} onChangeText={setEduField} />
+              <Text style={styles.groupLabel}>{t('editor.start')}</Text>
               <View style={styles.row2}>
                 <SelectField
-                  label="Month"
+                  label={t('editor.month')}
                   value={monthLabel(eduStartMonth)}
                   placeholder={!eduStartMonth}
                   onPress={() => setSelectKind('startMonth')}
                   compact
                 />
                 <SelectField
-                  label="Year"
-                  value={eduStartYear ? String(eduStartYear) : 'Year'}
+                  label={t('editor.year')}
+                  value={eduStartYear ? String(eduStartYear) : t('editor.year')}
                   placeholder={!eduStartYear}
                   onPress={() => setSelectKind('startYear')}
                   compact
                 />
               </View>
               <ToggleRow
-                label="Currently studying here"
+                label={t('editor.studying')}
                 value={eduStudying}
                 onChange={setEduStudying}
               />
               {!eduStudying ? (
                 <>
-                  <Text style={styles.groupLabel}>End</Text>
+                  <Text style={styles.groupLabel}>{t('editor.end')}</Text>
                   <View style={styles.row2}>
                     <SelectField
-                      label="Month"
+                      label={t('editor.month')}
                       value={monthLabel(eduEndMonth)}
                       placeholder={!eduEndMonth}
                       onPress={() => setSelectKind('endMonth')}
                       compact
                     />
                     <SelectField
-                      label="Year"
-                      value={eduEndYear ? String(eduEndYear) : 'Year'}
+                      label={t('editor.year')}
+                      value={eduEndYear ? String(eduEndYear) : t('editor.year')}
                       placeholder={!eduEndYear}
                       onPress={() => setSelectKind('endYear')}
                       compact
@@ -589,9 +597,9 @@ export default function EditAboutSectionScreen({
                   </View>
                 </>
               ) : null}
-              <Field label="Grade / GPA" value={eduGrade} onChangeText={setEduGrade} />
+              <Field label={t('editor.grade')} value={eduGrade} onChangeText={setEduGrade} />
               <Field
-                label="Description"
+                label={t('editor.description')}
                 value={eduDesc}
                 onChangeText={setEduDesc}
                 multiline
@@ -601,61 +609,61 @@ export default function EditAboutSectionScreen({
 
           {section === 'experience' && (
             <>
-              <Field label="Title / Role *" value={expTitle} onChangeText={setExpTitle} />
+              <Field label={t('editor.role')} value={expTitle} onChangeText={setExpTitle} />
               <Field
-                label="Company / Organization *"
+                label={t('editor.company')}
                 value={expCompany}
                 onChangeText={setExpCompany}
               />
               <SelectField
-                label="Employment Type"
-                value={expEmployment || 'Select type'}
+                label={t('editor.employmentType')}
+                value={expEmployment ? employmentChoiceLabel(expEmployment) : t('editor.selectType')}
                 placeholder={!expEmployment}
                 onPress={() => setSelectKind('employment')}
               />
-              <Field label="Location" value={expLocation} onChangeText={setExpLocation} />
+              <Field label={t('editor.location')} value={expLocation} onChangeText={setExpLocation} />
               <SelectField
-                label="Location Type"
-                value={expLocationType || 'Select type'}
+                label={t('editor.locationType')}
+                value={expLocationType ? locationTypeChoiceLabel(expLocationType) : t('editor.selectType')}
                 placeholder={!expLocationType}
                 onPress={() => setSelectKind('locationType')}
               />
-              <Text style={styles.groupLabel}>Start</Text>
+              <Text style={styles.groupLabel}>{t('editor.start')}</Text>
               <View style={styles.row2}>
                 <SelectField
-                  label="Month"
+                  label={t('editor.month')}
                   value={monthLabel(expStartMonth)}
                   placeholder={!expStartMonth}
                   onPress={() => setSelectKind('startMonth')}
                   compact
                 />
                 <SelectField
-                  label="Year"
-                  value={expStartYear ? String(expStartYear) : 'Year'}
+                  label={t('editor.year')}
+                  value={expStartYear ? String(expStartYear) : t('editor.year')}
                   placeholder={!expStartYear}
                   onPress={() => setSelectKind('startYear')}
                   compact
                 />
               </View>
               <ToggleRow
-                label="I currently work here"
+                label={t('editor.workingHere')}
                 value={expWorking}
                 onChange={setExpWorking}
               />
               {!expWorking ? (
                 <>
-                  <Text style={styles.groupLabel}>End</Text>
+                  <Text style={styles.groupLabel}>{t('editor.end')}</Text>
                   <View style={styles.row2}>
                     <SelectField
-                      label="Month"
+                      label={t('editor.month')}
                       value={monthLabel(expEndMonth)}
                       placeholder={!expEndMonth}
                       onPress={() => setSelectKind('endMonth')}
                       compact
                     />
                     <SelectField
-                      label="Year"
-                      value={expEndYear ? String(expEndYear) : 'Year'}
+                      label={t('editor.year')}
+                      value={expEndYear ? String(expEndYear) : t('editor.year')}
                       placeholder={!expEndYear}
                       onPress={() => setSelectKind('endYear')}
                       compact
@@ -664,7 +672,7 @@ export default function EditAboutSectionScreen({
                 </>
               ) : null}
               <Field
-                label="Description"
+                label={t('editor.description')}
                 value={expDesc}
                 onChangeText={setExpDesc}
                 multiline
@@ -675,51 +683,51 @@ export default function EditAboutSectionScreen({
           {section === 'certifications' && (
             <>
               <Field
-                label="Certification Name *"
+                label={t('editor.certName')}
                 value={certName}
                 onChangeText={setCertName}
               />
               <Field
-                label="Issuing Organization *"
+                label={t('editor.issuer')}
                 value={certOrg}
                 onChangeText={setCertOrg}
               />
-              <Text style={styles.groupLabel}>Issue Date</Text>
+              <Text style={styles.groupLabel}>{t('editor.issueDate')}</Text>
               <View style={styles.row2}>
                 <SelectField
-                  label="Month"
+                  label={t('editor.month')}
                   value={monthLabel(certIssueMonth)}
                   placeholder={!certIssueMonth}
                   onPress={() => setSelectKind('issueMonth')}
                   compact
                 />
                 <SelectField
-                  label="Year"
-                  value={certIssueYear ? String(certIssueYear) : 'Year'}
+                  label={t('editor.year')}
+                  value={certIssueYear ? String(certIssueYear) : t('editor.year')}
                   placeholder={!certIssueYear}
                   onPress={() => setSelectKind('issueYear')}
                   compact
                 />
               </View>
               <ToggleRow
-                label="This credential does not expire"
+                label={t('editor.noExpire')}
                 value={certNoExpire}
                 onChange={setCertNoExpire}
               />
               {!certNoExpire ? (
                 <>
-                  <Text style={styles.groupLabel}>Expiration Date</Text>
+                  <Text style={styles.groupLabel}>{t('editor.expirationDate')}</Text>
                   <View style={styles.row2}>
                     <SelectField
-                      label="Month"
+                      label={t('editor.month')}
                       value={monthLabel(certExpMonth)}
                       placeholder={!certExpMonth}
                       onPress={() => setSelectKind('expMonth')}
                       compact
                     />
                     <SelectField
-                      label="Year"
-                      value={certExpYear ? String(certExpYear) : 'Year'}
+                      label={t('editor.year')}
+                      value={certExpYear ? String(certExpYear) : t('editor.year')}
                       placeholder={!certExpYear}
                       onPress={() => setSelectKind('expYear')}
                       compact
@@ -727,9 +735,9 @@ export default function EditAboutSectionScreen({
                   </View>
                 </>
               ) : null}
-              <Field label="Credential ID" value={certId} onChangeText={setCertId} />
+              <Field label={t('editor.credentialId')} value={certId} onChangeText={setCertId} />
               <Field
-                label="Credential URL"
+                label={t('editor.credentialUrl')}
                 value={certUrl}
                 onChangeText={setCertUrl}
                 placeholder="https://"
@@ -741,7 +749,7 @@ export default function EditAboutSectionScreen({
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
           <Button
-            title="Save"
+            title={t('common.save')}
             onPress={() => {
               void save();
             }}
@@ -754,14 +762,15 @@ export default function EditAboutSectionScreen({
               disabled={saving}
             >
               <Text style={styles.deleteText}>
-                Delete{' '}
-                {section === 'languages'
-                  ? 'Language'
-                  : section === 'education'
-                    ? 'Education'
-                    : section === 'experience'
-                      ? 'Experience'
-                      : 'Certification'}
+                {t(
+                  section === 'languages'
+                    ? 'editor.deleteLanguage'
+                    : section === 'education'
+                      ? 'editor.deleteEducation'
+                      : section === 'experience'
+                        ? 'editor.deleteExperience'
+                        : 'editor.deleteCertification',
+                )}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -772,14 +781,14 @@ export default function EditAboutSectionScreen({
         visible={selectKind != null}
         title={
           selectKind === 'language'
-            ? 'Select language'
+            ? t('editor.selectLanguage')
             : selectKind === 'level'
-              ? 'Proficiency'
+              ? t('editor.proficiency')
               : selectKind === 'employment'
-                ? 'Employment type'
+                ? t('editor.selectEmployment')
                 : selectKind === 'locationType'
-                  ? 'Location type'
-                  : 'Select'
+                  ? t('editor.selectLocationType')
+                  : t('editor.select')
         }
         options={selectOptions}
         searchable={selectKind === 'language'}
@@ -800,9 +809,9 @@ export default function EditAboutSectionScreen({
 
       <ConfirmActionModal
         visible={confirmDelete}
-        title="Delete this item?"
-        message="This will remove it from your profile after confirmation."
-        confirmLabel="Delete"
+        title={t('editor.deleteItemTitle')}
+        message={t('editor.deleteItemBody')}
+        confirmLabel={t('common.delete')}
         danger
         busy={saving}
         onCancel={() => setConfirmDelete(false)}

@@ -8,6 +8,7 @@ import { GuestStatusBlock } from '../../components/guest/GuestDiscoveryCards';
 import { toImageSource } from '../../utils/image';
 import { getMediaCacheKey } from '../../lib/mediaCacheKey';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { SignedOutScreenProps } from '../../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -28,9 +29,9 @@ export default function GuestPortfolioProjectDetailScreen({
   return (
     <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.background}>
       <StatusBar style="dark" />
-      <GuestScreenHeader onBack={() => navigation.goBack()} title={title || 'Project'} />
+      <GuestScreenHeader onBack={() => navigation.goBack()} title={title || t('editor.project')} />
       {missing ? (
-        <GuestStatusBlock error="This project is unavailable." />
+        <GuestStatusBlock error={t('editor.projectUnavailable')} />
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
           {images.length > 0 ? (

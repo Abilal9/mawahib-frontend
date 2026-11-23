@@ -9,6 +9,7 @@ import GuestAppHeader from '../../components/layout/GuestAppHeader';
 import Button from '../../components/ui/Button';
 import { listPaddingAboveTabBar } from '../../components/layout/CustomTabBar';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { SignedOutStackParamList } from '../../navigation/types';
 
 /** Kept for copy reference; Account is a header entry, not a tab. */
@@ -27,19 +28,16 @@ export default function GuestAccountScreen() {
           { paddingBottom: listPaddingAboveTabBar(insets.bottom, spacing.xl) },
         ]}
       >
-        <Text style={styles.title}>Account</Text>
-        <Text style={styles.copy}>
-          Sign in or create an account to message, save, and manage your Mawahib
-          profile.
-        </Text>
+        <Text style={styles.title}>{t('editor.account')}</Text>
+        <Text style={styles.copy}>{t('editor.accountBody')}</Text>
         <View style={styles.actions}>
           <Button
-            title="Sign In"
+            title={t('auth.signIn')}
             fullWidth
             onPress={() => navigation.navigate('SignIn')}
           />
           <Button
-            title="Create Account"
+            title={t('auth.createAccount')}
             variant="ghost"
             fullWidth
             onPress={() => navigation.navigate('Welcome', { step: 1 })}

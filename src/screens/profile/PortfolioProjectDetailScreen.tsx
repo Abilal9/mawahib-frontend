@@ -17,6 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { useMyProfile } from '../../context/ProfileContext';
 import { ScreenProps } from '../../navigation/types';
 import { useVisitorProfessionalProfile } from '../../hooks/useVisitorProfessionalProfile';
@@ -46,7 +47,7 @@ export default function PortfolioProjectDetailScreen({
     return (
       <ScreenContainer>
         <StatusBar style="dark" />
-        <Text style={styles.missing}>Loading…</Text>
+        <Text style={styles.missing}>{t('editor.loading')}</Text>
       </ScreenContainer>
     );
   }
@@ -60,7 +61,7 @@ export default function PortfolioProjectDetailScreen({
             <Ionicons name={backIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
-        <Text style={styles.missing}>Project not found</Text>
+        <Text style={styles.missing}>{t('editor.projectNotFound')}</Text>
       </ScreenContainer>
     );
   }
@@ -124,8 +125,8 @@ export default function PortfolioProjectDetailScreen({
           {project.images.length > 1 ? (
             <View style={styles.heroHint}>
               <Text style={styles.heroHintText}>
-                {project.images.length} photos
-                {project.hasVideo ? ' · includes video' : ''}
+                {t('editor.photoCount', { count: project.images.length })}
+                {project.hasVideo ? t('editor.includesVideo') : ''}
               </Text>
             </View>
           ) : null}
@@ -135,7 +136,7 @@ export default function PortfolioProjectDetailScreen({
           <Text style={styles.title}>{project.title}</Text>
           <Text style={styles.description}>{project.description}</Text>
 
-          <Text style={styles.galleryLabel}>Gallery</Text>
+          <Text style={styles.galleryLabel}>{t('editor.gallery')}</Text>
           <View style={styles.gallery}>
             {project.images.map((uri, index) => (
               <TouchableOpacity
@@ -170,10 +171,8 @@ export default function PortfolioProjectDetailScreen({
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setDeleteOpen(false)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Delete project?</Text>
-            <Text style={styles.modalBody}>
-              Are you sure you want to delete “{project.title}”? This can’t be undone.
-            </Text>
+            <Text style={styles.modalTitle}>{t('editor.deleteProjectTitle')}</Text>
+            <Text style={styles.modalBody}>{t('editor.deleteProjectBody', { title: project.title })}</Text>
             <TouchableOpacity
               style={styles.modalDangerBtn}
               onPress={() => {
@@ -184,14 +183,14 @@ export default function PortfolioProjectDetailScreen({
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.modalDangerText}>Delete</Text>
+              <Text style={styles.modalDangerText}>{t('common.delete')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalCancelBtn}
               onPress={() => setDeleteOpen(false)}
               activeOpacity={0.85}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { useMyProfile } from '../../context/ProfileContext';
 import { PortfolioProject, ProfileService } from '../../data/types';
 import { ScreenProps } from '../../navigation/types';
@@ -260,10 +261,10 @@ export default function ManageProfileListScreen({
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (allowLeaveRef.current || !dirtyRef.current) return;
       e.preventDefault();
-      Alert.alert('Discard changes?', 'You have unsaved changes to this list.', [
-        { text: 'Keep editing', style: 'cancel' },
+      Alert.alert(t('editor.discardTitle'), t('editor.discardList'), [
+        { text: t('editor.keepEditing'), style: 'cancel' },
         {
-          text: 'Discard',
+          text: t('editor.discard'),
           style: 'destructive',
           onPress: () => {
             allowLeaveRef.current = true;
@@ -281,10 +282,10 @@ export default function ManageProfileListScreen({
       navigation.goBack();
       return;
     }
-    Alert.alert('Discard changes?', 'You have unsaved changes to this list.', [
-      { text: 'Keep editing', style: 'cancel' },
+    Alert.alert(t('editor.discardTitle'), t('editor.discardList'), [
+      { text: t('editor.keepEditing'), style: 'cancel' },
       {
-        text: 'Discard',
+        text: t('editor.discard'),
         style: 'destructive',
         onPress: () => {
           allowLeaveRef.current = true;
@@ -314,8 +315,8 @@ export default function ManageProfileListScreen({
         navigation.goBack();
       } catch (err) {
         Alert.alert(
-          'Save failed',
-          err instanceof Error ? err.message : 'Could not save list changes',
+          t('editor.saveProjectFailed'),
+          err instanceof Error ? err.message : t('editor.saveListFailed'),
         );
       }
     })();
@@ -324,14 +325,14 @@ export default function ManageProfileListScreen({
   const confirmDelete = useCallback(
     (id: string, itemTitle: string) => {
       Alert.alert(
-        isPortfolio ? 'Delete project?' : 'Delete service?',
+        isPortfolio ? t('editor.deleteProjectTitle') : t('editor.deleteServiceTitle'),
         isPortfolio
-          ? `Remove “${itemTitle}” from your portfolio?`
-          : `Remove “${itemTitle}” from your services?`,
+          ? t('editor.removePortfolio', { title: itemTitle })
+          : t('editor.removeService', { title: itemTitle }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: () => {
               removedIdsRef.current.add(id);
@@ -390,7 +391,7 @@ export default function ManageProfileListScreen({
             style={styles.dragHandle}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel="Hold and drag to reorder"
+            accessibilityLabel={t('editor.reorder')}
           >
             <Ionicons name="reorder-three" size={28} color={colors.textSecondary} />
           </View>
@@ -462,7 +463,7 @@ export default function ManageProfileListScreen({
     ]
   );
 
-  const title = isPortfolio ? 'Edit Portfolio' : 'Edit Services';
+  const title = isPortfolio ? t('editor.editPortfolio') : t('editor.editServices');
   const isDragging = draggingId != null;
 
   return (
@@ -486,27 +487,23 @@ export default function ManageProfileListScreen({
         scrollEnabled={!isDragging}
         removeClippedSubviews={false}
         ListHeaderComponent={
-          <Text style={styles.hint}>
-            Hold the grip icon and drag to reorder. Edit or delete an item, then
-            save when you’re done.
-          </Text>
+          <Text style={styles.hint}>{t('editor.reorderHint')}</Text>
         }
         ListEmptyComponent={
           <Text style={styles.empty}>
-            No {isPortfolio ? 'projects' : 'services'} left. Save to apply, or
-            discard.
+            {isPortfolio ? t('editor.emptyProjects') : t('editor.emptyServices')}
           </Text>
         }
       />
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         <Button
-          title="Cancel"
+          title={t('common.cancel')}
           variant="outline"
           onPress={requestLeave}
           style={styles.footerBtn}
         />
-        <Button title="Save" onPress={handleSave} style={styles.footerBtn} />
+        <Button title={t('common.save')} onPress={handleSave} style={styles.footerBtn} />
       </View>
     </ScreenContainer>
   );

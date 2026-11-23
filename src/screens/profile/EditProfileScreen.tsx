@@ -21,6 +21,7 @@ import Button from '../../components/ui/Button';
 import LocationSelectors from '../../components/ui/LocationSelectors';
 import UserAvatar from '../../components/ui/UserAvatar';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { PROFILE_COVER_HEIGHT } from '../../constants/profile';
 import { useMyProfile } from '../../context/ProfileContext';
 import { ScreenProps } from '../../navigation/types';
@@ -86,10 +87,10 @@ export default function EditProfileScreen({
         if (cancelled) return;
         navigation.setParams({ coverDraftUri: undefined });
         Alert.alert(
-          'Could not use cover photo',
+          t('editor.coverFailed'),
           err instanceof Error
             ? err.message
-            : 'Could not determine the cropped file size. Please try again.',
+            : t('editor.coverSize'),
         );
       }
     })();
@@ -137,10 +138,10 @@ export default function EditProfileScreen({
       navigation.goBack();
       return;
     }
-    Alert.alert('Discard changes?', 'Your edits will not be saved.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('editor.discardTitle'), t('editor.discardBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Discard',
+        text: t('editor.discard'),
         style: 'destructive',
         onPress: () => navigation.goBack(),
       },
@@ -154,8 +155,8 @@ export default function EditProfileScreen({
       setAvatarDraft({ kind: 'local', ...local });
     } catch (err) {
       Alert.alert(
-        'Could not pick photo',
-        err instanceof Error ? err.message : 'Try again',
+        t('editor.pickPhotoFailed'),
+        err instanceof Error ? err.message : t('editor.tryAgain'),
       );
     }
   };
@@ -167,8 +168,8 @@ export default function EditProfileScreen({
       navigation.navigate('CoverReposition', { uri: local.uri });
     } catch (err) {
       Alert.alert(
-        'Could not pick cover',
-        err instanceof Error ? err.message : 'Try again',
+        t('editor.pickCoverFailed'),
+        err instanceof Error ? err.message : t('editor.tryAgain'),
       );
     }
   };
@@ -177,16 +178,20 @@ export default function EditProfileScreen({
     draft: MediaDraft,
     initialUrl: string | null,
     purpose: 'avatar' | 'cover',
-    label: string,
   ): Promise<string | null | undefined> => {
     if (draft.kind === 'keep') return undefined;
     if (draft.kind === 'remove') return null;
-    setProgressHint(`Uploading ${label}…`);
+    const photo = purpose === 'avatar';
+    setProgressHint(t(photo ? 'editor.uploadingPhoto' : 'editor.uploadingCover'));
     const uploaded = await uploadLocalFile({
       ...draft,
       purpose,
-      onProgress: (r) =>
-        setProgressHint(`Uploading ${label}… ${Math.round(r * 100)}%`),
+      onProgress: (ratio) =>
+        setProgressHint(
+          t(photo ? 'editor.uploadingPhotoPercent' : 'editor.uploadingCoverPercent', {
+            percent: Math.round(ratio * 100),
+          }),
+        ),
     });
     return uploaded.remoteUrl;
   };
@@ -194,7 +199,7 @@ export default function EditProfileScreen({
   const save = async () => {
     const name = displayName.trim();
     if (name.length < 2) {
-      Alert.alert('Display name required', 'Enter at least 2 characters.');
+      Alert.alert(t('editor.nameRequired'), t('editor.nameTooShort'));
       return;
     }
 
@@ -207,16 +212,14 @@ export default function EditProfileScreen({
         avatarDraft,
         initialAvatar,
         'avatar',
-        'photo',
       );
       uploadedCover = await resolveMediaUrl(
         coverDraft,
         initialCover,
         'cover',
-        'cover',
       );
 
-      setProgressHint('Saving profile…');
+      setProgressHint(t('editor.savingProfile'));
       await saveProfileBasics({
         name,
         title: title.trim() || null,
@@ -229,8 +232,8 @@ export default function EditProfileScreen({
       navigation.goBack();
     } catch (err) {
       Alert.alert(
-        'Could not save profile',
-        err instanceof Error ? err.message : 'Please try again',
+        t('editor.saveProfileFailed'),
+        err instanceof Error ? err.message : t('editor.pleaseTryAgain'),
       );
       // Draft preserved; newly uploaded URLs are unreferenced — lifecycle cleanup deferred.
     } finally {
@@ -246,7 +249,7 @@ export default function EditProfileScreen({
         <TouchableOpacity onPress={discardOrBack} style={styles.iconBtn} disabled={saving}>
           <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Edit Profile</Text>
+        <Text style={styles.title}>{t('editor.editProfile')}</Text>
         <View style={styles.iconBtn} />
       </View>
 
@@ -271,7 +274,7 @@ export default function EditProfileScreen({
                 onPress={() => setCoverDraft({ kind: 'remove' })}
                 disabled={saving}
                 hitSlop={8}
-                accessibilityLabel="Remove cover photo"
+                accessibilityLabel={t('editor.removeCover')}
               >
                 <Ionicons name="close" size={16} color={colors.white} />
               </TouchableOpacity>
@@ -279,7 +282,7 @@ export default function EditProfileScreen({
           </View>
           <View style={styles.coverActions}>
             <Button
-              title={previewCover ? 'Change cover photo' : 'Add cover photo'}
+              title={previewCover ? t('editor.changeCover') : t('editor.addCover')}
               variant="outline"
               size="sm"
               onPress={() => {
@@ -298,7 +301,7 @@ export default function EditProfileScreen({
                 onPress={() => setAvatarDraft({ kind: 'remove' })}
                 disabled={saving}
                 hitSlop={8}
-                accessibilityLabel="Remove photo"
+                accessibilityLabel={t('editor.removePhoto')}
               >
                 <Ionicons name="close" size={14} color={colors.white} />
               </TouchableOpacity>
@@ -306,7 +309,7 @@ export default function EditProfileScreen({
           </View>
           <View style={styles.avatarActions}>
             <Button
-              title={hasCustomAvatar(previewAvatar) ? 'Change photo' : 'Add photo'}
+              title={hasCustomAvatar(previewAvatar) ? t('editor.changePhoto') : t('editor.addPhoto')}
               variant="outline"
               size="sm"
               onPress={() => {
@@ -324,22 +327,22 @@ export default function EditProfileScreen({
             </View>
           ) : null}
 
-          <Text style={styles.label}>Display name</Text>
+          <Text style={styles.label}>{t('editor.displayName')}</Text>
           <TextInput
             style={styles.input}
             value={displayName}
             onChangeText={setDisplayName}
-            placeholder="Your name"
+            placeholder={t('editor.namePlaceholder')}
             placeholderTextColor={colors.textSecondary}
             editable={!saving}
           />
 
-          <Text style={styles.label}>Title</Text>
+          <Text style={styles.label}>{t('editor.title')}</Text>
           <TextInput
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder="e.g. Product Designer"
+            placeholder={t('editor.titlePlaceholder')}
             placeholderTextColor={colors.textSecondary}
             editable={!saving}
           />
@@ -356,7 +359,7 @@ export default function EditProfileScreen({
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
           <Button
-            title={saving ? 'Saving…' : 'Save'}
+            title={saving ? t('editor.saving') : t('common.save')}
             onPress={() => {
               void save();
             }}

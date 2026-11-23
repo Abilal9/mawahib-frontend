@@ -299,7 +299,7 @@ export default function ReviewsScreen({ navigation, route }: ScreenProps<'Review
 
       <ContentReportSheet
         visible={reportReviewId !== null}
-        title="Report review"
+        title={t('editor.reportReview')}
         targetType="engagement_review"
         targetId={reportReviewId}
         onClose={() => setReportReviewId(null)}

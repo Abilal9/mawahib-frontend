@@ -2,6 +2,7 @@ import { authFlowCatalog } from './catalogs/authFlow';
 import { discoverCatalog } from './catalogs/discover';
 import { entryCatalog } from './catalogs/entry';
 import { profileCatalog } from './catalogs/profile';
+import { editorCatalog } from './catalogs/editor';
 
 export const messages = {
   en: {
@@ -164,6 +165,7 @@ export const messages = {
     ...authFlowCatalog.en,
     ...discoverCatalog.en,
     ...profileCatalog.en,
+    ...editorCatalog.en,
   },
   ar: {
     'language.title': 'تغيير اللغة',
@@ -328,6 +330,7 @@ export const messages = {
     ...authFlowCatalog.ar,
     ...discoverCatalog.ar,
     ...profileCatalog.ar,
+    ...editorCatalog.ar,
   },
 } as const;
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { ReviewDistribution } from '../../data/types';
 
 export default function ReviewSummaryCard({
@@ -50,7 +51,7 @@ export default function ReviewSummaryCard({
           ))}
         </View>
         <Text style={styles.summaryCount}>
-          {total === 0 ? 'No reviews yet' : `${total} Reviews`}
+          {total === 0 ? t('nav.noReviews') : t('editor.reviewsTotal', { count: total })}
         </Text>
       </View>
     </View>

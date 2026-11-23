@@ -29,6 +29,7 @@ import { useAuthGate } from '../../context/AuthGateContext';
 import { guestAboutToProfileContent } from '../../lib/guestAbout';
 import { shareProfile } from '../../utils/shareProfile';
 import { colors, spacing } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { ProfileTab } from '../../data/types';
 import type { SignedOutScreenProps } from '../../navigation/types';
 
@@ -72,7 +73,7 @@ export default function GuestUserProfileScreen({
     return (
       <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.background}>
         <StatusBar style="dark" />
-        <GuestScreenHeader onBack={() => navigation.goBack()} title="Profile" />
+        <GuestScreenHeader onBack={() => navigation.goBack()} title={t('editor.profile')} />
         <GuestStatusBlock loading />
       </ScreenContainer>
     );
@@ -82,9 +83,9 @@ export default function GuestUserProfileScreen({
     return (
       <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.background}>
         <StatusBar style="dark" />
-        <GuestScreenHeader onBack={() => navigation.goBack()} title="Profile" />
+        <GuestScreenHeader onBack={() => navigation.goBack()} title={t('editor.profile')} />
         <GuestStatusBlock
-          error={profileState.profileError || 'This profile is unavailable.'}
+          error={profileState.profileError || t('editor.profileUnavailable')}
           onRetry={profileState.notFound ? undefined : profileState.refresh}
         />
       </ScreenContainer>
@@ -166,7 +167,7 @@ export default function GuestUserProfileScreen({
               {!profileState.portfolio.loading &&
               profileState.portfolio.items.length === 0 &&
               !profileState.portfolio.error ? (
-                <GuestStatusBlock emptyLabel="No public portfolio yet." />
+                <GuestStatusBlock emptyLabel={t('editor.noPublicPortfolio')} />
               ) : null}
               {profileState.portfolio.items.map((project) => (
                 <GuestPortfolioCard
@@ -198,7 +199,7 @@ export default function GuestUserProfileScreen({
               {!profileState.services.loading &&
               profileState.services.items.length === 0 &&
               !profileState.services.error ? (
-                <GuestStatusBlock emptyLabel="No public services yet." />
+                <GuestStatusBlock emptyLabel={t('editor.noPublicServices')} />
               ) : null}
               {profileState.services.items.map((service) => (
                 <GuestServiceCard
@@ -231,7 +232,7 @@ export default function GuestUserProfileScreen({
               {!profileState.posts.loading &&
               profileState.posts.items.length === 0 &&
               !profileState.posts.error ? (
-                <GuestStatusBlock emptyLabel="No public posts yet." />
+                <GuestStatusBlock emptyLabel={t('editor.noPublicPosts')} />
               ) : null}
               {profileState.posts.items.map((post) => (
                 <GuestPostCard

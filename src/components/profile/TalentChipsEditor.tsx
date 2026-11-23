@@ -202,7 +202,7 @@ export default function TalentChipsEditor({ value, onChange, disabled }: Props) 
           style={styles.input}
           value={draft}
           onChangeText={(t) => setDraft(t.slice(0, MAX_LEN))}
-          placeholder="Add a talent…"
+          placeholder={t('editor.addTalent')}
           placeholderTextColor={colors.textSecondary}
           editable={!disabled && value.length < MAX_TALENTS}
           onSubmitEditing={addTalent}
@@ -242,18 +242,18 @@ export default function TalentChipsEditor({ value, onChange, disabled }: Props) 
               onPress={addTalent}
               disabled={disabled}
             >
-              <Text style={styles.suggestName}>{`Add "${draft.trim()}"`}</Text>
+              <Text style={styles.suggestName}>{t('editor.addCustomTalent', { name: draft.trim() })}</Text>
             </TouchableOpacity>
           ) : null}
           {suggestError ? (
             <TouchableOpacity onPress={() => setSuggestAttempt((n) => n + 1)}>
-              <Text style={styles.hint}>Couldn’t load suggestions. Tap to retry. You can still add your own.</Text>
+              <Text style={styles.hint}>{t('editor.talentSuggestFailed')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
       ) : null}
       <Text style={styles.hint}>
-        {value.length}/{MAX_TALENTS} · drag chips to reorder · Save to persist
+        {t('editor.talentHint', { count: value.length, max: MAX_TALENTS })}
       </Text>
     </View>
   );

@@ -17,6 +17,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { PROFILE_COVER_HEIGHT } from '../../constants/profile';
 import { requireLocalFileByteSize } from '../../lib/uploadMedia';
 import { ScreenProps } from '../../navigation/types';
@@ -48,7 +49,7 @@ export default function CoverRepositionScreen({
       uri,
       (w, h) => setNatural({ w, h }),
       () => {
-        Alert.alert('Could not load image', 'Please pick another photo.');
+        Alert.alert(t('editor.imageFailed'), t('editor.pickAnother'));
         navigation.goBack();
       },
     );
@@ -145,8 +146,8 @@ export default function CoverRepositionScreen({
       });
     } catch (err) {
       Alert.alert(
-        'Crop failed',
-        err instanceof Error ? err.message : 'Could not crop cover photo',
+        t('editor.cropFailed'),
+        err instanceof Error ? err.message : t('editor.cropFailedBody'),
       );
     } finally {
       setBusy(false);
@@ -164,12 +165,12 @@ export default function CoverRepositionScreen({
         >
           <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Reposition cover</Text>
+        <Text style={styles.title}>{t('editor.repositionCover')}</Text>
         <View style={styles.iconBtn} />
       </View>
 
       <View style={styles.hintWrap}>
-        <Text style={styles.hint}>Drag to frame · match Profile header</Text>
+        <Text style={styles.hint}>{t('editor.repositionHint')}</Text>
       </View>
 
       <View style={[styles.frame, { width: frameW, height: frameH }]} {...panResponder.panHandlers}>
@@ -200,7 +201,7 @@ export default function CoverRepositionScreen({
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <Button
-          title={busy ? 'Processing…' : 'Use this framing'}
+          title={busy ? t('editor.processing') : t('editor.useFraming')}
           onPress={() => {
             void confirm();
           }}

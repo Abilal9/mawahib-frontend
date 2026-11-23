@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../../theme';
 import { t } from '../../i18n/runtime';
-import { aboutSectionAddLabel, aboutSectionLabel } from '../../i18n/profileLabels';
+import { aboutSectionAddLabel, aboutSectionLabel, employmentChoiceLabel, locationTypeChoiceLabel } from '../../i18n/profileLabels';
 import {
   ABOUT_SECTION_KEYS,
   AboutSectionKey,
@@ -256,14 +256,14 @@ export default function AboutTab({
                 <View style={styles.timelineBody}>
                   <Text style={styles.cardTitle}>{item.title}</Text>
                   <Text style={styles.cardSub}>
-                    {[item.company, experienceTypeLabel(item)].filter(Boolean).join(' · ')}
+                    {[item.company, employmentChoiceLabel(experienceTypeLabel(item))].filter(Boolean).join(' · ')}
                   </Text>
                   {experienceDateLabel(item) ? (
                     <Text style={styles.cardMeta}>{experienceDateLabel(item)}</Text>
                   ) : null}
                   {[item.location, item.locationType].filter(Boolean).length ? (
                     <Text style={styles.cardMeta}>
-                      {[item.location, item.locationType].filter(Boolean).join(' · ')}
+                      {[item.location, locationTypeChoiceLabel(item.locationType)].filter(Boolean).join(' · ')}
                     </Text>
                   ) : null}
                   {item.description ? (

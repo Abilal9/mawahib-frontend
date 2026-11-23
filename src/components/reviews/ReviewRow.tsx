@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../ui/UserAvatar';
 import { toImageSource } from '../../utils/image';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { ReviewItem } from '../../data/types';
 import {
   reviewHasUnsupportedVideo,
@@ -20,8 +21,8 @@ import {
 } from '../../lib/reviewMedia';
 
 function receivedRoleLabel(role: ReviewItem['receivedAs']): string | null {
-  if (role === 'provider') return 'As Talent';
-  if (role === 'client') return 'As Client';
+  if (role === 'provider') return t('profile.asTalent');
+  if (role === 'client') return t('profile.asClient');
   return null;
 }
 
@@ -69,18 +70,18 @@ export default function ReviewRow({
             )}
           </View>
           {onReport ? (
-            <TouchableOpacity onPress={onReport} hitSlop={8} accessibilityLabel="Report review">
+            <TouchableOpacity onPress={onReport} hitSlop={8} accessibilityLabel={t('editor.reportReview')}>
               <Ionicons name="flag-outline" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           ) : null}
-          <View style={styles.ratingPill} accessibilityLabel={`Rating ${review.rating.toFixed(1)}`}>
+          <View style={styles.ratingPill} accessibilityLabel={t('editor.ratingLabel', { rating: review.rating.toFixed(1) })}>
             <Ionicons name="star" size={12} color="#F5A623" />
             <Text style={styles.ratingText}>{review.rating.toFixed(1)}</Text>
           </View>
         </View>
         {review.serviceName ? (
           <Text style={styles.serviceLine}>
-            <Text style={styles.serviceLabel}>Service: </Text>
+            <Text style={styles.serviceLabel}>{t('editor.serviceLabel')}</Text>
             <Text style={styles.serviceName}>{review.serviceName}</Text>
           </Text>
         ) : null}
@@ -100,7 +101,7 @@ export default function ReviewRow({
         ) : videoOnly ? (
           <View style={styles.videoPlaceholder}>
             <Ionicons name="videocam-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.videoLabel}>Video isn’t available here</Text>
+            <Text style={styles.videoLabel}>{t('editor.videoUnavailable')}</Text>
           </View>
         ) : null}
         <Modal

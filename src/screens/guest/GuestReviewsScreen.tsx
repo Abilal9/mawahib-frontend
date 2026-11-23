@@ -25,14 +25,15 @@ import {
 import type { PublicReviewRole } from '../../services/publicQuery';
 import { reviewCountLabel } from '../../utils/reviewSummary';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { SignedOutScreenProps } from '../../navigation/types';
 
 type RoleFilter = 'all' | PublicReviewRole;
 
-const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'provider', label: 'As Talent' },
-  { value: 'client', label: 'As Client' },
+const ROLE_OPTIONS: { value: RoleFilter; labelKey: 'profile.all' | 'profile.asTalent' | 'profile.asClient' }[] = [
+  { value: 'all', labelKey: 'profile.all' },
+  { value: 'provider', labelKey: 'profile.asTalent' },
+  { value: 'client', labelKey: 'profile.asClient' },
 ];
 
 function aggregateFor(
@@ -118,7 +119,7 @@ export default function GuestReviewsScreen({
       <StatusBar style="dark" />
       <GuestScreenHeader
         onBack={() => navigation.goBack()}
-        title={total === 0 ? 'Reviews' : reviewCountLabel(total)}
+        title={total === 0 ? t('profile.reviews') : reviewCountLabel(total)}
       />
       {isUserList ? (
         <View style={styles.roleRow}>
@@ -134,7 +135,7 @@ export default function GuestReviewsScreen({
                 <Text
                   style={[styles.roleChipText, selected && styles.roleChipTextOn]}
                 >
-                  {option.label}
+                  {t(option.labelKey)}
                 </Text>
               </TouchableOpacity>
             );
@@ -142,7 +143,7 @@ export default function GuestReviewsScreen({
         </View>
       ) : null}
       {reviews.notFound ? (
-        <GuestStatusBlock error="Reviews are unavailable." />
+        <GuestStatusBlock error={t('editor.reviewsUnavailable')} />
       ) : (
         <FlatList
           data={reviews.loading ? [] : mapped}
@@ -167,7 +168,7 @@ export default function GuestReviewsScreen({
               <GuestStatusBlock
                 error={reviews.error}
                 emptyLabel={
-                  reviews.error ? undefined : 'No published reviews yet.'
+                  reviews.error ? undefined : t('editor.noPublishedReviews')
                 }
                 onRetry={reviews.error ? reviews.refresh : undefined}
               />

@@ -18,6 +18,7 @@ import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import ReorderableMediaGrid from '../../components/ui/ReorderableMediaGrid';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { useMyProfile } from '../../context/ProfileContext';
 import { ScreenProps } from '../../navigation/types';
 import { requiredTitle } from '../../domain/truthfulFacts';
@@ -68,8 +69,8 @@ export default function AddPortfolioProjectScreen({
       ]);
     } catch (err) {
       Alert.alert(
-        'Upload failed',
-        err instanceof Error ? err.message : 'Could not upload image',
+        t('editor.uploadFailed'),
+        err instanceof Error ? err.message : t('editor.uploadFailedBody'),
       );
     } finally {
       setUploading(false);
@@ -79,17 +80,14 @@ export default function AddPortfolioProjectScreen({
 
   const save = async () => {
     if (media.length === 0) {
-      Alert.alert('Add media', 'Upload at least one image for this project.');
+      Alert.alert(t('editor.addMedia'), t('editor.addMediaBody'));
       return;
     }
     let trimmedTitle: string;
     try {
       trimmedTitle = requiredTitle(title, 'project title');
-    } catch (err) {
-      Alert.alert(
-        'Add a title',
-        err instanceof Error ? err.message : 'Enter a project title.',
-      );
+    } catch {
+      Alert.alert(t('editor.addTitle'), t('editor.enterProjectTitle'));
       return;
     }
     const trimmedDesc = description.trim();
@@ -113,8 +111,8 @@ export default function AddPortfolioProjectScreen({
       navigation.goBack();
     } catch (err) {
       Alert.alert(
-        'Save failed',
-        err instanceof Error ? err.message : 'Could not save project',
+        t('editor.saveProjectFailed'),
+        err instanceof Error ? err.message : t('editor.saveProjectFailedBody'),
       );
     } finally {
       setSaving(false);
@@ -128,7 +126,7 @@ export default function AddPortfolioProjectScreen({
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
           <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>{isEditing ? 'Edit Project' : 'Add Project'}</Text>
+        <Text style={styles.title}>{isEditing ? t('editor.editProject') : t('editor.addProjectTitle')}</Text>
         <View style={styles.iconBtn} />
       </View>
 
@@ -141,9 +139,9 @@ export default function AddPortfolioProjectScreen({
           keyboardShouldPersistTaps="handled"
           scrollEnabled={!mediaDragging}
         >
-          <Text style={styles.label}>Project title</Text>
+          <Text style={styles.label}>{t('editor.projectTitle')}</Text>
           <TextInput style={styles.input} value={title} onChangeText={setTitle} />
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>{t('editor.description')}</Text>
           <TextInput
             style={[styles.input, styles.multiline]}
             value={description}
@@ -153,7 +151,7 @@ export default function AddPortfolioProjectScreen({
           />
 
           <View style={styles.mediaHeader}>
-            <Text style={styles.labelInline}>Project media</Text>
+            <Text style={styles.labelInline}>{t('editor.projectMedia')}</Text>
             <Text style={styles.mediaCount}>
               {media.length}/{MAX_MEDIA}
             </Text>
@@ -162,10 +160,9 @@ export default function AddPortfolioProjectScreen({
             <View style={styles.progressRow}>
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.progressText}>
-                Uploading
                 {uploadProgress != null
-                  ? ` ${Math.round(uploadProgress * 100)}%`
-                  : '…'}
+                  ? t('editor.uploadingPercent', { percent: Math.round(uploadProgress * 100) })
+                  : t('editor.uploading')}
               </Text>
             </View>
           )}
@@ -190,7 +187,7 @@ export default function AddPortfolioProjectScreen({
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
           <Button
-            title={saving ? 'Saving…' : isEditing ? 'Save changes' : 'Add project'}
+            title={saving ? t('editor.saving') : isEditing ? t('editor.saveChanges') : t('editor.addProject')}
             onPress={() => {
               void save();
             }}
