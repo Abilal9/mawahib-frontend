@@ -22,6 +22,7 @@ import UserAvatar from '../../components/ui/UserAvatar';
 import ContentReportSheet from '../../components/report/ContentReportSheet';
 import { categoryCardLabel } from '../../i18n/catalogLabel';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import {
   servicesApi,
   type ApiServiceReview,
@@ -174,7 +175,7 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
     return (
       <ScreenContainer>
         <View style={styles.missingWrap}>
-          <Text style={styles.missingText}>Loading…</Text>
+          <Text style={styles.missingText}>{t('work.loading')}</Text>
         </View>
       </ScreenContainer>
     );
@@ -184,9 +185,9 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
     return (
       <ScreenContainer>
         <View style={styles.missingWrap}>
-          <Text style={styles.missingText}>Service not found</Text>
+          <Text style={styles.missingText}>{t('work.serviceNotFound')}</Text>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.missingBack}>
-            <Text style={styles.missingBackText}>Go back</Text>
+            <Text style={styles.missingBackText}>{t('profile.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </ScreenContainer>
@@ -272,7 +273,7 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
                 {reviewCountLabel(profileOffering.reviewCount ?? 0)})
               </Text>
             ) : (
-              <Text style={styles.description}>No reviews yet</Text>
+              <Text style={styles.description}>{t('nav.noReviews')}</Text>
             )}
             {serviceReviews.map((review) => (
               <View key={review.id}>
@@ -338,7 +339,7 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
 
             {profileOffering.addons?.length ? (
               <>
-                <Text style={styles.sectionTitle}>Add-ons:</Text>
+                <Text style={styles.sectionTitle}>{t('work.addons')}</Text>
                 {profileOffering.addons.map((addon) => (
                   <View key={addon.id} style={styles.addonRow}>
                     <Text style={styles.addonTitle}>{addon.title}</Text>
@@ -359,7 +360,7 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
         {isVisitorView ? (
           <View style={styles.footer}>
             <Button
-              title="Apply"
+              title={t('work.apply')}
               fullWidth
               onPress={() =>
                 navigation.navigate('RequestService', {
@@ -380,7 +381,7 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setDeleteOpen(false)}>
             <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-              <Text style={styles.modalTitle}>Delete service?</Text>
+              <Text style={styles.modalTitle}>{t('editor.deleteServiceTitle')}</Text>
               <Text style={styles.modalBody}>
                 Are you sure you want to delete “{profileOffering.title}”? This can’t be undone.
               </Text>
@@ -394,28 +395,28 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
                 }}
                 activeOpacity={0.85}
               >
-                <Text style={styles.modalDangerText}>Delete</Text>
+                <Text style={styles.modalDangerText}>{t('common.delete')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
                 onPress={() => setDeleteOpen(false)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </Pressable>
           </Pressable>
         </Modal>
         <ContentReportSheet
           visible={reportServiceOpen}
-          title="Report service"
+          title={t('work.reportService')}
           targetType="service_offering"
           targetId={profileOffering?.id ?? null}
           onClose={() => setReportServiceOpen(false)}
         />
         <ContentReportSheet
           visible={reportReviewId !== null}
-          title="Report review"
+          title={t('editor.reportReview')}
           targetType="engagement_review"
           targetId={reportReviewId}
           onClose={() => setReportReviewId(null)}
@@ -482,7 +483,7 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
                     </Text>
                   </>
                 ) : (
-                  <Text style={styles.rating}>No reviews yet</Text>
+                  <Text style={styles.rating}>{t('nav.noReviews')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -497,27 +498,27 @@ export default function ServiceDetailScreen({ route, navigation }: ScreenProps<'
                     <CurrencyIcon size={18} color={colors.primary} currency={objectCurrency} location={objectCurrency ? null : providerLocation} />
                     <Text style={styles.metaValueInline}>{service.price.toLocaleString()}</Text>
                   </View>
-                  <Text style={styles.metaLabel}>Price</Text>
+                  <Text style={styles.metaLabel}>{t('work.price')}</Text>
                 </View>
               ) : null}
               {service.duration.trim() ? (
                 <View style={styles.metaCard}>
                   <Ionicons name="time-outline" size={20} color={colors.primary} />
                   <Text style={styles.metaValue}>{service.duration}</Text>
-                  <Text style={styles.metaLabel}>Duration</Text>
+                  <Text style={styles.metaLabel}>{t('work.duration')}</Text>
                 </View>
               ) : null}
             </View>
           ) : null}
 
-          <Text style={styles.sectionTitle}>About this service</Text>
+          <Text style={styles.sectionTitle}>{t('work.aboutService')}</Text>
           <Text style={styles.description}>{service.description}</Text>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <Button
-          title="Request Service"
+          title={t('work.requestService')}
           onPress={() =>
             navigation.navigate('RequestService', {
               userId: service.provider.id,

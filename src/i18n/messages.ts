@@ -3,6 +3,7 @@ import { discoverCatalog } from './catalogs/discover';
 import { entryCatalog } from './catalogs/entry';
 import { profileCatalog } from './catalogs/profile';
 import { editorCatalog } from './catalogs/editor';
+import { workCatalog } from './catalogs/work';
 
 export const messages = {
   en: {
@@ -166,6 +167,7 @@ export const messages = {
     ...discoverCatalog.en,
     ...profileCatalog.en,
     ...editorCatalog.en,
+    ...workCatalog.en,
   },
   ar: {
     'language.title': 'تغيير اللغة',
@@ -331,6 +333,7 @@ export const messages = {
     ...discoverCatalog.ar,
     ...profileCatalog.ar,
     ...editorCatalog.ar,
+    ...workCatalog.ar,
   },
 } as const;
 

@@ -18,6 +18,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import MoneyAmount from '../../components/ui/MoneyAmount';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
+import type { MessageKey } from '../../i18n/messages';
 import UserAvatar from '../../components/ui/UserAvatar';
 import {
   UserJob,
@@ -42,78 +44,88 @@ const SECTION_BODY_MIN_HEIGHT = 220;
 
 interface SectionSpec {
   key: UserJobSection;
-  title: string;
+  titleKey: MessageKey;
   dot: string;
   countColor: string;
-  emptyMessage: string;
+  emptyKey: MessageKey;
+  loadKey: MessageKey;
 }
 
 const RECEIVED_SECTIONS: SectionSpec[] = [
   {
     key: 'requests',
-    title: 'Requests',
+    titleKey: 'work.requests',
     dot: '#C084FC',
     countColor: '#8B5CF6',
-    emptyMessage: 'No requests yet.',
+    emptyKey: 'work.noRequests',
+    loadKey: 'work.loadRequests',
   },
   {
     key: 'pending-payment',
-    title: 'Pending Payment',
+    titleKey: 'status.pendingPayment',
     dot: '#60A5FA',
     countColor: '#2E6AC5',
-    emptyMessage: 'No pending payments.',
+    emptyKey: 'work.noPayments',
+    loadKey: 'work.loadPayments',
   },
   {
     key: 'in-progress',
-    title: 'In Progress',
+    titleKey: 'status.inProgress',
     dot: '#60A5FA',
     countColor: '#3B82F6',
-    emptyMessage: 'No jobs in progress.',
+    emptyKey: 'work.noProgress',
+    loadKey: 'work.loadProgress',
   },
   {
     key: 'completed',
-    title: 'History',
+    titleKey: 'work.history',
     dot: '#22C55E',
     countColor: '#16A34A',
-    emptyMessage: 'No history yet.',
+    emptyKey: 'work.noHistory',
+    loadKey: 'work.loadHistory',
   },
 ];
 
 const SENT_SECTIONS: SectionSpec[] = [
   {
     key: 'requests',
-    title: 'Requests',
+    titleKey: 'work.requests',
     dot: '#C084FC',
     countColor: '#8B5CF6',
-    emptyMessage: 'No requests yet.',
+    emptyKey: 'work.noRequests',
+    loadKey: 'work.loadRequests',
   },
   {
     key: 'pending-payment',
-    title: 'Pending Payment',
+    titleKey: 'status.pendingPayment',
     dot: '#60A5FA',
     countColor: '#2E6AC5',
-    emptyMessage: 'No pending payments.',
+    emptyKey: 'work.noPayments',
+    loadKey: 'work.loadPayments',
   },
   {
     key: 'in-progress',
-    title: 'In Progress',
+    titleKey: 'status.inProgress',
     dot: '#60A5FA',
     countColor: '#3B82F6',
-    emptyMessage: 'No jobs in progress.',
+    emptyKey: 'work.noProgress',
+    loadKey: 'work.loadProgress',
   },
   {
     key: 'posted',
-    title: 'Posted Jobs',
+    titleKey: 'work.postedJobs',
     dot: '#F59E0B',
     countColor: '#B45309',
-    emptyMessage: 'No posted jobs.',
+    emptyKey: 'work.noPosted',
+    loadKey: 'work.loadPosted',
   },
   {
     key: 'completed',
-    title: 'History',
+    titleKey: 'work.history',
     dot: '#22C55E',
     countColor: '#16A34A',
-    emptyMessage: 'No history yet.',
+    emptyKey: 'work.noHistory',
+    loadKey: 'work.loadHistory',
   },
 ];
 
@@ -234,7 +246,7 @@ function JobFlowCard({
       </View>
 
       <View style={styles.metaLine}>
-        <Text style={styles.metaLabel}>User</Text>
+        <Text style={styles.metaLabel}>{t('work.user')}</Text>
         <TouchableOpacity
           style={styles.userInline}
           onPress={(e) => {
@@ -253,7 +265,7 @@ function JobFlowCard({
       </View>
       <View style={styles.metaSeparator} />
       <View style={styles.metaLine}>
-        <Text style={styles.metaLabel}>Requested</Text>
+        <Text style={styles.metaLabel}>{t('work.requested')}</Text>
         <View style={styles.userInline}>
           <Ionicons name="time-outline" size={14} color="#3F78B7" />
           <Text style={styles.dateValue}>{job.date}</Text>
@@ -263,7 +275,7 @@ function JobFlowCard({
         <>
           <View style={styles.metaSeparator} />
           <View style={styles.metaLine}>
-            <Text style={styles.metaLabel}>Total</Text>
+            <Text style={styles.metaLabel}>{t('work.total')}</Text>
             <MoneyAmount
               amount={total}
               currency={details.currencySymbol}
@@ -427,7 +439,7 @@ export default function JobsScreen({
     <ScreenContainer padded={false}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Jobs</Text>
+        <Text style={styles.headerTitle}>{t('work.jobs')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -447,7 +459,7 @@ export default function JobsScreen({
                 <Text
                   style={[styles.tabText, activeTab === tab && styles.tabTextActive]}
                 >
-                  {tab === 'received' ? 'Received' : 'Sent'}
+                  {tab === 'received' ? t('work.received') : t('work.sent')}
                 </Text>
                 {count > 0 ? <View style={styles.tabUnreadDot} /> : null}
               </View>
@@ -480,7 +492,7 @@ export default function JobsScreen({
               <View style={styles.panelHeader}>
                 <View style={styles.panelTitleWrap}>
                   <View style={[styles.panelDot, { backgroundColor: section.dot }]} />
-                  <Text style={styles.panelTitle}>{section.title}</Text>
+                  <Text style={styles.panelTitle}>{t(section.titleKey)}</Text>
                   <Text style={[styles.panelCount, { color: section.countColor }]}>
                     {showSectionLoading || showSectionError ? '—' : items.length}
                   </Text>
@@ -521,20 +533,18 @@ export default function JobsScreen({
                       size={28}
                       color={colors.error}
                     />
-                    <Text style={styles.errorTitle}>
-                      Couldn&apos;t load your {section.title.toLowerCase()}.
-                    </Text>
-                    <Text style={styles.errorSubtitle}>Please try again.</Text>
+                    <Text style={styles.errorTitle}>{t(section.loadKey)}</Text>
+                    <Text style={styles.errorSubtitle}>{t('work.tryAgain')}</Text>
                     <TouchableOpacity
                       style={styles.retryBtn}
                       onPress={() => void refresh()}
                     >
-                      <Text style={styles.retryText}>Retry</Text>
+                      <Text style={styles.retryText}>{t('common.retry')}</Text>
                     </TouchableOpacity>
                   </SectionBodyState>
                 ) : items.length === 0 ? (
                   <SectionBodyState>
-                    <Text style={styles.emptyText}>{section.emptyMessage}</Text>
+                    <Text style={styles.emptyText}>{t(section.emptyKey)}</Text>
                   </SectionBodyState>
                 ) : (
                   items.map((job) => (
@@ -582,14 +592,16 @@ export default function JobsScreen({
         <Pressable style={styles.sortBackdrop} onPress={() => setSortOpen(false)}>
           <Pressable style={styles.sortSheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.sortTitle}>
-              Sort {sections.find((s) => s.key === sortSection)?.title ?? ''}
+              {t('work.sortSection', {
+                section: t(sections.find((s) => s.key === sortSection)?.titleKey ?? 'work.requests'),
+              })}
             </Text>
             {(
               [
-                { id: 'most-recent', label: 'Most recent' },
-                { id: 'oldest', label: 'Oldest first' },
-                { id: 'due-date', label: 'Due date' },
-              ] as { id: SectionSort; label: string }[]
+                { id: 'most-recent', labelKey: 'work.mostRecent' },
+                { id: 'oldest', labelKey: 'discover.oldestFirst' },
+                { id: 'due-date', labelKey: 'discover.dueDate' },
+              ] as const
             ).map((opt) => {
               const selected = sectionSort[sortSection] === opt.id;
               return (
@@ -607,7 +619,7 @@ export default function JobsScreen({
                       selected && styles.sortOptionTextSelected,
                     ]}
                   >
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </Text>
                   {selected ? (
                     <Ionicons name="checkmark" size={18} color={colors.primary} />

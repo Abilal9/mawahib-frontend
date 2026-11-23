@@ -18,6 +18,7 @@ import BookmarkButton from '../../components/ui/BookmarkButton';
 import { displayProfileTitle } from '../../constants/profile';
 import { categoryCardLabel } from '../../i18n/catalogLabel';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { SignedOutScreenProps } from '../../navigation/types';
 import { TouchableOpacity } from 'react-native';
 
@@ -43,7 +44,7 @@ export default function GuestServiceDetailScreen({
   return (
     <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.background}>
       <StatusBar style="dark" />
-      <GuestScreenHeader onBack={() => navigation.goBack()} title="Service" />
+      <GuestScreenHeader onBack={() => navigation.goBack()} title={t('work.service')} />
       {loading ? (
         <GuestStatusBlock loading />
       ) : notFound || !service ? (
@@ -95,7 +96,7 @@ export default function GuestServiceDetailScreen({
 
           {service.packages.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.subhead}>Packages</Text>
+              <Text style={styles.subhead}>{t('work.packages')}</Text>
               {service.packages.map((pkg) => (
                 <View key={pkg.name} style={styles.packageCard}>
                   <View style={styles.packageTop}>
@@ -117,7 +118,7 @@ export default function GuestServiceDetailScreen({
 
           {service.addons.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.subhead}>Add-ons</Text>
+              <Text style={styles.subhead}>{t('work.addonsTitle')}</Text>
               {service.addons.map((addon) => (
                 <View key={addon.id} style={styles.packageTop}>
                   <Text style={styles.include}>{addon.title}</Text>
@@ -128,13 +129,13 @@ export default function GuestServiceDetailScreen({
           ) : null}
 
           <View style={styles.section}>
-            <Text style={styles.subhead}>Reviews</Text>
+            <Text style={styles.subhead}>{t('profile.reviews')}</Text>
             {reviewsLoading ? <GuestStatusBlock loading /> : null}
             {reviewsError ? (
               <GuestStatusBlock error={reviewsError} onRetry={refresh} />
             ) : null}
             {!reviewsLoading && reviews.length === 0 && !reviewsError ? (
-              <Text style={styles.meta}>No published reviews yet.</Text>
+              <Text style={styles.meta}>{t('work.noPublishedReviews')}</Text>
             ) : null}
             {reviews.map((review) => (
               <GuestReviewCard key={review.id} review={review} />
@@ -145,14 +146,14 @@ export default function GuestServiceDetailScreen({
                   navigation.navigate('Reviews', { serviceId: service.id })
                 }
               >
-                <Text style={styles.link}>See all reviews</Text>
+                <Text style={styles.link}>{t('work.seeAllReviews')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
 
           <View style={styles.cta}>
             <Button
-              title="Request Service"
+              title={t('work.requestService')}
               onPress={() =>
                 requireAuth({
                   action: 'request',

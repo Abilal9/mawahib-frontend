@@ -43,6 +43,7 @@ import DocumentViewerModal, {
 } from '../../components/media/DocumentViewerModal';
 import EngagementReviewPrompt from '../../components/job/EngagementReviewPrompt';
 import { colors, spacing, radius, typography, fontFamily } from '../../theme';
+import { t } from '../../i18n/runtime';
 import {
   normalizeMoneyInputEditing,
   parseMoneyInput,
@@ -85,7 +86,6 @@ import {
   DeadlineType,
   DurationUnit,
   ProposedTermsInput,
-  SOURCE_BADGE_LABEL,
   WorkRequestDeadlineInput,
   WorkRequestEvent,
   WorkRequestTerms,
@@ -1353,11 +1353,15 @@ export default function WorkRequestDetailScreen({
         <View style={styles.badgeRow}>
           <View style={styles.sourceBadge}>
             <Text style={styles.sourceBadgeText}>
-              {SOURCE_BADGE_LABEL[request.source]}
+              {request.source === 'job_posting'
+                ? t('work.jobPosting')
+                : request.source === 'service_request'
+                  ? t('work.serviceRequest')
+                  : t('work.directRequest')}
             </Text>
           </View>
           <Text style={styles.directionText}>
-            {isSender ? 'You sent this' : 'Sent to you'}
+            {isSender ? t('work.youSent') : t('work.sentToYou')}
           </Text>
         </View>
         {presentation.requestLabel || presentation.applicationLabel ? (

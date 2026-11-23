@@ -13,6 +13,7 @@ import BookmarkButton from '../../components/ui/BookmarkButton';
 import { displayProfileTitle } from '../../constants/profile';
 import { categoryCardLabel } from '../../i18n/catalogLabel';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { SignedOutScreenProps } from '../../navigation/types';
 
 /**
@@ -31,7 +32,7 @@ export default function GuestJobListingDetailScreen({
   return (
     <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.background}>
       <StatusBar style="dark" />
-      <GuestScreenHeader onBack={() => navigation.goBack()} title="Job" />
+      <GuestScreenHeader onBack={() => navigation.goBack()} title={t('work.job')} />
       {loading ? (
         <GuestStatusBlock loading />
       ) : notFound || !job ? (
@@ -88,7 +89,7 @@ export default function GuestJobListingDetailScreen({
           ) : null}
           {job.postedAt || job.createdAt ? (
             <Text style={styles.meta}>
-              Posted {publicTimeAgo(job.postedAt || job.createdAt)}
+              {t('discover.postedOn', { date: publicTimeAgo(job.postedAt || job.createdAt) })}
             </Text>
           ) : null}
           {categoryCardLabel(job) ? (
@@ -107,7 +108,7 @@ export default function GuestJobListingDetailScreen({
             </View>
           ) : null}
           <Button
-            title="Apply"
+            title={t('work.apply')}
             onPress={() =>
               requireAuth({
                 action: 'apply',

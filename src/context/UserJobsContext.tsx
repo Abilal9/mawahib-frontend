@@ -36,7 +36,6 @@ import {
   CreateServiceWorkRequestInput,
   PackageTier,
   ProposedTermsInput,
-  SOURCE_BADGE_LABEL,
   WorkRequestTerms,
   effectiveTerms,
   formatDeadline,
@@ -224,26 +223,35 @@ function mapStatus(request: ApiWorkRequest): {
   }
 }
 
+function sourceBadge(source: ApiWorkRequest['source']): string {
+  if (source === 'job_posting') return t('work.jobPosting');
+  if (source === 'service_request') return t('work.serviceRequest');
+  return t('work.directRequest');
+}
+
+function listingStatusLabel(status: string): string {
+  if (status === 'open') return t('work.statusOpen');
+  if (status === 'closed') return t('work.statusClosed');
+  return status.replace(/_/g, ' ');
+}
 function activityCopy(
   request: ApiWorkRequest,
   direction: 'sent' | 'received',
 ): string {
   if (request.source === 'job_posting') {
-    return direction === 'sent'
-      ? 'Applied to Job Posting'
-      : 'Application received';
+    return direction === 'sent' ? t('work.appliedSent') : t('work.applicationReceived');
   }
   if (request.source === 'service_request') {
-    return direction === 'sent' ? 'Service requested' : 'Service request received';
+    return direction === 'sent' ? t('work.serviceRequested') : t('work.serviceRequestReceived');
   }
-  return direction === 'sent' ? 'Direct request sent' : 'Direct request received';
+  return direction === 'sent' ? t('work.directSent') : t('work.directReceived');
 }
 
 /** `Aug 12, 2026` — the day the row was created, never a price or a deadline. */
 function formatCardDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-US', {
+  return formatUiDateTime(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -297,7 +305,7 @@ export function mapWorkRequestToUserJob(
     engagementId: request.workEngagementId ?? undefined,
     listingId: request.jobListingId ?? undefined,
     source: request.source,
-    sourceLabel: SOURCE_BADGE_LABEL[request.source],
+    sourceLabel: sourceBadge(request.source),
     title: terms.title || request.title,
     type: direction,
     status: mapped.status,
@@ -309,7 +317,7 @@ export function mapWorkRequestToUserJob(
     updatedAt: request.updatedAt,
     jobType: terms.employmentType ?? undefined,
     unread: request.unread,
-    activityLabel: 'Activity',
+    activityLabel: t('work.activity'),
     activityValue: activityCopy(request, direction),
     details: detailsFromTerms(request, terms),
     completedAt: request.workEngagementCompletedAt ?? undefined,
@@ -328,19 +336,19 @@ export function mapListingToPostedUserJob(
     id: `listing-${listing.id}`,
     listingId: listing.id,
     source: 'posted_listing',
-    sourceLabel: 'POSTED JOB',
+    sourceLabel: t('work.postedJob'),
     title: listing.title,
     type: 'sent',
     status: 'posted',
-    statusLabel: listing.status.replace(/_/g, ' '),
+    statusLabel: listingStatusLabel(listing.status),
     section: 'posted',
     counterpart: me,
     date: formatCardDate(listing.createdAt),
     createdAt: listing.createdAt,
     updatedAt: listing.updatedAt,
     jobType: employmentTypeToUi(listing.employmentType),
-    activityLabel: 'Posted',
-    activityValue: listing.status.replace(/_/g, ' '),
+    activityLabel: t('work.posted'),
+    activityValue: listingStatusLabel(listing.status),
   };
 }
 
