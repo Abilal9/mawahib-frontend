@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../../theme';
+import { placeLabel } from '../../i18n/places';
+import { t } from '../../i18n/runtime';
+import type { MessageKey } from '../../i18n/messages';
 import LocationSelectors from '../ui/LocationSelectors';
 import { ExploreTab } from '../../data/mock/explore';
 import {
@@ -28,12 +31,12 @@ export interface ExploreSheetValue {
   employmentType: ApiEmploymentType | null;
 }
 
-const JOB_TYPES: { id: ApiEmploymentType; label: string }[] = [
-  { id: 'full_time', label: 'Full-time' },
-  { id: 'part_time', label: 'Part-time' },
-  { id: 'contract', label: 'Contract' },
-  { id: 'freelance', label: 'Freelance' },
-  { id: 'gig', label: 'Gig' },
+const JOB_TYPES: { id: ApiEmploymentType; labelKey: MessageKey }[] = [
+  { id: 'full_time', labelKey: 'discover.fullTime' },
+  { id: 'part_time', labelKey: 'discover.partTime' },
+  { id: 'contract', labelKey: 'discover.contract' },
+  { id: 'freelance', labelKey: 'discover.freelance' },
+  { id: 'gig', labelKey: 'discover.gig' },
 ];
 
 export function countryForLocationCode(code: string | null): CountryCode | null {
@@ -48,9 +51,11 @@ export function countryForLocationCode(code: string | null): CountryCode | null 
 
 export function locationLabel(code: string | null): string {
   const country = countryForLocationCode(code);
-  if (!country || !code) return 'All cities';
+  if (!country || !code) return t('discover.allCities');
   const city = locationsForCountry(country).find((location) => location.code === code);
-  return city ? `${city.label}, ${COUNTRY_CATALOG[country].label}` : 'All cities';
+  return city
+    ? `${placeLabel(city.label)}, ${placeLabel(COUNTRY_CATALOG[country].label)}`
+    : t('discover.allCities');
 }
 
 interface ExploreFilterSheetProps {
@@ -87,7 +92,7 @@ export default function ExploreFilterSheet({
       <View style={styles.sheet}>
         <View style={styles.handle} />
         <View style={styles.header}>
-          <Text style={styles.title}>Filters</Text>
+          <Text style={styles.title}>{t('discover.filters')}</Text>
           <TouchableOpacity
             onPress={() => {
               setDraft({
@@ -98,18 +103,18 @@ export default function ExploreFilterSheet({
               setCountryCode(null);
             }}
           >
-            <Text style={styles.reset}>Reset</Text>
+            <Text style={styles.reset}>{t('discover.reset')}</Text>
           </TouchableOpacity>
         </View>
         <ScrollView showsVerticalScrollIndicator={false}>
           {tab === 'talents' ? (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Sort by</Text>
+              <Text style={styles.sectionLabel}>{t('discover.sortBy')}</Text>
               <View style={styles.chipWrap}>
                 {(
                   [
-                    ['recommended', 'Recommended'],
-                    ['top-rated', 'Top rated'],
+                    ['recommended', 'discover.recommended'],
+                    ['top-rated', 'discover.topRated'],
                   ] as const
                 ).map(([id, label]) => {
                   const selected = draft.talentSort === id;
@@ -120,7 +125,7 @@ export default function ExploreFilterSheet({
                       onPress={() => setDraft((prev) => ({ ...prev, talentSort: id }))}
                     >
                       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                        {label}
+                        {t(label)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -129,10 +134,10 @@ export default function ExploreFilterSheet({
             </View>
           ) : (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Sort by</Text>
+              <Text style={styles.sectionLabel}>{t('discover.sortBy')}</Text>
               <View style={styles.chipWrap}>
                 <View style={[styles.chip, styles.chipSelected]}>
-                  <Text style={[styles.chipText, styles.chipTextSelected]}>Newest</Text>
+                  <Text style={[styles.chipText, styles.chipTextSelected]}>{t('discover.newest')}</Text>
                 </View>
               </View>
             </View>
@@ -142,10 +147,10 @@ export default function ExploreFilterSheet({
             <View style={styles.section}>
               <View style={styles.cityHeader}>
                 <Text style={styles.sectionLabel}>
-                  {tab === 'services' ? 'Provider city' : 'City'}
+                  {tab === 'services' ? t('discover.providerCity') : t('discover.city')}
                 </Text>
                 <TouchableOpacity onPress={() => setDraft((prev) => ({ ...prev, locationCode: null }))}>
-                  <Text style={styles.reset}>All cities</Text>
+                  <Text style={styles.reset}>{t('discover.allCities')}</Text>
                 </TouchableOpacity>
               </View>
               <LocationSelectors
@@ -165,7 +170,7 @@ export default function ExploreFilterSheet({
 
           {tab === 'jobs' ? (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Job type</Text>
+              <Text style={styles.sectionLabel}>{t('discover.jobType')}</Text>
               <View style={styles.chipWrap}>
                 <TouchableOpacity
                   style={[styles.chip, draft.employmentType == null && styles.chipSelected]}
@@ -177,7 +182,7 @@ export default function ExploreFilterSheet({
                       draft.employmentType == null && styles.chipTextSelected,
                     ]}
                   >
-                    All types
+                    {t('discover.allTypes')}
                   </Text>
                 </TouchableOpacity>
                 {JOB_TYPES.map((option) => {
@@ -191,7 +196,7 @@ export default function ExploreFilterSheet({
                       }
                     >
                       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                        {option.label}
+                        {t(option.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -202,7 +207,7 @@ export default function ExploreFilterSheet({
         </ScrollView>
         <TouchableOpacity style={styles.apply} onPress={() => onApply(draft)} activeOpacity={0.85}>
           <Ionicons name="checkmark" size={18} color={colors.white} />
-          <Text style={styles.applyText}>Apply</Text>
+          <Text style={styles.applyText}>{t('discover.applyFilters')}</Text>
         </TouchableOpacity>
       </View>
     </Modal>

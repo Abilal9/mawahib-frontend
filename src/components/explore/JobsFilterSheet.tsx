@@ -8,6 +8,8 @@ import {
   Pressable,
 } from 'react-native';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
+import type { MessageKey } from '../../i18n/messages';
 import { UserJobStatus } from '../../data/types/userJobs';
 
 export type JobsSort = 'newest' | 'oldest' | 'due-date';
@@ -30,25 +32,25 @@ interface JobsFilterSheetProps {
   onReset: () => void;
 }
 
-const STATUS_OPTIONS: { id: JobsFilters['status']; label: string }[] = [
-  { id: 'all', label: 'All statuses' },
-  { id: 'pending', label: 'Pending' },
-  { id: 'under-review', label: 'Under Review' },
-  { id: 'selected', label: 'Selected' },
-  { id: 'changes-requested', label: 'Changes requested' },
-  { id: 'changes-declined', label: 'Changes declined' },
-  { id: 'pending-payment', label: 'Pending payment' },
-  { id: 'in-progress', label: 'In progress' },
-  { id: 'delivered', label: 'Delivered' },
-  { id: 'completed', label: 'Completed' },
-  { id: 'rejected', label: 'Rejected' },
-  { id: 'withdrawn', label: 'Cancelled' },
+const STATUS_OPTIONS: { id: JobsFilters['status']; labelKey: MessageKey }[] = [
+  { id: 'all', labelKey: 'discover.allStatuses' },
+  { id: 'pending', labelKey: 'status.pending' },
+  { id: 'under-review', labelKey: 'status.underReview' },
+  { id: 'selected', labelKey: 'status.selected' },
+  { id: 'changes-requested', labelKey: 'status.changesRequested' },
+  { id: 'changes-declined', labelKey: 'status.changesDeclined' },
+  { id: 'pending-payment', labelKey: 'status.pendingPayment' },
+  { id: 'in-progress', labelKey: 'status.inProgress' },
+  { id: 'delivered', labelKey: 'status.delivered' },
+  { id: 'completed', labelKey: 'status.completed' },
+  { id: 'rejected', labelKey: 'status.rejected' },
+  { id: 'withdrawn', labelKey: 'status.cancelled' },
 ];
 
-const SORT_OPTIONS: { id: JobsSort; label: string }[] = [
-  { id: 'newest', label: 'Newest first' },
-  { id: 'oldest', label: 'Oldest first' },
-  { id: 'due-date', label: 'Due date' },
+const SORT_OPTIONS: { id: JobsSort; labelKey: MessageKey }[] = [
+  { id: 'newest', labelKey: 'discover.newestFirst' },
+  { id: 'oldest', labelKey: 'discover.oldestFirst' },
+  { id: 'due-date', labelKey: 'discover.dueDate' },
 ];
 
 export default function JobsFilterSheet({
@@ -70,13 +72,13 @@ export default function JobsFilterSheet({
       <View style={styles.sheet}>
         <View style={styles.handle} />
         <View style={styles.header}>
-          <Text style={styles.title}>Filter jobs</Text>
+          <Text style={styles.title}>{t('discover.filterJobs')}</Text>
           <TouchableOpacity onPress={onReset}>
-            <Text style={styles.reset}>Reset</Text>
+            <Text style={styles.reset}>{t('discover.reset')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionLabel}>Status</Text>
+        <Text style={styles.sectionLabel}>{t('discover.status')}</Text>
         <View style={styles.chipWrap}>
           {STATUS_OPTIONS.map((option) => {
             const selected = draft.status === option.id;
@@ -87,14 +89,14 @@ export default function JobsFilterSheet({
                 onPress={() => setDraft((prev) => ({ ...prev, status: option.id }))}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                  {option.label}
+                  {t(option.labelKey)}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <Text style={[styles.sectionLabel, { marginTop: spacing.lg }]}>Sort by</Text>
+        <Text style={[styles.sectionLabel, { marginTop: spacing.lg }]}>{t('discover.sortBy')}</Text>
         <View style={styles.chipWrap}>
           {SORT_OPTIONS.map((option) => {
             const selected = draft.sort === option.id;
@@ -105,7 +107,7 @@ export default function JobsFilterSheet({
                 onPress={() => setDraft((prev) => ({ ...prev, sort: option.id }))}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                  {option.label}
+                  {t(option.labelKey)}
                 </Text>
               </TouchableOpacity>
             );
@@ -119,7 +121,7 @@ export default function JobsFilterSheet({
             onClose();
           }}
         >
-          <Text style={styles.applyText}>Apply filters</Text>
+          <Text style={styles.applyText}>{t('discover.applyFiltersLong')}</Text>
         </TouchableOpacity>
       </View>
     </Modal>

@@ -23,6 +23,7 @@ import ExploreTalentCard from '../../components/explore/ExploreTalentCard';
 import ExploreServiceCard from '../../components/explore/ExploreServiceCard';
 import ExploreJobCard from '../../components/explore/ExploreJobCard';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { serviceDetailRoute } from '../../domain/truthfulFacts';
 import { exploreTabs, ExploreTab } from '../../data/mock/explore';
 import { normalizeExploreTab } from '../../utils/explore';
@@ -292,7 +293,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
         return true;
       } catch (error) {
         if (requestGen.current[target] !== gen) return false;
-        const message = error instanceof Error ? error.message : 'Failed to load explore';
+        const message = error instanceof Error ? error.message : t('discover.failedExplore');
         if (mode === 'reset') satisfiedKey.current[target] = '';
         if (target === 'talents') markFailed(setTalents, message, mode);
         else if (target === 'services') markFailed(setServices, message, mode);
@@ -393,8 +394,14 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
     });
   };
 
-  const emptyTitle =
-    tab === 'talents' ? 'No talents found' : tab === 'services' ? 'No services found' : 'No jobs found';
+  const emptyTitle = t(
+    tab === 'talents'
+      ? 'discover.noTalentsFound'
+      : tab === 'services'
+        ? 'discover.noServicesFound'
+        : 'discover.noJobsFound',
+  );
+  const tabLabel = t(exploreTabs.find((item) => item.id === tab)?.labelKey ?? 'discover.talents');
   const taxonomyActive = taxonomyByTab[tab].categoryIds.length > 0;
 
   return (
@@ -406,7 +413,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
             <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
               style={styles.searchField}
-              placeholder={`Search ${tab}...`}
+              placeholder={t('discover.searchTab', { tab: tabLabel })}
               placeholderTextColor={colors.textSecondary}
               value={query}
               onChangeText={setQuery}
@@ -424,15 +431,17 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
                 setQuery('');
               }}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <Text style={styles.pageTitle}>Explore</Text>
+            <Text style={styles.pageTitle}>{t('tab.explore')}</Text>
             <TouchableOpacity
               style={styles.iconButton}
               onPress={() => setSearchOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('discover.search')}
               activeOpacity={0.8}
             >
               <Ionicons name="search-outline" size={20} color={colors.textTertiary} />
@@ -453,7 +462,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
             >
               <View style={[styles.mainTabLabel, selected && styles.mainTabLabelActive]}>
                 <Text style={[styles.mainTabText, selected && styles.mainTabTextActive]}>
-                  {item.label}
+                  {t(item.labelKey)}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -472,14 +481,24 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
         <Text style={styles.filterSummary} numberOfLines={1}>
           {tab === 'jobs'
             ? filters.employmentType
-              ? filters.employmentType.replace('_', ' ')
-              : 'All job types'
+              ? t(
+                  filters.employmentType === 'full_time'
+                    ? 'discover.fullTime'
+                    : filters.employmentType === 'part_time'
+                      ? 'discover.partTime'
+                      : filters.employmentType === 'contract'
+                        ? 'discover.contract'
+                        : filters.employmentType === 'gig'
+                          ? 'discover.gig'
+                          : 'discover.freelance',
+                )
+              : t('discover.allJobTypes')
             : locationLabel(filters.locationCode)}
           {tab === 'talents'
             ? filters.talentSort === 'top-rated'
-              ? ' · Top rated'
-              : ' · Recommended'
-            : ' · Newest'}
+              ? t('discover.topRatedSuffix')
+              : t('discover.recommendedSuffix')
+            : t('discover.newestSuffix')}
         </Text>
         {bucket.pending ? <ActivityIndicator size="small" color={colors.primary} /> : null}
       </View>
@@ -499,10 +518,10 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
       {bucket.error && bucket.items.length === 0 && !bucket.initialLoading ? (
         <View style={styles.empty}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
-          <Text style={styles.emptyTitle}>Could not load {tab}</Text>
+          <Text style={styles.emptyTitle}>{t('discover.loadFailed', { tab: tabLabel })}</Text>
           <Text style={styles.emptyText}>{bucket.error}</Text>
           <TouchableOpacity onPress={retry}>
-            <Text style={styles.retry}>Retry</Text>
+            <Text style={styles.retry}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -545,9 +564,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
                 <Ionicons name="compass-outline" size={48} color={colors.textSecondary} />
                 <Text style={styles.emptyTitle}>{emptyTitle}</Text>
                 <Text style={styles.emptyText}>
-                  {taxonomyActive
-                    ? 'No matches for these filters.'
-                    : 'Try another search or city.'}
+                  {taxonomyActive ? t('discover.noFilterMatches') : t('discover.tryAnother')}
                 </Text>
               </View>
             )
@@ -557,7 +574,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
               <ActivityIndicator style={styles.footer} color={colors.primary} />
             ) : bucket.error && bucket.items.length > 0 ? (
               <TouchableOpacity onPress={retry} style={styles.footer}>
-                <Text style={styles.retry}>{bucket.error} · Retry</Text>
+                <Text style={styles.retry}>{bucket.error} · {t('common.retry')}</Text>
               </TouchableOpacity>
             ) : undefined
           }
@@ -609,14 +626,14 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
 
       <ConfirmActionModal
         visible={disconnectTarget != null}
-        title="Disconnect connection?"
+        title={t('discover.disconnectTitle')}
         message={
           disconnectTarget
-            ? `Are you sure you want to disconnect from ${disconnectTarget.name}?`
+            ? t('discover.disconnectBody', { name: disconnectTarget.name })
             : ''
         }
-        confirmLabel="Disconnect"
-        cancelLabel="Cancel"
+        confirmLabel={t('discover.disconnect')}
+        cancelLabel={t('common.cancel')}
         danger
         busy={mutationBusy}
         onCancel={() => setDisconnectTarget(null)}

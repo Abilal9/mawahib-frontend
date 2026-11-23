@@ -1,3 +1,4 @@
+import { formatCompactAge } from '../i18n/format';
 import { apiRequest } from '../lib/apiClient';
 import type { Comment, Post, User } from '../data/types';
 
@@ -79,15 +80,7 @@ export interface ApiEngagement {
 }
 
 function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const m = Math.max(0, Math.floor(ms / 60000));
-  if (m < 1) return 'now';
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return `${Math.floor(d / 7)}w`;
+  return formatCompactAge(iso);
 }
 
 export function mapFeedAuthor(a: ApiFeedAuthor): User {

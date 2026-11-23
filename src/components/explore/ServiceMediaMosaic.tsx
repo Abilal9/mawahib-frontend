@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { getMediaCacheKey } from '../../lib/mediaCacheKey';
 import { toImageSource } from '../../utils/image';
 import { colors, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 
 /** Explore cover height. Profile cards pass their own existing height. */
 const DEFAULT_MEDIA_HEIGHT = 160;
@@ -32,7 +33,8 @@ export default function ServiceMediaMosaic({
     return <View style={[styles.fallback, { height }]} />;
   }
 
-  const label = `Service gallery, ${count} ${count === 1 ? 'image' : 'images'}`;
+  const label =
+    count === 1 ? t('discover.galleryOne') : t('discover.galleryMany', { count });
 
   if (count === 1) {
     return (

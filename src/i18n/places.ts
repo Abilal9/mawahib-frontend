@@ -32,3 +32,12 @@ export function placeLabel(english: string): string {
   if (getAppliedLocale() !== 'ar') return english;
   return PLACE_AR[english] ?? english;
 }
+
+/** Labels each catalog place in a "City, Country" line. Unknown text stays as stored. */
+export function placeLineLabel(value: string | null | undefined): string {
+  if (!value) return '';
+  return value
+    .split(', ')
+    .map((part) => placeLabel(part))
+    .join(', ');
+}

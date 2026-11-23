@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UserAvatar from '../ui/UserAvatar';
 import { colors, spacing, radius, typography } from '../../theme';
+import { placeLineLabel } from '../../i18n/places';
+import { reviewCountLabel, t } from '../../i18n/runtime';
 import { displayProfileTitle } from '../../constants/profile';
 import type { TalentConnectStatus } from '../../data/types';
 
@@ -65,7 +67,7 @@ export default function ExploreTalentCard({
             ) : null}
             {talent.studio ? (
               <View style={styles.studioBadge}>
-                <Text style={styles.studioText}>Studio</Text>
+                <Text style={styles.studioText}>{t('discover.studio')}</Text>
               </View>
             ) : null}
           </View>
@@ -73,7 +75,7 @@ export default function ExploreTalentCard({
           {talent.location ? (
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={14} color={colors.text} />
-              <Text style={styles.metaText}>{talent.location}</Text>
+              <Text style={styles.metaText}>{placeLineLabel(talent.location)}</Text>
             </View>
           ) : null}
           {talent.skills.length > 0 ? (
@@ -85,7 +87,7 @@ export default function ExploreTalentCard({
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color={colors.warning} />
               <Text style={styles.ratingValue}>{talent.rating.toFixed(1)}</Text>
-              <Text style={styles.ratingCount}>({talent.reviewCount})</Text>
+              <Text style={styles.ratingCount}>({reviewCountLabel(talent.reviewCount)})</Text>
             </View>
           ) : null}
         </View>
@@ -95,12 +97,12 @@ export default function ExploreTalentCard({
             onPress={onConnect}
             accessibilityLabel={
               connectStatus === 'incoming'
-                ? 'Accept connection request'
+                ? t('discover.acceptRequest')
                 : connectStatus === 'request-sent'
-                  ? 'Cancel connection request'
+                  ? t('discover.cancelRequest')
                   : connectStatus === 'added'
-                    ? 'Confirm disconnect'
-                    : 'Connect'
+                    ? t('discover.confirmDisconnect')
+                    : t('discover.connect')
             }
             activeOpacity={0.85}
           >

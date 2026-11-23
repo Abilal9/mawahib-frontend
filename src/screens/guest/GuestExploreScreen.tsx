@@ -25,6 +25,7 @@ import { useGuestExplore } from '../../hooks/useGuestExplore';
 import { useAuthGate } from '../../context/AuthGateContext';
 import { exploreTabs, type ExploreTab } from '../../data/mock/explore';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { GuestTabScreenProps } from '../../navigation/types';
 
 function normalizeTab(value: string | undefined): ExploreTab {
@@ -49,12 +50,16 @@ export default function GuestExploreScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.contentType]);
 
-  const emptyTitle =
+  const tabLabel = t(
+    exploreTabs.find((item) => item.id === explore.tab)?.labelKey ?? 'discover.talents',
+  );
+  const emptyTitle = t(
     explore.tab === 'talents'
-      ? 'No talents found'
+      ? 'discover.noTalentsFound'
       : explore.tab === 'services'
-        ? 'No services found'
-        : 'No jobs found';
+        ? 'discover.noServicesFound'
+        : 'discover.noJobsFound',
+  );
 
   return (
     <ScreenContainer padded={false} backgroundColor={colors.background}>
@@ -65,7 +70,7 @@ export default function GuestExploreScreen({
             <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
               style={styles.searchField}
-              placeholder={`Search ${explore.tab}...`}
+              placeholder={t('discover.searchTab', { tab: tabLabel })}
               placeholderTextColor={colors.textSecondary}
               value={explore.query}
               onChangeText={explore.setQuery}
@@ -83,12 +88,12 @@ export default function GuestExploreScreen({
                 explore.setQuery('');
               }}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <Text style={styles.pageTitle}>Explore</Text>
+            <Text style={styles.pageTitle}>{t('tab.explore')}</Text>
             <View style={styles.topActions}>
               <GuestAccountEntry size={20} />
               <TouchableOpacity
@@ -115,7 +120,7 @@ export default function GuestExploreScreen({
             >
               <View style={[styles.mainTabLabel, selected && styles.mainTabLabelActive]}>
                 <Text style={[styles.mainTabText, selected && styles.mainTabTextActive]}>
-                  {item.label}
+                  {t(item.labelKey)}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -135,7 +140,7 @@ export default function GuestExploreScreen({
       />
 
       {explore.searchBlocked ? (
-        <Text style={styles.hint}>Type at least 2 characters to search.</Text>
+        <Text style={styles.hint}>{t('discover.minSearch')}</Text>
       ) : null}
 
       <FlatList

@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import BookmarkButton from '../ui/BookmarkButton';
 import MoneyAmount from '../ui/MoneyAmount';
 import { colors, spacing, radius, typography } from '../../theme';
+import { formatUiDateTime } from '../../i18n/format';
+import { t } from '../../i18n/runtime';
 import { toImageSource } from '../../utils/image';
 import { stripCurrencyCodeTokens } from '../../utils/money';
 import type { Job } from '../../data/types';
@@ -25,7 +27,7 @@ export type ExploreJobCardData = {
 function postedLabel(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatUiDateTime(date, { month: 'short', day: 'numeric' });
 }
 
 function jobUiType(type: string): Job['type'] | string {
@@ -45,21 +47,21 @@ function jobUiType(type: string): Job['type'] | string {
 function jobTypeBadge(type: string) {
   const ui = jobUiType(type);
   if (ui === 'part-time') {
-    return { label: 'Part-time', bg: '#EFF6FF', border: '#DBEAFE', text: '#193CB8' };
+    return { label: t('discover.partTime'), bg: '#EFF6FF', border: '#DBEAFE', text: '#193CB8' };
   }
   if (ui === 'full-time') {
-    return { label: 'Full-time', bg: '#FEFCE8', border: '#FEF9C2', text: '#894B00' };
+    return { label: t('discover.fullTime'), bg: '#FEFCE8', border: '#FEF9C2', text: '#894B00' };
   }
   if (ui === 'gig' || ui === 'freelance') {
     return {
-      label: ui === 'gig' ? 'Gig' : 'Freelance',
+      label: ui === 'gig' ? t('discover.gig') : t('discover.freelance'),
       bg: '#F0FDF4',
       border: '#DCFCE7',
       text: '#016630',
     };
   }
   if (ui === 'contract') {
-    return { label: 'Contract', bg: '#FDF2F8', border: '#FCE7F3', text: colors.primary };
+    return { label: t('discover.contract'), bg: '#FDF2F8', border: '#FCE7F3', text: colors.primary };
   }
   return { label: String(type), bg: '#FDF2F8', border: '#FCE7F3', text: colors.primary };
 }
@@ -105,7 +107,7 @@ export default function ExploreJobCard({
         <MoneyAmount
           amount={
             typeof job.salary === 'string'
-              ? stripCurrencyCodeTokens(job.salary) || 'Negotiable'
+              ? stripCurrencyCodeTokens(job.salary) || t('discover.negotiable')
               : job.salary
           }
           currency={job.currency}
@@ -113,8 +115,10 @@ export default function ExploreJobCard({
           color={colors.textTertiary}
           rawLabel={typeof job.salary === 'string'}
         />
-        {job.postedAt ? (
-          <Text style={styles.jobMeta}>Posted {postedLabel(job.postedAt)}</Text>
+        {job.postedAt && postedLabel(job.postedAt) ? (
+          <Text style={styles.jobMeta}>
+            {t('discover.postedOn', { date: postedLabel(job.postedAt) })}
+          </Text>
         ) : null}
       </View>
       <View style={styles.jobAside}>

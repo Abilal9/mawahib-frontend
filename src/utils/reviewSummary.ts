@@ -1,3 +1,5 @@
+import { reviewCountLabel as localizedReviewCount } from '../i18n/runtime';
+
 export interface ReviewAggregate {
   average: number | null;
   count: number;
@@ -40,7 +42,7 @@ export function overallAggregate(user: RatedUser | null | undefined): ReviewAggr
 }
 
 export function reviewCountLabel(count: number): string {
-  return count === 1 ? '1 review' : `${count} reviews`;
+  return localizedReviewCount(count);
 }
 
 export function formatReviewAverage(average: number | null | undefined): string | null {

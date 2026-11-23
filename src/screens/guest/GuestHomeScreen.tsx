@@ -36,6 +36,7 @@ import {
   type HomeSectionAppearance,
 } from '../../lib/homeLoadingPresentation';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import type { GuestTabScreenProps } from '../../navigation/types';
 
 function sectionPending<T>(section: GuestHomeSection<T>): boolean {
@@ -150,7 +151,7 @@ export default function GuestHomeScreen({
 
         {pageEmpty === 'error' ? (
           <GuestStatusBlock
-            error="Unable to load public discovery."
+            error={t('discover.failedPublic')}
             onRetry={home.refresh}
           />
         ) : (
@@ -161,7 +162,7 @@ export default function GuestHomeScreen({
               onRetry={retry('talents')}
             >
               <GuestSectionHeader
-                title="Talents & businesses"
+                title={t('discover.talentsBusinesses')}
                 onPress={() => openExplore('talents')}
               />
               <FlatList
@@ -196,7 +197,7 @@ export default function GuestHomeScreen({
               onRetry={retry('services')}
             >
               <GuestSectionHeader
-                title="Services"
+                title={t('discover.services')}
                 onPress={() => openExplore('services')}
               />
               <FlatList
@@ -238,7 +239,7 @@ export default function GuestHomeScreen({
               onRetry={retry('jobs')}
             >
               <GuestSectionHeader
-                title="Open jobs"
+                title={t('discover.openJobs')}
                 onPress={() => openExplore('jobs')}
               />
               <FlatList
@@ -274,7 +275,7 @@ export default function GuestHomeScreen({
               error={home.posts.error}
               onRetry={retry('posts')}
             >
-              <GuestSectionHeader title="Newest posts" />
+              <GuestSectionHeader title={t('discover.newestPosts')} />
               {home.posts.items.map((post) => (
                 <GuestPostCard
                   key={post.id}
@@ -314,10 +315,8 @@ export default function GuestHomeScreen({
 
             {pageEmpty === 'empty' ? (
               <View style={styles.emptyCopy}>
-                <Text style={styles.emptyTitle}>Nothing public yet</Text>
-                <Text style={styles.emptyText}>
-                  Public talents, services, jobs, and posts will appear here.
-                </Text>
+                <Text style={styles.emptyTitle}>{t('discover.nothingPublic')}</Text>
+                <Text style={styles.emptyText}>{t('discover.publicAppearsHere')}</Text>
               </View>
             ) : null}
           </>

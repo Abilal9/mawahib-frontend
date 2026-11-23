@@ -11,6 +11,10 @@ import ExploreServiceCard from '../explore/ExploreServiceCard';
 import ExploreJobCard from '../explore/ExploreJobCard';
 import ReviewRow from '../reviews/ReviewRow';
 import { colors, spacing, radius, typography } from '../../theme';
+import { formatCompactAge } from '../../i18n/format';
+import { placeLabel } from '../../i18n/places';
+import { categoryCardLabel } from '../../i18n/catalogLabel';
+import { t, reviewCountLabel } from '../../i18n/runtime';
 import { displayProfileTitle } from '../../constants/profile';
 import { toImageSource } from '../../utils/image';
 import { getMediaCacheKey } from '../../lib/mediaCacheKey';
@@ -28,23 +32,15 @@ import type {
 } from '../../services/publicApi';
 
 export function publicTimeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const m = Math.max(0, Math.floor(ms / 60000));
-  if (m < 1) return 'now';
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return `${Math.floor(d / 7)}w`;
+  return formatCompactAge(iso);
 }
 
 export function guestLocationLabel(
   city: string | null | undefined,
   country: string | null | undefined,
 ): string | null {
-  const parts = [city?.trim(), country?.trim()].filter(Boolean);
-  return parts.length ? parts.join(', ') : null;
+  const parts = [city?.trim(), country?.trim()].filter((part): part is string => Boolean(part));
+  return parts.length ? parts.map((part) => placeLabel(part)).join(', ') : null;
 }
 
 export function accountTypeLabel(value: string | null | undefined): string | null {
@@ -73,13 +69,13 @@ export function GuestRating({
   const count = summary?.count ?? 0;
   const average = summary?.average ?? null;
   if (count <= 0 || average == null) {
-    return <Text style={styles.muted}>No reviews yet</Text>;
+    return <Text style={styles.muted}>{t('nav.noReviews')}</Text>;
   }
   return (
     <View style={styles.ratingRow}>
       <Ionicons name="star" size={12} color={colors.warning} />
       <Text style={styles.ratingText}>{average.toFixed(1)}</Text>
-      <Text style={styles.muted}>({count})</Text>
+      <Text style={styles.muted}>({reviewCountLabel(count)})</Text>
     </View>
   );
 }
@@ -95,7 +91,12 @@ export function GuestSectionHeader({
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {onPress ? (
-        <TouchableOpacity onPress={onPress} hitSlop={8} accessibilityRole="button">
+        <TouchableOpacity
+          onPress={onPress}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('discover.seeMore')}
+        >
           <Ionicons name={chevronForwardIcon()} size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       ) : null}
@@ -127,7 +128,7 @@ export function GuestStatusBlock({
         <Text style={styles.statusText}>{error}</Text>
         {onRetry ? (
           <TouchableOpacity onPress={onRetry} accessibilityRole="button">
-            <Text style={styles.retry}>Retry</Text>
+            <Text style={styles.retry}>{t('common.retry')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -227,7 +228,12 @@ export function GuestServiceCard({
         id: service.id,
         title: service.title,
         description: 'description' in service ? service.description : undefined,
-        category: service.category,
+        category: categoryCardLabel({
+          customCategory: 'customCategory' in service ? service.customCategory : null,
+          categoryName: 'categoryName' in service ? service.categoryName : null,
+          categoryNameAr: 'categoryNameAr' in service ? service.categoryNameAr : null,
+          category: service.category,
+        }),
         images: service.images ?? [],
         providerName: service.provider.displayName,
         providerAvatar: service.provider.avatarUrl,
@@ -267,7 +273,7 @@ export function GuestJobCard({
         company,
         logo: job.poster.avatarUrl,
         location: job.location,
-        salary: pay ?? 'Negotiable',
+        salary: pay ?? '',
         currency: job.currency,
         type: job.employmentType,
         postedAt: job.postedAt,

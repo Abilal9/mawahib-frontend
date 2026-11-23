@@ -211,6 +211,9 @@ export type GuestExploreService = {
   title: string;
   description: string;
   category: string | null;
+  categoryName?: string | null;
+  categoryNameAr?: string | null;
+  customCategory?: string | null;
   images: string[];
   reviewSummary: GuestReviewAggregate;
   provider: GuestActorCard;

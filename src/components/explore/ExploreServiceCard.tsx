@@ -6,6 +6,8 @@ import BookmarkButton from '../ui/BookmarkButton';
 import ServiceMediaMosaic from './ServiceMediaMosaic';
 import MoneyAmount from '../ui/MoneyAmount';
 import { colors, spacing, radius, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
+import { reviewCountLabel } from '../../utils/reviewSummary';
 
 export type ExploreServiceCardData = {
   id: string;
@@ -80,17 +82,16 @@ export default function ExploreServiceCard({
         ) : null}
         {serviceReviews > 0 ? (
           <Text style={styles.providerRating}>
-            {service.rating.toFixed(1)} (
-            {serviceReviews === 1 ? '1 review' : `${serviceReviews} reviews`})
+            {service.rating.toFixed(1)} ({reviewCountLabel(serviceReviews)})
           </Text>
         ) : (
-          <Text style={styles.providerRating}>No reviews yet</Text>
+          <Text style={styles.providerRating}>{t('nav.noReviews')}</Text>
         )}
         {service.duration ? <Text style={styles.serviceMeta}>{service.duration}</Text> : null}
         {service.price != null ? (
           <View style={styles.priceRow}>
             {service.fromPrice ? (
-              <Text style={styles.fromLabel}>From</Text>
+              <Text style={styles.fromLabel}>{t('discover.fromPrice')}</Text>
             ) : null}
             <MoneyAmount
               amount={service.price}

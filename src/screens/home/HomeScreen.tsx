@@ -31,6 +31,9 @@ import {
 } from '../../lib/homeLoadingPresentation';
 import { feedInitialPending } from '../../lib/feedLifecycle';
 import { colors, spacing, radius, typography } from '../../theme';
+import { placeLineLabel } from '../../i18n/places';
+import { t } from '../../i18n/runtime';
+import { reviewCountLabel } from '../../utils/reviewSummary';
 import { useSidebar } from '../../context/SidebarContext';
 import { useMyProfile } from '../../context/ProfileContext';
 import { usePosts } from '../../context/PostsContext';
@@ -106,21 +109,21 @@ function FeedPostCard({
             </View>
             {post.role ? <Text style={styles.feedRole}>{post.role}</Text> : null}
             {isDiscovery ? (
-              <Text style={styles.discoveryLabel}>Discovery</Text>
+              <Text style={styles.discoveryLabel}>{t('discover.discovery')}</Text>
             ) : null}
           </View>
         </TouchableOpacity>
         {showConnect ? (
           <TouchableOpacity style={styles.connectBtn} onPress={onConnect} hitSlop={8}>
-            <Text style={styles.connectBtnText}>Connect</Text>
+            <Text style={styles.connectBtnText}>{t('discover.connect')}</Text>
           </TouchableOpacity>
         ) : showRequested ? (
           <View style={styles.connectBtnMuted}>
-            <Text style={styles.connectBtnMutedText}>Requested</Text>
+            <Text style={styles.connectBtnMutedText}>{t('discover.requested')}</Text>
           </View>
         ) : showAccept ? (
           <TouchableOpacity style={styles.connectBtn} onPress={onAccept} hitSlop={8}>
-            <Text style={styles.connectBtnText}>Accept</Text>
+            <Text style={styles.connectBtnText}>{t('discover.accept')}</Text>
           </TouchableOpacity>
         ) : (
           <Text style={styles.feedTime}>{post.timeAgo ?? ''}</Text>
@@ -131,7 +134,7 @@ function FeedPostCard({
         <Text style={styles.feedCaption}>
           {truncated}
           {post.caption.length > 120 && (
-            <Text style={styles.seeMore}> See more</Text>
+            <Text style={styles.seeMore}>{t('discover.seeMore')}</Text>
           )}
         </Text>
       ) : null}
@@ -140,7 +143,7 @@ function FeedPostCard({
 
       <View style={styles.feedActions}>
         <View style={styles.feedAction}>
-          <TouchableOpacity onPress={onLike} hitSlop={8}>
+          <TouchableOpacity onPress={onLike} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('discover.like')}>
             <Ionicons
               name={post.isLiked ? 'thumbs-up' : 'thumbs-up-outline'}
               size={20}
@@ -159,11 +162,13 @@ function FeedPostCard({
           style={styles.feedAction}
           onPress={onComment}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('discover.comment')}
         >
           <Ionicons name="chatbubble-outline" size={20} color={colors.textTertiary} />
           <Text style={styles.feedActionCount}>{post.comments}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.feedAction} onPress={onShare} hitSlop={8}>
+        <TouchableOpacity style={styles.feedAction} onPress={onShare} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('discover.share')}>
           <Ionicons name="share-outline" size={20} color={colors.textTertiary} />
         </TouchableOpacity>
         <View style={styles.feedActionSpacer} />
@@ -205,14 +210,14 @@ function JobMatchCard({
 }) {
   const typeLabel =
     job.type === 'part-time'
-      ? 'Part-time'
+      ? t('discover.partTime')
       : job.type === 'full-time'
-        ? 'Full-time'
+        ? t('discover.fullTime')
         : job.type === 'contract'
-          ? 'Contract'
+          ? t('discover.contract')
           : job.type === 'gig'
-            ? 'Gig'
-            : 'Freelance';
+            ? t('discover.gig')
+            : t('discover.freelance');
 
   return (
     <TouchableOpacity style={styles.matchCard} onPress={onPress} activeOpacity={0.9}>
@@ -251,7 +256,7 @@ function JobMatchCard({
       </View>
       <View style={styles.jobMetaRow}>
         <MoneyAmount
-          amount={stripCurrencyCodeTokens(job.salary) || 'Negotiable'}
+          amount={stripCurrencyCodeTokens(job.salary) || t('discover.negotiable')}
           currency={job.currency}
           size={14}
           color={colors.textSecondary}
@@ -294,11 +299,11 @@ function ServiceMatchCard({
                 {service.rating.toFixed(1)}
               </Text>
               <Text style={styles.ratingCountText}>
-                ({service.reviewCount === 1 ? '1 review' : `${service.reviewCount} reviews`})
+                ({reviewCountLabel(service.reviewCount ?? 0)})
               </Text>
             </View>
           ) : (
-            <Text style={styles.ratingCountText}>No reviews yet</Text>
+            <Text style={styles.ratingCountText}>{t('nav.noReviews')}</Text>
           )}
           <Text style={styles.jobCompany} numberOfLines={1}>
             {service.provider.name}
@@ -361,7 +366,7 @@ function TalentMatchCard({
             <View style={styles.ratingInline}>
               <Ionicons name="star" size={12} color={colors.warning} />
               <Text style={styles.ratingInlineText}>{talent.rating.toFixed(1)}</Text>
-              <Text style={styles.ratingCountText}>({talent.reviewCount ?? 0})</Text>
+              <Text style={styles.ratingCountText}>({reviewCountLabel(talent.reviewCount ?? 0)})</Text>
             </View>
           ) : null}
         </View>
@@ -371,7 +376,7 @@ function TalentMatchCard({
         <View style={styles.jobMetaRow}>
           <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
           <Text style={styles.jobMetaText} numberOfLines={1}>
-            {talent.user.location}
+            {placeLineLabel(talent.user.location)}
           </Text>
         </View>
       ) : null}
@@ -433,7 +438,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
             }
             return {
               ok: false as const,
-              message: e instanceof Error ? e.message : 'Failed to load jobs',
+              message: e instanceof Error ? e.message : t('discover.failedJobs'),
             };
           },
         ),
@@ -446,7 +451,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
             return {
               ok: false as const,
               message:
-                e instanceof Error ? e.message : 'Failed to load explore catalog',
+                e instanceof Error ? e.message : t('discover.failedCatalog'),
             };
           },
         ),
@@ -492,7 +497,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
               }
               return {
                 ok: false as const,
-                message: e instanceof Error ? e.message : 'Failed to load jobs',
+                message: e instanceof Error ? e.message : t('discover.failedJobs'),
               };
             },
           ),
@@ -518,7 +523,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
           setTalentList(catalogResult.catalog.talents);
           setCatalogError(null);
         } else if (catalogResult.ok === false) {
-          setCatalogError('Failed to load explore catalog');
+          setCatalogError(t('discover.failedCatalog'));
         }
         if (catalogResult.ok !== 'stale') setCatalogLoading(false);
       })(),
@@ -537,7 +542,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         setCatalogError(null);
       } catch (e) {
         setCatalogError(
-          e instanceof Error ? e.message : 'Failed to load explore catalog',
+          e instanceof Error ? e.message : t('discover.failedCatalog'),
         );
       } finally {
         setCatalogLoading(false);
@@ -547,7 +552,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
 
   const sharePost = async (post: Post) => {
     const url = `https://mawahib.app/p/${post.id}`;
-    const message = `Check out this post on Mawahib`;
+    const message = t('discover.sharePost');
     try {
       await Share.share(
         Platform.OS === 'ios'
@@ -555,7 +560,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
           : { message: `${message}\n${url}`, title: 'Mawahib' },
       );
     } catch {
-      Alert.alert('Share unavailable', `${message}\n${url}`);
+      Alert.alert(t('discover.shareUnavailable'), `${message}\n${url}`);
     }
   };
 
@@ -722,7 +727,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
                   marginTop: spacing.xs,
                 }}
               >
-                Retry
+                {t('common.retry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -730,7 +735,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         {feedAppearance === 'empty' ? (
           <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
-              No posts yet. Follow people and share your work to fill Home.
+              {t('discover.noPosts')}
             </Text>
           </View>
         ) : null}
@@ -739,7 +744,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
 
         {jobsAppearance !== 'omit' ? (
           <SectionHeader
-            title="Jobs matches for you"
+            title={t('discover.jobMatches')}
             onPress={() => openExplore('jobs')}
           />
         ) : null}
@@ -759,7 +764,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
                     setJobsLoading(false);
                   } catch (e) {
                     setJobsError(
-                      e instanceof Error ? e.message : 'Failed to load jobs',
+                      e instanceof Error ? e.message : t('discover.failedJobs'),
                     );
                     setJobsLoading(false);
                   }
@@ -774,7 +779,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
                   marginTop: spacing.xs,
                 }}
               >
-                Retry
+                {t('common.retry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -782,7 +787,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         {jobsAppearance === 'empty' ? (
           <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
-              No open job listings yet.
+              {t('discover.noJobs')}
             </Text>
           </View>
         ) : null}
@@ -825,7 +830,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
                   marginTop: spacing.xs,
                 }}
               >
-                Retry
+                {t('common.retry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -833,7 +838,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         {serviceList.length > 0 ? (
           <>
             <SectionHeader
-              title="Services for you"
+              title={t('discover.servicesForYou')}
               onPress={() => openExplore('services')}
             />
             <FlatList
@@ -866,7 +871,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         {talentList.length > 0 ? (
           <>
             <SectionHeader
-              title="Talents for you"
+              title={t('discover.talentsForYou')}
               onPress={() => openExplore('talents')}
             />
             <FlatList
@@ -894,7 +899,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'HomeTab'>) {
         {pageEmpty === 'empty' && feedAppearance !== 'empty' ? (
           <View style={{ paddingHorizontal: spacing.screen, marginBottom: spacing.lg }}>
             <Text style={{ ...typography.bodySmall, color: colors.textSecondary }}>
-              Nothing to show on Home yet.
+              {t('discover.homeEmpty')}
             </Text>
           </View>
         ) : null}
