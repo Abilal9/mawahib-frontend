@@ -15,6 +15,7 @@ import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import WelcomeStepIndicator from '../../components/onboarding/WelcomeStepIndicator';
+import { t } from '../../i18n/runtime';
 import { WELCOME_STEPS } from '../../constants/welcome';
 import { colors, spacing, radius, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
@@ -128,8 +129,8 @@ export default function WelcomeScreen({ route, navigation }: ScreenProps<'Welcom
           contentFit="cover"
         />
         <View style={styles.textBlock}>
-          <Text style={styles.title}>{content.title}</Text>
-          <Text style={styles.subtitle}>{content.subtitle}</Text>
+          <Text style={styles.title}>{t(content.title)}</Text>
+          <Text style={styles.subtitle}>{t(content.subtitle)}</Text>
         </View>
       </View>
     );
@@ -168,13 +169,13 @@ export default function WelcomeScreen({ route, navigation }: ScreenProps<'Welcom
 
         <View style={styles.footer}>
           <Button
-            title={isLast ? 'Get Started' : 'Next'}
+            title={isLast ? t('welcome.start') : t('welcome.next')}
             onPress={handleNext}
             fullWidth
             size="md"
           />
           <Button
-            title="Skip"
+            title={t('welcome.skip')}
             variant="secondary"
             onPress={handleSkip}
             fullWidth

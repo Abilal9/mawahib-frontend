@@ -11,6 +11,7 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 
 const gate = read('src/context/AuthGateContext.tsx');
 const sheet = read('src/components/auth/AuthGateSheet.tsx');
+const entryCopy = read('src/i18n/catalogs/entry.ts');
 const app = read('App.tsx');
 
 assert.match(gate, /export function AuthGateProvider/);
@@ -45,13 +46,14 @@ assert.match(cancelFn, /clearStagedReturnIntent\(\)/);
 assert.equal(cancelFn.includes('persistStagedReturnIntent'), false);
 assert.equal(cancelFn.includes('navigateSignedOut'), false);
 
-assert.match(sheet, /Sign in to continue/);
-assert.match(sheet, /title="Sign In"/);
-assert.match(sheet, /title="Create Account"/);
-assert.match(sheet, /title="Cancel"/);
-assert.match(sheet, /manage your work and applications/);
-assert.match(sheet, /Public job listings stay on Home and Explore/);
-assert.match(sheet, /open your messages/);
+assert.match(sheet, /gate\.title/);
+assert.match(sheet, /auth\.signIn/);
+assert.match(sheet, /auth\.createAccount/);
+assert.match(sheet, /common\.cancel/);
+assert.match(entryCopy, /Sign in to continue/);
+assert.match(entryCopy, /manage your work and applications/);
+assert.match(entryCopy, /Public job listings stay on Home and Explore/);
+assert.match(entryCopy, /open your messages/);
 assert.match(sheet, /chooseSignIn/);
 assert.match(sheet, /chooseCreateAccount/);
 assert.match(sheet, /cancel/);

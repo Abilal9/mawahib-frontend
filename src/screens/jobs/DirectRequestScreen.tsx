@@ -18,6 +18,7 @@ import TextInput from '../../components/ui/TextInput';
 import MoneyAmountField from '../../components/ui/MoneyAmountField';
 import CalendarPicker from '../../components/ui/CalendarPicker';
 import { startOfLocalMonth } from '../../utils/calendarDay';
+import { getAppliedLocale } from '../../i18n/runtime';
 import { formatGregorianLocalDay } from '../../utils/gregorianCivilDate';
 import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
 import ConfirmActionModal from '../../components/ui/ConfirmActionModal';
@@ -60,7 +61,7 @@ const DEADLINE_MODES: { id: DeadlineMode; label: string }[] = [
 ];
 
 function formatPickedDate(date: Date) {
-  return formatGregorianLocalDay(date);
+  return formatGregorianLocalDay(date, getAppliedLocale());
 }
 
 /**

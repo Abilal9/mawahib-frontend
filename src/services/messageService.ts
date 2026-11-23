@@ -1,3 +1,4 @@
+import { t } from '../i18n/runtime';
 import { User } from '../data/types';
 import {
   messagingApi,
@@ -11,7 +12,7 @@ function peerToUser(peer: PeerSummary | null | undefined): User {
   if (!peer) {
     return {
       id: '',
-      name: 'Unknown',
+      name: t('chat.unknownPerson'),
       username: 'unknown',
       avatar: '',
       followers: 0,
@@ -39,10 +40,10 @@ export function isConversationUnread(c: ApiConversation): boolean {
 /** Inbox subtitle. A real last message wins over the job title. */
 export function conversationPreview(c: ApiConversation): string {
   const raw = c.lastMessagePreview?.trim() ?? '';
-  if (raw === '[attachment]') return 'Photo';
+  if (raw === '[attachment]') return t('chat.photo');
   if (raw) return raw;
   if (c.type === 'work' && c.workContext?.title) return c.workContext.title;
-  return 'No messages yet';
+  return t('chat.noMessagesYet');
 }
 
 export const messageService = {

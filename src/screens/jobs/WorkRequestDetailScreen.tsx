@@ -30,6 +30,7 @@ import {
   startOfLocalDay,
   startOfLocalMonth,
 } from '../../utils/calendarDay';
+import { getAppliedLocale } from '../../i18n/runtime';
 import { formatGregorianLocalDay } from '../../utils/gregorianCivilDate';
 import { placeFromLocationNote } from '../../utils/googleMapsLink';
 import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
@@ -139,7 +140,7 @@ function formatDateTime(iso: string) {
 }
 
 function formatPickedDate(date: Date) {
-  return formatGregorianLocalDay(date);
+  return formatGregorianLocalDay(date, getAppliedLocale());
 }
 
 type EngagementEvent = ApiEngagement['events'][number];

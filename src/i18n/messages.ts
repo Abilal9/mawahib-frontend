@@ -1,3 +1,5 @@
+import { entryCatalog } from './catalogs/entry';
+
 export const messages = {
   en: {
     'language.title': 'Change language',
@@ -144,6 +146,14 @@ export const messages = {
     'place.selectCity': 'Select city / emirate',
     'place.selectCountryFirst': 'Select a country first',
     'notice.markAll': 'Mark all categories read',
+    'calendar.previousMonth': 'Previous month',
+    'calendar.nextMonth': 'Next month',
+    'calendar.paymentFailed': 'Payment Failed',
+    'calendar.scheduled': '{date}, scheduled work',
+    'chat.photo': 'Photo',
+    'chat.noMessagesYet': 'No messages yet',
+    'chat.unknownPerson': 'Unknown',
+    ...entryCatalog.en,
   },
   ar: {
     'language.title': 'تغيير اللغة',
@@ -293,6 +303,14 @@ export const messages = {
     'place.selectCity': 'اختر المدينة أو الإمارة',
     'place.selectCountryFirst': 'اختر الدولة أولًا',
     'notice.markAll': 'تعيين كل التصنيفات كمقروءة',
+    'calendar.previousMonth': 'الشهر السابق',
+    'calendar.nextMonth': 'الشهر التالي',
+    'calendar.paymentFailed': 'فشل الدفع',
+    'calendar.scheduled': '{date}، عمل مجدول',
+    'chat.photo': 'صورة',
+    'chat.noMessagesYet': 'لا توجد رسائل بعد',
+    'chat.unknownPerson': 'غير معروف',
+    ...entryCatalog.ar,
   },
 } as const;
 

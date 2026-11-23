@@ -1,29 +1,31 @@
 import React from 'react';
 import { Modal, Pressable, Text, StyleSheet, View } from 'react-native';
 import Button from '../ui/Button';
+import { t } from '../../i18n/runtime';
+import type { MessageKey } from '../../i18n/messages';
 import { colors, spacing, typography } from '../../theme';
 import { useAuthGate } from '../../context/AuthGateContext';
 import type { ReturnIntentAction } from '../../lib/returnIntent';
 
-const ACTION_COPY: Record<ReturnIntentAction, string> = {
-  save: 'Save this after you sign in.',
-  like: 'Like this post after you sign in.',
-  comment: 'Comment after you sign in.',
-  connect: 'Connect after you sign in.',
-  message: 'Send a message after you sign in.',
-  apply: 'Apply after you sign in.',
-  request: 'Request this service after you sign in.',
-  create: 'Create a post, story, or job after you sign in.',
-  review: 'Write a review after you sign in.',
-  private: 'Continue after you sign in.',
-  messages: 'Sign in to open your messages. Browsing public profiles stays available.',
-  jobs: 'Sign in to manage your work and applications. Public job listings stay on Home and Explore.',
+const ACTION_COPY: Record<ReturnIntentAction, MessageKey> = {
+  save: 'gate.save',
+  like: 'gate.like',
+  comment: 'gate.comment',
+  connect: 'gate.connect',
+  message: 'gate.message',
+  apply: 'gate.apply',
+  request: 'gate.request',
+  create: 'gate.create',
+  review: 'gate.review',
+  private: 'gate.private',
+  messages: 'gate.messages',
+  jobs: 'gate.jobs',
 };
 
 export default function AuthGateSheet() {
   const { visible, intent, chooseSignIn, chooseCreateAccount, cancel } =
     useAuthGate();
-  const subtitle = intent?.action ? ACTION_COPY[intent.action] : ACTION_COPY.private;
+  const subtitle = t(intent?.action ? ACTION_COPY[intent.action] : ACTION_COPY.private);
 
   return (
     <Modal
@@ -34,18 +36,18 @@ export default function AuthGateSheet() {
     >
       <Pressable style={styles.backdrop} onPress={cancel}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Sign in to continue</Text>
+          <Text style={styles.title}>{t('gate.title')}</Text>
           <Text style={styles.message}>{subtitle}</Text>
           <View style={styles.actions}>
-            <Button title="Sign In" fullWidth onPress={chooseSignIn} />
+            <Button title={t('auth.signIn')} fullWidth onPress={chooseSignIn} />
             <Button
-              title="Create Account"
+              title={t('auth.createAccount')}
               variant="ghost"
               fullWidth
               onPress={chooseCreateAccount}
             />
             <Button
-              title="Cancel"
+              title={t('common.cancel')}
               variant="secondary"
               fullWidth
               onPress={cancel}

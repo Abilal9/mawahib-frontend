@@ -1,5 +1,6 @@
 import React from 'react';
 import { backIcon } from '../../i18n/direction';
+import { t } from '../../i18n/runtime';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +27,7 @@ export default function AuthBrandHeader({ onBack }: Props) {
           onPress={onBack}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('auth.back')}
         >
           <Ionicons name={backIcon()} size={24} color={colors.text} />
         </TouchableOpacity>

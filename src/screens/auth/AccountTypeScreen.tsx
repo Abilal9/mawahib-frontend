@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import Button from '../../components/ui/Button';
 import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
+import { t } from '../../i18n/runtime';
 import { colors, spacing, radius, typography } from '../../theme';
 import { RootStackScreenProps } from '../../navigation/types';
 import { useAuth, AccountType } from '../../context/AuthContext';
@@ -14,20 +15,20 @@ const SELECTED_PINK = '#F6339A';
 
 const OPTIONS: {
   type: AccountType;
-  title: string;
-  description: string;
+  title: 'auth.talent' | 'auth.business';
+  description: 'auth.talentBody' | 'auth.businessBody';
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   {
     type: 'talent',
-    title: 'Talent',
-    description: 'Showcase your skills, portfolio, and find opportunities.',
+    title: 'auth.talent',
+    description: 'auth.talentBody',
     icon: 'person-outline',
   },
   {
     type: 'business',
-    title: 'Business',
-    description: 'Hire talent, post jobs, and grow your team.',
+    title: 'auth.business',
+    description: 'auth.businessBody',
     icon: 'business-outline',
   },
 ];
@@ -43,8 +44,8 @@ export default function AccountTypeScreen({
       <View style={styles.container}>
         <AuthBrandHeader onBack={() => navigation.goBack()} />
 
-        <Text style={styles.title}>Join Mawahib</Text>
-        <Text style={styles.subtitle}>Choose how you want to use the platform.</Text>
+        <Text style={styles.title}>{t('auth.join')}</Text>
+        <Text style={styles.subtitle}>{t('auth.chooseUse')}</Text>
 
         <View style={styles.options}>
           {OPTIONS.map((option) => {
@@ -64,8 +65,8 @@ export default function AccountTypeScreen({
                   />
                 </View>
                 <View style={styles.optionText}>
-                  <Text style={styles.optionTitle}>{option.title}</Text>
-                  <Text style={styles.optionDescription}>{option.description}</Text>
+                  <Text style={styles.optionTitle}>{t(option.title)}</Text>
+                  <Text style={styles.optionDescription}>{t(option.description)}</Text>
                 </View>
                 {/* Fixed slot so selection never changes card width/height */}
                 <View style={styles.checkSlot}>
@@ -83,15 +84,15 @@ export default function AccountTypeScreen({
         </View>
 
         <Button
-          title="Continue"
+          title={t('common.continue')}
           onPress={() => navigation.navigate('SignUp')}
           disabled={!accountType}
         />
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
+          <Text style={styles.footerText}>{t('auth.haveAccount')}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
-            <Text style={styles.footerLink}>Log In</Text>
+            <Text style={styles.footerLink}>{t('auth.login')}</Text>
           </TouchableOpacity>
         </View>
       </View>

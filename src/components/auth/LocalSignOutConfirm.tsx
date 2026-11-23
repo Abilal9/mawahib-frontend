@@ -1,9 +1,7 @@
 import React, { useRef, useState } from 'react';
+import { t } from '../../i18n/runtime';
 import ConfirmActionModal from '../ui/ConfirmActionModal';
 import { useAuth } from '../../context/AuthContext';
-
-const FAILURE_MESSAGE =
-  'Could not log out. You are still signed in on this device.';
 
 /**
  * Confirmed, current-device logout shared by Settings and the sidebar.
@@ -51,14 +49,10 @@ export function useLocalSignOutPrompt(onSignedOut?: () => void) {
   const dialog = (
     <ConfirmActionModal
       visible={visible}
-      title="Log out?"
-      message={
-        failed
-          ? FAILURE_MESSAGE
-          : 'Are you sure you want to log out of this device?'
-      }
-      confirmLabel="Log Out"
-      cancelLabel="Cancel"
+      title={t('auth.logoutTitle')}
+      message={failed ? t('auth.logoutFailed') : t('auth.logoutBody')}
+      confirmLabel={t('auth.logout')}
+      cancelLabel={t('common.cancel')}
       danger
       busy={busy}
       onCancel={cancel}

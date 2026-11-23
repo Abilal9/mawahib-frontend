@@ -43,6 +43,9 @@ const MONTHS_SHORT = [
 /** Sunday-first, matching the existing Calendar grids. Index 0 is Sunday. */
 export const GREGORIAN_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
+/** One-letter Sunday-first headings. The weekday index is unchanged. */
+const WEEKDAYS_SHORT_AR = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'] as const;
+
 const MONTHS_LONG_AR = [
   'يناير',
   'فبراير',
@@ -250,6 +253,12 @@ export function gregorianMonthName(monthIndex: number, locale?: string): string 
 export function gregorianWeekdayName(weekdayIndex: number, locale?: string): string {
   const names = schedulingLanguage(locale) === 'ar' ? WEEKDAYS_AR : GREGORIAN_WEEKDAYS;
   return names[weekdayIndex] ?? '';
+}
+
+/** Compact grid heading. Sunday stays index 0 in both languages. */
+export function gregorianWeekdayHeading(weekdayIndex: number, locale?: string): string {
+  if (schedulingLanguage(locale) === 'ar') return WEEKDAYS_SHORT_AR[weekdayIndex] ?? '';
+  return GREGORIAN_WEEKDAYS[weekdayIndex] ?? '';
 }
 
 export function formatGregorianMonthTitle(year: number, month: number, locale?: string): string {

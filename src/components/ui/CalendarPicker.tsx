@@ -2,6 +2,13 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../../theme';
+import { chevronBackIcon, chevronForwardIcon } from '../../i18n/direction';
+import { getAppliedLocale, t } from '../../i18n/runtime';
+import {
+  formatGregorianLocalDay,
+  formatGregorianMonthTitle,
+  gregorianWeekdayHeading,
+} from '../../utils/gregorianCivilDate';
 import {
   isCalendarDayBlocked,
   isCurrentLocalMonth,
@@ -9,10 +16,6 @@ import {
   startOfLocalDay,
   startOfLocalMonth,
 } from '../../utils/calendarDay';
-import {
-  formatGregorianMonthTitle,
-  GREGORIAN_WEEKDAYS,
-} from '../../utils/gregorianCivilDate';
 
 interface Props {
   /** Any day inside the month to render. */
@@ -52,18 +55,19 @@ export default function CalendarPicker({
   rangeEnd,
   notBefore,
 }: Props) {
+  const locale = getAppliedLocale();
   const grid = useMemo(() => {
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
     return {
-      label: formatGregorianMonthTitle(year, monthIndex + 1),
+      label: formatGregorianMonthTitle(year, monthIndex + 1, locale),
       leadingBlanks: new Date(year, monthIndex, 1).getDay(),
       days: Array.from(
         { length: new Date(year, monthIndex + 1, 0).getDate() },
         (_, i) => i + 1,
       ),
     };
-  }, [month]);
+  }, [month, locale]);
 
   const today = useMemo(() => startOfLocalDay(new Date()), []);
   const atCurrentMonth = isCurrentLocalMonth(month, today);
@@ -87,18 +91,25 @@ export default function CalendarPicker({
           <TouchableOpacity
             hitSlop={8}
             disabled={atCurrentMonth}
+            accessibilityRole="button"
+            accessibilityLabel={t('calendar.previousMonth')}
             accessibilityState={{ disabled: atCurrentMonth }}
             onPress={atCurrentMonth ? undefined : () => shiftMonth(-1)}
           >
             <Ionicons
-              name="chevron-back"
+              name={chevronBackIcon()}
               size={18}
               color={atCurrentMonth ? colors.border : colors.textSecondary}
             />
           </TouchableOpacity>
-          <TouchableOpacity hitSlop={8} onPress={() => shiftMonth(1)}>
+          <TouchableOpacity
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('calendar.nextMonth')}
+            onPress={() => shiftMonth(1)}
+          >
             <Ionicons
-              name="chevron-forward"
+              name={chevronForwardIcon()}
               size={18}
               color={colors.textSecondary}
             />
@@ -107,9 +118,9 @@ export default function CalendarPicker({
       </View>
 
       <View style={styles.weekRow}>
-        {GREGORIAN_WEEKDAYS.map((day) => (
-          <Text key={day} style={styles.weekDay}>
-            {day}
+        {Array.from({ length: 7 }, (_, index) => (
+          <Text key={index} style={styles.weekDay}>
+            {gregorianWeekdayHeading(index, locale)}
           </Text>
         ))}
       </View>
@@ -144,7 +155,9 @@ export default function CalendarPicker({
                 isEnd && bothEnds && !blocked && styles.dayCellRangeEnd,
               ]}
               disabled={blocked}
-              accessibilityState={{ disabled: blocked }}
+              accessibilityRole="button"
+              accessibilityLabel={formatGregorianLocalDay(date, locale) || String(day)}
+              accessibilityState={{ disabled: blocked, selected: isSelected && !blocked }}
               onPress={blocked ? undefined : () => onPickDay(date)}
             >
               <View
@@ -174,7 +187,6 @@ export default function CalendarPicker({
 
 const styles = StyleSheet.create({
   card: {
-    direction: 'ltr',
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderRadius: radius.card,
@@ -210,13 +222,13 @@ const styles = StyleSheet.create({
   dayCellInRange: { backgroundColor: colors.primary + '18' },
   dayCellRangeStart: {
     backgroundColor: colors.primary + '18',
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
+    borderTopStartRadius: 14,
+    borderBottomStartRadius: 14,
   },
   dayCellRangeEnd: {
     backgroundColor: colors.primary + '18',
-    borderTopRightRadius: 14,
-    borderBottomRightRadius: 14,
+    borderTopEndRadius: 14,
+    borderBottomEndRadius: 14,
   },
   dayInner: {
     width: 28,

@@ -1,8 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { t } from '../../i18n/runtime';
+import type { MessageKey } from '../../i18n/messages';
 import { colors, spacing, typography } from '../../theme';
 import { evaluatePassword } from '../../lib/passwordRules';
+
+const PASSWORD_LABELS: Record<string, MessageKey> = {
+  length: 'password.length',
+  uppercase: 'password.upper',
+  lowercase: 'password.lower',
+  number: 'password.number',
+  special: 'password.special',
+};
 
 export default function PasswordRequirements({ password }: { password: string }) {
   const checks = evaluatePassword(password);
@@ -22,7 +32,7 @@ export default function PasswordRequirements({ password }: { password: string })
               check.met ? styles.labelMet : styles.labelPending,
             ]}
           >
-            {check.label}
+            {t(PASSWORD_LABELS[check.id] ?? 'password.length')}
           </Text>
         </View>
       ))}

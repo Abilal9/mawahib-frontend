@@ -15,6 +15,7 @@ import TextInput from '../../components/ui/TextInput';
 import Button from '../../components/ui/Button';
 import AuthBrandHeader from '../../components/auth/AuthBrandHeader';
 import { colors, spacing, typography } from '../../theme';
+import { t } from '../../i18n/runtime';
 import { RootStackScreenProps } from '../../navigation/types';
 import { useAuth } from '../../context/AuthContext';
 import { mapAuthError } from '../../lib/authErrors';
@@ -99,10 +100,7 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
 
   useEffect(() => {
     if (route.params?.notice !== 'password-updated') return;
-    Alert.alert(
-      'Password changed',
-      'Sign in with your new password. Other devices may keep access for up to an hour.',
-    );
+    Alert.alert(t('auth.passwordChanged'), t('auth.passwordChangedBody'));
     navigation.setParams({ notice: undefined });
   }, [navigation, route.params?.notice]);
 
@@ -154,10 +152,7 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
     try {
       const ok = await discardInterruptedRecovery();
       if (!ok) {
-        Alert.alert(
-          'Still signed in',
-          'Could not sign this device out. Try again.',
-        );
+        Alert.alert(t('auth.stillSignedIn'), t('auth.signOutFailedShort'));
       }
     } finally {
       setDiscarding(false);
@@ -178,7 +173,7 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
     } catch (e) {
       if (isAccountSuspendedFailure(e)) return;
       Alert.alert(
-        'Profile still unavailable',
+        t('auth.profileStill'),
         isAuthFailure(e)
           ? e.message
           : mapAuthError(e, authError || undefined),
@@ -210,12 +205,12 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
 
       if (needsVerify) {
         Alert.alert(
-          'Email verification required',
-          'Your account exists but email is not verified yet. Resend a code to continue.',
+          t('auth.emailRequired'),
+          t('auth.emailRequiredBody'),
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             {
-              text: 'Resend code',
+              text: t('auth.resend'),
               onPress: () => {
                 void (async () => {
                   const normalized = email.trim().toLowerCase();
@@ -227,19 +222,19 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
                     if (resumable) {
                       // Legitimate prior OTP send — restore ConfirmCode without claiming a new send.
                       Alert.alert(
-                        'Verification still pending',
+                        t('auth.verifyPending'),
                         isRateLimitError(resendErr)
-                          ? 'A new code could not be sent yet (too many requests). If you still have a recent code, you can enter it now. Otherwise wait a minute and resend from the next screen.'
-                          : `${mapAuthError(resendErr)}\n\nIf you still have a recent code, you can enter it now.`,
+                          ? t('auth.verifyPendingRate')
+                          : `${mapAuthError(resendErr)}\n\n${t('auth.recentCode')}`,
                         [
                           {
-                            text: 'Enter code',
+                            text: t('auth.enterCode'),
                             onPress: () =>
                               navigation.navigate('ConfirmCode', {
                                 email: normalized,
                               }),
                           },
-                          { text: 'Cancel', style: 'cancel' },
+                          { text: t('common.cancel'), style: 'cancel' },
                         ],
                       );
                       return;
@@ -247,12 +242,12 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
 
                     Alert.alert(
                       isRateLimitError(resendErr)
-                        ? 'Please wait before resending'
-                        : 'Unable to send code',
+                        ? t('auth.waitResend')
+                        : t('auth.unableSend'),
                       isRateLimitError(resendErr)
-                        ? 'Too many requests. Wait a minute, then try Resend code again. We did not send a new verification code.'
+                        ? t('auth.rateResend')
                         : mapAuthError(resendErr),
-                      [{ text: 'OK', style: 'cancel' }],
+                      [{ text: t('auth.ok'), style: 'cancel' }],
                     );
                   }
                 })();
@@ -262,7 +257,7 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
         );
         return;
       }
-      Alert.alert('Sign in failed', mapAuthError(e, authError || undefined));
+      Alert.alert(t('auth.signInFailed'), mapAuthError(e, authError || undefined));
     } finally {
       setLoading(false);
     }
@@ -281,22 +276,17 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
           />
         </View>
         <View style={styles.content}>
-          <Text style={styles.title}>Log In</Text>
+          <Text style={styles.title}>{t('auth.login')}</Text>
           <Text style={styles.subtitle}>
-            {sessionExpired
-              ? 'Your session ended. Sign in again to continue.'
-              : 'Welcome back! Please enter your details.'}
+            {sessionExpired ? t('auth.sessionEnded') : t('auth.welcomeBack')}
           </Text>
 
           {recovery ? (
             <View style={styles.backendBanner}>
-              <Text style={styles.backendBannerTitle}>Password reset interrupted</Text>
-              <Text style={styles.backendBannerBody}>
-                This device still needs to sign out before you can continue. You
-                are not signed in to Mawahib.
-              </Text>
+              <Text style={styles.backendBannerTitle}>{t('auth.resetInterrupted')}</Text>
+              <Text style={styles.backendBannerBody}>{t('auth.resetInterruptedBody')}</Text>
               <Button
-                title={discarding ? 'Signing out…' : 'Sign out and continue'}
+                title={discarding ? t('auth.signingOut') : t('auth.signOutContinue')}
                 onPress={() => {
                   void handleDiscardRecovery();
                 }}
@@ -308,14 +298,10 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
 
           {backendUnavailable ? (
             <View style={styles.backendBanner}>
-              <Text style={styles.backendBannerTitle}>Signed in, profile unavailable</Text>
-              <Text style={styles.backendBannerBody}>
-                Your Supabase session is active, but Mawahib could not load your
-                profile. This is not an OTP failure. Retry when the backend is
-                reachable.
-              </Text>
+              <Text style={styles.backendBannerTitle}>{t('auth.profileUnavailable')}</Text>
+              <Text style={styles.backendBannerBody}>{t('auth.profileUnavailableBody')}</Text>
               <Button
-                title={retrying ? 'Retrying…' : 'Retry profile load'}
+                title={retrying ? t('auth.retrying') : t('auth.retryProfile')}
                 onPress={() => {
                   void handleRetryBackend();
                 }}
@@ -325,16 +311,16 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
           ) : null}
 
           <TextInput
-            label="Email"
-            placeholder="Enter your email"
+            label={t('auth.email')}
+            placeholder={t('auth.enterEmail')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
           <TextInput
-            label="Password"
-            placeholder="Enter your password"
+            label={t('auth.password')}
+            placeholder={t('auth.enterPassword')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -345,13 +331,13 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
             style={styles.forgotWrap}
             accessibilityRole="button"
           >
-            <Text style={styles.footerLink}>Forgot password?</Text>
+            <Text style={styles.footerLink}>{t('auth.forgot')}</Text>
           </TouchableOpacity>
 
-          <Button title="Log In" onPress={handleLogIn} disabled={!canSubmit || Boolean(recovery)} />
+          <Button title={t('auth.login')} onPress={handleLogIn} disabled={!canSubmit || Boolean(recovery)} />
           {sessionExpired && !recovery ? (
             <Button
-              title="Continue as Guest"
+              title={t('auth.guest')}
               variant="outline"
               onPress={() => {
                 void continueAsGuest();
@@ -364,9 +350,9 @@ export default function SignInScreen({ navigation, route }: RootStackScreenProps
           ) : null}
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>New to Mawahib? </Text>
+            <Text style={styles.footerText}>{t('auth.newHere')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('AccountType')}>
-              <Text style={styles.footerLink}>Sign Up</Text>
+              <Text style={styles.footerLink}>{t('auth.signUp')}</Text>
             </TouchableOpacity>
           </View>
         </View>

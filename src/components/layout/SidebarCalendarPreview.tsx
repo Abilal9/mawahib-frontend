@@ -2,9 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../../theme';
-import { formatGregorianMonthTitle } from '../../utils/gregorianCivilDate';
+import { chevronBackIcon, chevronForwardIcon } from '../../i18n/direction';
+import { getAppliedLocale, t } from '../../i18n/runtime';
+import { formatGregorianMonthTitle, gregorianWeekdayHeading } from '../../utils/gregorianCivilDate';
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const ENGLISH_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 interface SidebarCalendarPreviewProps {
   onPress: () => void;
@@ -19,7 +21,11 @@ export default function SidebarCalendarPreview({ onPress }: SidebarCalendarPrevi
   const { firstDay, monthLabel, days } = useMemo(() => {
     const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
     const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
-    const monthLabel = formatGregorianMonthTitle(month.getFullYear(), month.getMonth() + 1);
+    const monthLabel = formatGregorianMonthTitle(
+      month.getFullYear(),
+      month.getMonth() + 1,
+      getAppliedLocale(),
+    );
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     return { firstDay, monthLabel, days };
   }, [month]);
@@ -35,22 +41,35 @@ export default function SidebarCalendarPreview({ onPress }: SidebarCalendarPrevi
           <Text style={styles.monthLabel}>{monthLabel}</Text>
         </TouchableOpacity>
         <View style={styles.nav}>
-          <TouchableOpacity hitSlop={8} onPress={() => shiftMonth(-1)}>
-            <Ionicons name="chevron-back" size={14} color={colors.textSecondary} />
+          <TouchableOpacity
+            hitSlop={8}
+            onPress={() => shiftMonth(-1)}
+            accessibilityRole="button"
+            accessibilityLabel={t('calendar.previousMonth')}
+          >
+            <Ionicons name={chevronBackIcon()} size={14} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity hitSlop={8} onPress={() => shiftMonth(1)}>
-            <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+          <TouchableOpacity
+            hitSlop={8}
+            onPress={() => shiftMonth(1)}
+            accessibilityRole="button"
+            accessibilityLabel={t('calendar.nextMonth')}
+          >
+            <Ionicons name={chevronForwardIcon()} size={14} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
 
       <TouchableOpacity onPress={onPress} activeOpacity={0.95}>
         <View style={styles.weekDays}>
-          {WEEKDAYS.map((day, index) => (
-            <Text key={`${day}-${index}`} style={styles.weekDay}>
-              {day}
-            </Text>
-          ))}
+          {ENGLISH_INITIALS.map((day, index) => {
+            const label = getAppliedLocale() === 'ar' ? gregorianWeekdayHeading(index, 'ar') : day;
+            return (
+              <Text key={index} style={styles.weekDay}>
+                {label}
+              </Text>
+            );
+          })}
         </View>
 
         <View style={styles.daysGrid}>
@@ -73,7 +92,6 @@ export default function SidebarCalendarPreview({ onPress }: SidebarCalendarPrevi
 
 const styles = StyleSheet.create({
   card: {
-    direction: 'ltr',
     backgroundColor: colors.white,
     marginBottom: 0,
   },

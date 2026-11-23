@@ -22,6 +22,7 @@ import MoneyAmount from '../../components/ui/MoneyAmount';
 import ActionBusyOverlay from '../../components/ui/ActionBusyOverlay';
 import ConfirmActionModal from '../../components/ui/ConfirmActionModal';
 import SuccessConfirmationModal from '../../components/ui/SuccessConfirmationModal';
+import { getAppliedLocale } from '../../i18n/runtime';
 import { colors, spacing, radius, typography } from '../../theme';
 import {
   isCalendarDayBlocked,
@@ -33,7 +34,7 @@ import {
 } from '../../utils/calendarDay';
 import {
   formatGregorianMonthTitle,
-  GREGORIAN_WEEKDAYS,
+  gregorianWeekdayHeading,
 } from '../../utils/gregorianCivilDate';
 import { acceptedGoogleMapsUrl } from '../../utils/googleMapsLink';
 import { ProfileService, ServicePackage } from '../../data/types';
@@ -443,7 +444,7 @@ export default function RequestServiceScreen({
   const month = calendarMonth.getMonth();
   const totalDays = daysInMonth(year, month);
   const firstDay = new Date(year, month, 1).getDay();
-  const monthLabel = formatGregorianMonthTitle(year, month + 1);
+  const monthLabel = formatGregorianMonthTitle(year, month + 1, getAppliedLocale());
 
   return (
     <ScreenContainer padded={false} safeTop={false} backgroundColor={colors.white}>
@@ -722,9 +723,9 @@ export default function RequestServiceScreen({
               </View>
 
               <View style={styles.weekRow}>
-                {GREGORIAN_WEEKDAYS.map((d) => (
-                  <Text key={d} style={styles.weekDay}>
-                    {d}
+                {Array.from({ length: 7 }, (_, index) => (
+                  <Text key={index} style={styles.weekDay}>
+                    {gregorianWeekdayHeading(index, getAppliedLocale())}
                   </Text>
                 ))}
               </View>

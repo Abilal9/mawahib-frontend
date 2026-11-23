@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import ScreenContainer from '../../components/ui/ScreenContainer';
 import UserAvatar from '../../components/ui/UserAvatar';
+import { getAppliedLocale, t } from '../../i18n/runtime';
 import { colors, spacing, radius, typography } from '../../theme';
 import { ScreenProps } from '../../navigation/types';
 import { useMyCalendar } from '../../hooks/useMyCalendar';
@@ -20,7 +21,7 @@ import {
   formatGregorianLongDate,
   formatGregorianMonthTitle,
   formatGregorianSpan,
-  GREGORIAN_WEEKDAYS,
+  gregorianWeekdayHeading,
   gregorianMonthGrid,
   indicatorDays,
   monthBounds,
@@ -29,16 +30,32 @@ import {
   type CalendarItem,
   type ScheduledCalendarItem,
 } from '../../utils/gregorianCivilDate';
+import type { MessageKey } from '../../i18n/messages';
+
+const CALENDAR_STATUS_KEYS: Record<string, MessageKey> = {
+  pending_payment: 'status.pendingPayment',
+  payment_failed: 'calendar.paymentFailed',
+  in_progress: 'status.inProgress',
+  delivered: 'status.delivered',
+  disputed: 'status.disputed',
+  completed: 'status.completed',
+};
+
+function calendarStatusText(status: string, fallback: string): string {
+  const key = CALENDAR_STATUS_KEYS[status];
+  return key ? t(key) : fallback;
+}
 
 export default function CalendarScreen({ navigation }: ScreenProps<'Calendar'>) {
   const calendar = useMyCalendar();
+  const locale = getAppliedLocale();
   const grid = useMemo(
     () => gregorianMonthGrid(calendar.year, calendar.month),
     [calendar.year, calendar.month],
   );
   const bounds = monthBounds(calendar.year, calendar.month);
-  const monthTitle = formatGregorianMonthTitle(calendar.year, calendar.month);
-  const heading = formatGregorianLongDate(calendar.selected) ?? monthTitle;
+  const monthTitle = formatGregorianMonthTitle(calendar.year, calendar.month, locale);
+  const heading = formatGregorianLongDate(calendar.selected, locale) ?? monthTitle;
   const page =
     calendar.page &&
     calendar.page.from === bounds.from &&
@@ -85,19 +102,29 @@ export default function CalendarScreen({ navigation }: ScreenProps<'Calendar'>) 
         }
       >
         <View style={styles.monthHeader}>
-          <TouchableOpacity onPress={() => calendar.shiftMonth(-1)} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => calendar.shiftMonth(-1)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('calendar.previousMonth')}
+          >
             <Ionicons name={chevronBackIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.monthName}>{monthTitle}</Text>
-          <TouchableOpacity onPress={() => calendar.shiftMonth(1)} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => calendar.shiftMonth(1)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('calendar.nextMonth')}
+          >
             <Ionicons name={chevronForwardIcon()} size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.weekDays}>
-          {GREGORIAN_WEEKDAYS.map((day) => (
-            <Text key={day} style={styles.weekDay}>
-              {day}
+          {Array.from({ length: 7 }, (_, index) => (
+            <Text key={index} style={styles.weekDay}>
+              {gregorianWeekdayHeading(index, locale)}
             </Text>
           ))}
         </View>
@@ -110,14 +137,14 @@ export default function CalendarScreen({ navigation }: ScreenProps<'Calendar'>) 
             const isSelected = cell.iso === calendar.selected;
             const isToday = cell.iso === calendar.today;
             const marked = marks.has(cell.iso);
-            const label = formatGregorianLongDate(cell.iso) ?? cell.iso;
+            const label = formatGregorianLongDate(cell.iso, locale) ?? cell.iso;
             return (
               <Pressable
                 key={cell.iso}
                 style={styles.dayCell}
                 onPress={() => calendar.selectDay(cell.iso)}
                 accessibilityRole="button"
-                accessibilityLabel={marked ? `${label}, scheduled work` : label}
+                accessibilityLabel={marked ? t('calendar.scheduled', { date: label }) : label}
                 accessibilityState={{ selected: isSelected }}
               >
                 <View style={[styles.dayInner, isToday && !isSelected && styles.dayToday, isSelected && styles.daySelected]}>
@@ -193,7 +220,9 @@ function AgendaCard({
   onPress: () => void;
 }) {
   const range =
-    'startDate' in item ? formatGregorianSpan(item.startDate, item.endDate) : null;
+    'startDate' in item
+      ? formatGregorianSpan(item.startDate, item.endDate, getAppliedLocale())
+      : null;
   const subtitle = detail ?? range;
   const tappable = workRequestRoute(item.workRequestId) !== null;
   return (
@@ -209,7 +238,7 @@ function AgendaCard({
         <Text style={styles.eventTitle}>{item.title}</Text>
         <Text style={styles.eventMeta}>{item.counterpart.displayName}</Text>
         {subtitle ? <Text style={styles.eventMeta}>{subtitle}</Text> : null}
-        <Text style={styles.eventStatus}>{item.statusLabel}</Text>
+        <Text style={styles.eventStatus}>{calendarStatusText(item.engagementStatus, item.statusLabel)}</Text>
       </View>
     </Pressable>
   );

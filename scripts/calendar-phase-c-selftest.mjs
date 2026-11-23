@@ -123,6 +123,8 @@ for (const [locale, language] of Object.entries(localeExpectations)) {
     assert.equal(title, 'أكتوبر 2026', locale);
     assert.equal(long, '22 أكتوبر 2026', locale);
     assert.equal(dates.gregorianWeekdayName(0, locale), 'الأحد', locale);
+    assert.equal(dates.gregorianWeekdayHeading(0, locale), 'ح', locale);
+    assert.equal(dates.gregorianWeekdayHeading(6, locale), 'س', locale);
   } else {
     assert.equal(month, 'October', locale);
     assert.equal(title, 'October 2026', locale);
@@ -298,8 +300,8 @@ assert.equal(page.workRequestRoute(''), null);
 const service = read('src/screens/profile/RequestServiceScreen.tsx');
 assert.equal(service.includes("toLocaleString('default'"), false);
 assert.equal(service.includes('toLocaleDateString'), false);
-assert.equal(service.includes('formatGregorianMonthTitle(year, month + 1)'), true);
-assert.equal(service.includes('GREGORIAN_WEEKDAYS'), true);
+assert.equal(service.includes('formatGregorianMonthTitle(year, month + 1, getAppliedLocale())'), true);
+assert.equal(service.includes('gregorianWeekdayHeading'), true);
 
 const deadlines = read('src/services/workRequestApi.ts');
 const deadlineLabel = deadlines.match(
@@ -310,7 +312,7 @@ assert.equal(deadlines.includes('MONTH_NAMES[month - 1]'), true);
 
 const detail = read('src/screens/jobs/WorkRequestDetailScreen.tsx');
 const pickedDate = detail.match(/function formatPickedDate\(date: Date\) \{([\s\S]*?)\n\}/);
-assert.equal(pickedDate?.[1].includes('formatGregorianLocalDay(date)'), true);
+assert.equal(pickedDate?.[1].includes('formatGregorianLocalDay(date, getAppliedLocale())'), true);
 assert.equal(/toLocale|Intl\./.test(pickedDate?.[1] ?? 'missing'), false);
 assert.equal(detail.includes('toLocaleDateString'), false);
 assert.equal(detail.includes("toLocaleString('default'"), false);
